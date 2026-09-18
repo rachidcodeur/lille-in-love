@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { env } from './env';
 import { supabaseAdmin } from './supabase';
 import { rattraperEnvoisPasses } from './mailer';
+import type { FicheFiltrable, Filtres, Groupe } from './groupes';
 
 /* ====================================================================
    Accès au back-office
@@ -57,6 +58,8 @@ export type MemberSummary = {
   age: number | null;
   status: string;
   form_version: 'court' | 'complet';
+  /** Groupe de composition d'une soirée : A, B ou C. Vide tant qu'on n'a pas trié. */
+  soiree_group: Groupe | null;
   suspect: boolean;
   photo_count: number;
   votes_oui: number;
@@ -66,6 +69,7 @@ export type MemberSummary = {
 export type MemberDetail = MemberSummary & {
   suspect_raison: string | null;
   postal_code: string | null;
+  children_preference: string | null;
   orientation: string | null;
   has_children: boolean | null;
   looking_for: string | null;
@@ -102,32 +106,93 @@ export type EmailLogRow = {
   soiree_nom?: string | null;
 };
 
-export async function listMembers(status?: string): Promise<MemberSummary[]> {
+/** Applique les filtres de la liste à une requête sur la vue de travail. */
+function filtrer<Q extends {
+  eq(colonne: string, valeur: string): Q;
+  is(colonne: string, valeur: null): Q;
+  gte(colonne: string, valeur: number): Q;
+  lte(colonne: string, valeur: number): Q;
+}>(query: Q, filtres: Filtres): Q {
+  let q = query;
+  if (filtres.statut !== 'tous') q = q.eq('status', filtres.statut);
+
+  if (filtres.groupe === 'aucun') q = q.is('soiree_group', null);
+  else if (filtres.groupe !== 'tous') q = q.eq('soiree_group', filtres.groupe);
+
+  if (filtres.genre !== 'tous') q = q.eq('gender', filtres.genre);
+
+  // L'âge est calculé par la vue : une fiche sans date de naissance
+  // (formulaire court) sort dès qu'une borne est posée. C'est voulu — mieux
+  // vaut l'absence qu'un âge supposé.
+  if (filtres.ageMin !== null) q = q.gte('age', filtres.ageMin);
+  if (filtres.ageMax !== null) q = q.lte('age', filtres.ageMax);
+
+  return q;
+}
+
+export async function listMembers(filtres: Filtres, limite = 300): Promise<MemberSummary[]> {
   // « * » plutôt qu'une liste de colonnes : la vue peut ne pas encore avoir
   // celles de supabase/04_signalement.sql, et une liste explicite ferait
   // échouer toute la page pour une colonne manquante.
-  let query = supabaseAdmin()
+  const query = supabaseAdmin()
     .from('lil_members_overview')
     .select('*')
     .order('created_at', { ascending: false })
-    .limit(300);
+    .limit(limite);
 
-  if (status && status !== 'tous') query = query.eq('status', status);
-
-  const { data, error } = await query;
+  const { data, error } = await filtrer(query, filtres);
   if (error) throw new Error(error.message);
   return (data ?? []) as MemberSummary[];
 }
 
-export async function countsByStatus(): Promise<Record<string, number>> {
-  const { data, error } = await supabaseAdmin().from('lil_members').select('status');
-  if (error) throw new Error(error.message);
+/**
+ * Les fiches complètes de la sélection, pour l'export CSV.
+ *
+ * Rangées comme l'équipe les lit : groupe, puis femmes et hommes, puis âge.
+ * Pas de limite de page ici — un export tronqué ne se voit pas.
+ */
+export async function membersForExport(filtres: Filtres): Promise<MemberDetail[]> {
+  const query = supabaseAdmin()
+    .from('lil_members_overview')
+    .select('*')
+    .order('soiree_group', { ascending: true, nullsFirst: false })
+    .order('gender', { ascending: true })
+    .order('age', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: true })
+    .limit(5000);
 
-  const counts: Record<string, number> = { tous: data?.length ?? 0 };
-  for (const row of data ?? []) {
-    counts[row.status] = (counts[row.status] ?? 0) + 1;
-  }
-  return counts;
+  const { data, error } = await filtrer(query, filtres);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as MemberDetail[];
+}
+
+/**
+ * De quoi compter chaque filtre sans relire toute la base.
+ *
+ * Quatre colonnes suffisent : les compteurs affichés à côté de chaque bouton
+ * se calculent ensuite en mémoire, filtre par filtre.
+ */
+export async function facettes(): Promise<FicheFiltrable[]> {
+  const { data, error } = await supabaseAdmin()
+    .from('lil_members_overview')
+    .select('status, soiree_group, gender, age')
+    .limit(5000);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as FicheFiltrable[];
+}
+
+/**
+ * Range une candidature dans un groupe de soirée — ou l'en retire.
+ *
+ * C'est une étiquette de travail : aucun email ne part, le statut ne bouge
+ * pas. On peut donc se tromper et corriger sans conséquence.
+ */
+export async function setGroup(memberId: string, groupe: Groupe | null): Promise<void> {
+  const { error } = await supabaseAdmin()
+    .from('lil_members')
+    .update({ soiree_group: groupe })
+    .eq('id', memberId);
+  if (error) throw new Error(error.message);
 }
 
 export async function getMember(id: string): Promise<MemberDetail | null> {

@@ -104,7 +104,7 @@ section('3. Le back-office');
 
 await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
 const rows = await page.locator('.adm-row').count();
-rows === 1 ? ok('la candidature apparaît dans « À examiner »') : bad('lignes affichées', String(rows));
+rows === 1 ? ok('la candidature apparaît dans la liste') : bad('lignes affichées', String(rows));
 
 const rowText = await page.locator('.adm-row').first().innerText();
 rowText.includes('Camille Dupont') ? ok('nom affiché') : bad('nom absent', rowText);
@@ -604,6 +604,168 @@ dupeBody.alreadyRegistered ? ok('un second envoi du même email est reconnu, pas
 
 s = await state();
 s.members.length === 1 ? ok('toujours une seule candidature en base') : bad('membres en base', String(s.members.length));
+
+/* ================================================================ */
+section('11. Groupes A/B/C, filtres croisés et export CSV');
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
+const ranger = async (m) => {
+  const r = await fetch(`${FAKE}/rest/v1/lil_members`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({
+      gender: 'femme',
+      last_name: 'Essai',
+      status: 'valide',
+      form_version: 'complet',
+      consent_at: new Date().toISOString(),
+      soiree_group: null,
+      ...m,
+    }),
+  });
+  return (await r.json())[0].id;
+};
+
+// Une population variée : c'est le croisement des critères qu'on veut voir
+// fonctionner, pas chaque filtre pris isolément.
+const idAmande = await ranger({ first_name: 'Amande', email: 'amande@example.com', birth_date: '1996-03-10' });
+await ranger({
+  first_name: 'Bea', email: 'bea@example.com', birth_date: '1998-02-05', soiree_group: 'C',
+  phone: '0612345678', city: 'Lille', postal_code: '59000', profession: 'Libraire',
+  instagram: '@bea', looking_for: 'relation_serieuse', orientation: 'hetero',
+  has_children: false, height_cm: 167, zodiac: 'verseau', referral: 'affiche',
+  about: 'Curieuse, du genre à dire "oui" trop vite.',
+  motivation: 'Rencontrer,\nautrement.',
+  interests: ['culture', 'voyages', 'autre'], interests_other: 'la poterie',
+  companion_first_name: 'Lucie', companion_email: 'lucie@example.com',
+});
+await ranger({ first_name: 'Carmen', email: 'carmen@example.com', birth_date: '1984-01-20', soiree_group: 'C' });
+await ranger({ first_name: 'David', email: 'david@example.com', birth_date: '1997-05-05', gender: 'homme', soiree_group: 'C' });
+await ranger({ first_name: 'Elise', email: 'elise@example.com', birth_date: '1995-07-07', soiree_group: 'A' });
+await ranger({ first_name: 'Flore', email: 'flore@example.com', form_version: 'court', soiree_group: 'C' });
+
+// --- Attribuer un groupe depuis la fiche --------------------------
+await page.goto(`${BASE}/admin/${idAmande}`, { waitUntil: 'networkidle' });
+await page.locator('.adm-groupes[data-compact="false"] [title="Groupe C"]').click();
+await page.waitForTimeout(900);
+
+s = await state();
+s.members.find((m) => m.id === idAmande)?.soiree_group === 'C'
+  ? ok('un clic sur « C » range la candidature dans le groupe C')
+  : bad('groupe non enregistré depuis la fiche', String(s.members.find((m) => m.id === idAmande)?.soiree_group));
+s.members.find((m) => m.id === idAmande)?.status === 'valide'
+  ? ok('le statut n’a pas bougé : un groupe n’est pas une décision')
+  : bad('le statut a changé avec le groupe');
+s.sent.length === 0 ? ok('aucun email déclenché par un changement de groupe') : bad('email envoyé à tort', String(s.sent.length));
+
+// --- Filtres croisés : les femmes de 27 à 35 ans du groupe C ------
+const urlFiltre = `${BASE}/admin?groupe=C&genre=femme&ageMin=27&ageMax=35`;
+await page.goto(urlFiltre, { waitUntil: 'networkidle' });
+
+const noms = (await page.locator('.adm-row-name').allInnerTexts()).map((t) => t.trim());
+noms.length === 2 && noms.every((n) => /Amande|Bea/.test(n))
+  ? ok('la liste ne garde que les femmes de 27 à 35 ans du groupe C')
+  : bad('sélection inattendue', noms.join(', ') || '(vide)');
+!noms.some((n) => n.includes('Flore'))
+  ? ok('la fiche sans date de naissance sort dès qu’une borne d’âge est posée')
+  : bad('un âge inconnu est passé au travers du filtre');
+
+// --- Attribuer un groupe depuis la liste, sans quitter la page ----
+await page.locator('.adm-row', { hasText: 'Amande' }).locator('[title="Groupe B"]').click();
+await page.waitForTimeout(1200);
+page.url().includes('/admin?')
+  ? ok('cliquer une touche de groupe dans la liste n’ouvre pas la fiche')
+  : bad('la fiche s’est ouverte', page.url());
+
+s = await state();
+s.members.find((m) => m.id === idAmande)?.soiree_group === 'B'
+  ? ok('le groupe se change aussi depuis la liste')
+  : bad('groupe non enregistré depuis la liste', String(s.members.find((m) => m.id === idAmande)?.soiree_group));
+
+await page.waitForTimeout(600);
+(await page.locator('.adm-row-name').allInnerTexts()).length === 1
+  ? ok('la fiche sort de la sélection dès qu’elle change de groupe')
+  : bad('la liste ne s’est pas rafraîchie');
+
+// --- L'export CSV de cette même sélection --------------------------
+/** Les enregistrements d'un CSV : un champ entre guillemets peut contenir
+ *  des retours à la ligne, qui ne sont pas des fins d'enregistrement. */
+const lignesCsv = (texte) => {
+  const lignes = [];
+  let courante = '';
+  let dansGuillemets = false;
+  for (const c of texte.replace(/\r\n/g, '\n')) {
+    if (c === '"') dansGuillemets = !dansGuillemets;
+    if (c === '\n' && !dansGuillemets) {
+      lignes.push(courante);
+      courante = '';
+    } else {
+      courante += c;
+    }
+  }
+  if (courante) lignes.push(courante);
+  return lignes;
+};
+
+const reponse = await fetch(`${BASE}/api/admin/export?groupe=C&genre=femme&ageMin=27&ageMax=35`);
+const csv = await reponse.text();
+const lignes = lignesCsv(csv);
+
+const ENTETE =
+  'soiree_group,first_name,gender,age,birth_date,email,phone,city,postal_code,profession,' +
+  'instagram,looking_for,orientation,has_children,children_preference,height_cm,zodiac_sign,' +
+  'about_you,ideal_evening,interests,friend_name,friend_email,source,created_at,id';
+
+lignes[0] === ENTETE
+  ? ok('l’en-tête reprend exactement les colonnes de l’export existant')
+  : bad('en-tête différent', lignes[0]);
+
+(reponse.headers.get('content-disposition') ?? '').includes('candidatures_femmes_C_27-35.csv')
+  ? ok('le fichier porte le nom de la sélection')
+  : bad('nom de fichier', reponse.headers.get('content-disposition'));
+
+// Amande vient de passer en B : l'export doit suivre la liste, pas la traîner.
+lignes.length === 2
+  ? ok('l’export contient exactement la sélection affichée (1 fiche)')
+  : bad('lignes exportées', String(lignes.length - 1));
+
+const bea = lignes[1] ?? '';
+bea.startsWith('C,Bea,F,28,1998-02-05,bea@example.com,')
+  ? ok('groupe, prénom, sexe en F/M, âge et date de naissance au bon format')
+  : bad('début de ligne inattendu', bea.slice(0, 80));
+bea.includes(',serieux,hetero,False,,167,verseau,')
+  ? ok('« relation sérieuse » devient serieux, has_children devient False')
+  : bad('valeurs converties', bea);
+bea.includes('"Rencontrer,\nautrement."')
+  ? ok('une virgule et un retour à la ligne dans un texte ne cassent pas le fichier')
+  : bad('échappement des sauts de ligne', bea);
+bea.includes('"Curieuse, du genre à dire ""oui"" trop vite."')
+  ? ok('les guillemets d’un témoignage sont doublés, comme le veut le format')
+  : bad('échappement des guillemets', bea);
+bea.includes('"Culture & spectacles, Voyages & découvertes, la poterie"')
+  ? ok('les centres d’intérêt sortent en clair, « autre » précisé')
+  : bad('centres d’intérêt', bea);
+bea.includes(',Lucie,lucie@example.com,affiche,')
+  ? ok('l’accompagnant et l’origine de la candidature sont repris')
+  : bad('accompagnant ou source', bea);
+
+// --- Sans groupe, et remise à zéro ---------------------------------
+const sansGroupe = await fetch(`${BASE}/api/admin/export?groupe=aucun`);
+const sansGroupeCsv = lignesCsv(await sansGroupe.text());
+sansGroupeCsv.length === 1
+  ? ok('« sans groupe » ne renvoie plus personne : tout le monde est rangé')
+  : bad('fiches sans groupe', sansGroupeCsv.slice(1).map((l) => l.split(',')[1]).join(', '));
+
+await page.goto(`${BASE}/admin/${idAmande}`, { waitUntil: 'networkidle' });
+await page.locator('.adm-groupes[data-compact="false"] .adm-groupe-btn-vide').click();
+await page.waitForTimeout(900);
+s = await state();
+s.members.find((m) => m.id === idAmande)?.soiree_group == null
+  ? ok('la touche « — » retire la candidature de tout groupe')
+  : bad('groupe non retiré', String(s.members.find((m) => m.id === idAmande)?.soiree_group));
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
 await browser.close();
 console.log('\n' + (failures.length === 0

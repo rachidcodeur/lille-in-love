@@ -52,8 +52,15 @@ function readTable(name) {
 }
 
 /* ---------------------------------------------------------------- */
-/* Filtres PostgREST : eq, in, order, limit                          */
+/* Filtres PostgREST : eq, in, is, gte, lte, order, limit           */
 /* ---------------------------------------------------------------- */
+function compare(a, b) {
+  if (a === null || a === undefined) return b === null || b === undefined ? 0 : 1;
+  if (b === null || b === undefined) return -1;
+  if (typeof a === 'number' && typeof b === 'number') return a - b;
+  return String(a) < String(b) ? -1 : String(a) > String(b) ? 1 : 0;
+}
+
 function applyFilters(rows, params) {
   let out = rows;
 
@@ -75,17 +82,48 @@ function applyFilters(rows, params) {
     } else if (op === 'in') {
       const list = value.replace(/^\(|\)$/g, '').split(',').map((v) => v.replace(/^"|"$/g, ''));
       out = out.filter((row) => list.includes(String(row[key])));
+    } else if (op === 'is') {
+      // « is.null » : une colonne absente de l'objet vaut null, comme en base.
+      if (value !== 'null') throw new Error(`is.${value} non géré`);
+      out = out.filter((row) => row[key] === null || row[key] === undefined);
+    } else if (op === 'gte' || op === 'lte') {
+      const seuil = Number(value);
+      out = out.filter((row) => {
+        const actual = row[key];
+        // Postgres écarte les null d'une comparaison : on fait pareil.
+        if (actual === null || actual === undefined) return false;
+        return op === 'gte' ? Number(actual) >= seuil : Number(actual) <= seuil;
+      });
+    } else {
+      // Sans ça, un opérateur non géré serait ignoré en silence et un test
+      // passerait alors que le filtre ne filtre rien.
+      throw new Error(`opérateur PostgREST non géré : ${key}=${raw}`);
     }
   }
 
+  // « order=a.asc,b.desc.nullslast » : plusieurs colonnes, dans l'ordre.
   const order = params.get('order');
   if (order) {
-    const [field, direction] = order.split('.');
+    const clauses = order.split(',').map((clause) => {
+      const [field, ...options] = clause.split('.');
+      return {
+        field,
+        desc: options.includes('desc'),
+        nullsFirst: options.includes('nullsfirst'),
+      };
+    });
     out = [...out].sort((a, b) => {
-      const av = a[field] ?? '';
-      const bv = b[field] ?? '';
-      const cmp = av < bv ? -1 : av > bv ? 1 : 0;
-      return direction === 'desc' ? -cmp : cmp;
+      for (const { field, desc, nullsFirst } of clauses) {
+        const av = a[field] ?? null;
+        const bv = b[field] ?? null;
+        if (av === null || bv === null) {
+          if (av === bv) continue;
+          return (av === null ? 1 : -1) * (nullsFirst ? -1 : 1);
+        }
+        const cmp = compare(av, bv);
+        if (cmp !== 0) return desc ? -cmp : cmp;
+      }
+      return 0;
     });
   }
 
@@ -127,7 +165,7 @@ async function readBody(req) {
   }
 }
 
-const server = createServer(async (req, res) => {
+async function traiter(req, res) {
   const url = new URL(req.url, 'http://localhost');
   const path = url.pathname;
 
@@ -370,6 +408,17 @@ const server = createServer(async (req, res) => {
   }
 
   json(res, 404, { message: `non géré : ${req.method} ${path}` });
+}
+
+const server = createServer(async (req, res) => {
+  try {
+    await traiter(req, res);
+  } catch (erreur) {
+    // Un faux serveur qui meurt en silence ferait échouer la suite entière
+    // sans dire pourquoi. On répond, et le test lit le message.
+    console.error('[faux backend]', erreur);
+    json(res, 400, { message: String(erreur?.message ?? erreur) });
+  }
 });
 
 const PORT = Number(process.env.FAKE_PORT ?? 54321);

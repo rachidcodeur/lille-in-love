@@ -40,6 +40,14 @@ const LOOKING_FOR: Record<string, string> = {
 
 const ORIENTATION: Record<string, string> = { hetero: 'Hétéro', gay: 'Gay' };
 
+// Reprise de l'ancien formulaire : le questionnaire actuel ne pose pas la
+// question, mais les fiches importées portent la réponse.
+const CHILDREN_PREFERENCE: Record<string, string> = {
+  peu_importe: 'Peu importe',
+  sans_enfants: 'Plutôt sans enfants',
+  avec_enfants: 'Plutôt avec enfants',
+};
+
 const GENDER: Record<string, string> = { femme: 'Femme', homme: 'Homme' };
 
 function fromOptions(list: { value: string; label: string }[], value: string): string {
@@ -50,6 +58,7 @@ export const label = {
   gender: (v: string | null) => (v ? (GENDER[v] ?? v) : null),
   orientation: (v: string | null) => (v ? (ORIENTATION[v] ?? v) : null),
   lookingFor: (v: string | null) => (v ? (LOOKING_FOR[v] ?? v) : null),
+  childrenPreference: (v: string | null) => (v ? (CHILDREN_PREFERENCE[v] ?? v) : null),
   zodiac: (v: string | null) => (v ? fromOptions(ZODIAC, v) : null),
   referral: (v: string | null) => (v ? fromOptions(REFERRALS, v) : null),
   interests: (list: string[] | null) =>

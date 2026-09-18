@@ -12,6 +12,7 @@ import {
 import { FicheActions } from '@/components/admin/FicheActions';
 import { PhotoGallery } from '@/components/admin/PhotoGallery';
 import { AnnulerEnvoi } from '@/components/admin/AnnulerEnvoi';
+import { GroupePicker } from '@/components/admin/GroupePicker';
 import { DECISION_TEMPLATES, templateAttendu } from '@/lib/decision';
 
 export const dynamic = 'force-dynamic';
@@ -77,6 +78,10 @@ export default async function FichePage({ params }: Props) {
             <PhotoGallery photos={photos} firstName={member.first_name} />
           </div>
 
+          <div className="adm-card">
+            <GroupePicker memberId={member.id} groupe={member.soiree_group} />
+          </div>
+
           <div className="adm-card adm-decision">
             <p className="adm-card-title">Décision</p>
             <FicheActions
@@ -127,6 +132,12 @@ export default async function FichePage({ params }: Props) {
                 value={member.has_children === null ? null : member.has_children ? 'Oui' : 'Non'}
               />
               <Answer term="Cherche" value={label.lookingFor(member.looking_for)} />
+              {member.children_preference && (
+                <Answer
+                  term="Enfants du partenaire"
+                  value={label.childrenPreference(member.children_preference)}
+                />
+              )}
               <Answer term="Taille" value={member.height_cm ? `${member.height_cm} cm` : null} />
               <Answer term="Profession" value={member.profession} />
               <Answer term="Signe" value={label.zodiac(member.zodiac)} />

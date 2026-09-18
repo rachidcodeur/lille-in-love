@@ -72,6 +72,8 @@ mettre à jour sans jamais retoucher à la page.
 | `src/lib/questions.ts`        | Les deux parcours, décrits une seule fois                |
 | `src/lib/decision.ts`         | Les règles de curation et le déclenchement des emails    |
 | `src/lib/soirees.ts`          | Qui reçoit quoi à la publication d'une soirée            |
+| `src/lib/groupes.ts`          | Groupes A/B/C et filtres de la liste, en un seul endroit  |
+| `src/lib/export-csv.ts`       | L'export CSV, au format des exports existants            |
 | `src/lib/admin.ts`            | Lecture des candidatures, photos signées, accès          |
 | `src/lib/validation.ts`       | La validation serveur — la seule qui fasse autorité      |
 | `src/lib/security.ts`         | Hachage d'IP, limitation de débit, CORS                  |

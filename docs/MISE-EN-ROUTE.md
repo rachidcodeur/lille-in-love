@@ -9,11 +9,17 @@ il reste à déployer l'application et à brancher la page WordPress.
 
 | Élément | État |
 | --- | --- |
-| Projet Supabase | `sljvoplsedepnecgmjih` — les 5 scripts SQL sont passés, bucket `lil-photos` privé |
+| Projet Supabase | `sljvoplsedepnecgmjih` — les 5 premiers scripts SQL sont passés, bucket `lil-photos` privé |
 | Resend | domaine **`in-love.fr` vérifié**, clé en place |
 | Expéditeur | `Lille in Love <info@in-love.fr>` |
 | Adresse de réponse | `info@in-love.fr` |
 | `.env.local` | rempli et valide — `/api/health` répond `ok: true` |
+
+> **Un script reste à passer : `supabase/08_groupes.sql`.** Il ajoute les
+> groupes A/B/C et la colonne `children_preference`. Sans lui, la liste des
+> candidatures affiche une erreur — elle a besoin de ces colonnes. Il est
+> relançable sans risque, n'envoie aucun email et ne touche à aucune
+> candidature existante.
 
 Les pages légales vivent sur **lilleinlove.fr** (`/reglement`,
 `/confidentialite`). Les mêmes adresses sur in-love.fr renvoient 404, c'est
@@ -202,6 +208,42 @@ Une fiche marquée **« à vérifier »** signale un envoi inhabituel (formulair
 rempli très vite). La candidature est conservée : c'est souvent quelqu'un de
 pressé.
 
+### Trier, grouper, exporter
+
+Chaque fiche peut être rangée dans un **groupe de soirée : A, B ou C**. Les
+quatre touches sont à droite de chaque ligne de la liste, et sur la fiche.
+C'est une étiquette de travail : **aucun email ne part, le statut ne change
+pas**, et on peut se tromper sans conséquence. La touche **—** retire du
+groupe.
+
+Au-dessus de la liste, trois filtres se combinent avec les pastilles de
+statut : le groupe, *femmes / hommes*, et une tranche d'âge. « Les femmes de
+27 à 35 ans du groupe C » se lit donc :
+
+```
+/admin?groupe=C&genre=femme&ageMin=27&ageMax=35
+```
+
+Le compteur affiché à côté de chaque choix tient compte des autres : si
+« Groupe C (0) » s'affiche, c'est que personne n'y répond **avec les critères
+déjà posés**.
+
+> Une fiche du formulaire court n'a pas de date de naissance. Dès qu'une
+> borne d'âge est posée, elle sort de la sélection — mieux vaut l'absence
+> qu'un âge supposé. L'écran le rappelle sous les filtres.
+
+**« Exporter N fiches en CSV »** télécharge exactement la sélection affichée,
+dans le format des exports déjà utilisés par l'équipe : mêmes colonnes, même
+ordre, mêmes valeurs (`F`/`M`, `serieux`, `True`/`False`…). Le fichier porte
+le nom de la sélection, par exemple `candidatures_femmes_C_27-35.csv`. Il
+contient toute la sélection, même quand la liste n'en affiche que les 300
+premières.
+
+La colonne `children_preference` vient de l'ancien formulaire. Le
+questionnaire actuel ne pose pas la question : elle reste vide pour les
+nouvelles candidatures, et la fiche ne l'affiche que lorsqu'elle est
+renseignée.
+
 ### Soirées
 
 `/admin/soirees` : nom, classe d'âge, date, heure, lieu. Avant tout envoi,
@@ -248,6 +290,7 @@ Dès l'application déployée : remets le widget iframe (section 3) et exécute
 
 ## 6. La recette avant d'ouvrir
 
+- [ ] `supabase/08_groupes.sql` exécuté (sinon `/admin` refuse de s'afficher)
 - [ ] `DELAI_REPONSE_MINUTES=1440` en production
 - [ ] `ADMIN_CODE` renseigné
 - [ ] `IP_HASH_SALT` différent de celui du poste local
