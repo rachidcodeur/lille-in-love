@@ -1,207 +1,133 @@
 # Mise en route
 
-De zéro à un formulaire en ligne, avec le back-office qui va avec. Compte une
-heure la première fois, l'essentiel étant de l'attente (DNS, vérification de
-domaine).
+État au 18 septembre 2026. Supabase et Resend sont configurés et vérifiés ;
+il reste à déployer l'application et à brancher la page WordPress.
 
 ---
 
-## 0. Ce qu'il faut récupérer
+## 0. Ce qui est déjà fait
 
-Cinq valeurs, à mettre dans un fichier `.env.local` à la racine du projet —
-jamais ailleurs, jamais dans WordPress, jamais dans un message.
+| Élément | État |
+| --- | --- |
+| Projet Supabase | `sljvoplsedepnecgmjih` — les 5 scripts SQL sont passés, bucket `lil-photos` privé |
+| Resend | domaine **`in-love.fr` vérifié**, clé en place |
+| Expéditeur | `Lille in Love <info@in-love.fr>` |
+| Adresse de réponse | `info@in-love.fr` |
+| `.env.local` | rempli et valide — `/api/health` répond `ok: true` |
 
-```bash
-cp .env.example .env.local
-```
-
-| Variable                    | Où la trouver                                                          |
-| --------------------------- | ---------------------------------------------------------------------- |
-| `SUPABASE_URL`              | Supabase → ton projet → **Settings → API** → « Project URL »            |
-| `SUPABASE_SERVICE_ROLE_KEY` | Même écran → **`service_role` secret** (pas la clé `anon`)              |
-| `RESEND_API_KEY`            | resend.com → **API Keys → Create** (permission « Sending access »)      |
-| `EMAIL_FROM`                | Une adresse du domaine vérifié, ex. `contact@lilleinlove.fr`            |
-| `IP_HASH_SALT`              | À générer : `openssl rand -hex 32`                                      |
-
-> **La clé `service_role` ouvre toute la base.** Elle ne doit vivre que dans
-> `.env.local` (ignoré par git) et dans les variables d'environnement de ton
-> hébergeur.
-
-Pour tes premiers essais, ajoute aussi :
-
-```bash
-VOTES_REQUIS=1               # tu valides seul
-DELAI_REPONSE_MINUTES=2      # la réponse part 2 min après la décision, pas 24 h
-```
-
-**Tu peux tout essayer avant même d'avoir ces clés** : `npm run test:curation`
-joue le parcours entier contre un faux Supabase et un faux Resend locaux.
+Les pages légales vivent sur **lilleinlove.fr** (`/reglement`,
+`/confidentialite`). Les mêmes adresses sur in-love.fr renvoient 404, c'est
+pourquoi les liens du formulaire pointent sur lilleinlove.fr.
 
 ---
 
-## 1. Supabase — créer les tables
-
-Dans ton projet Supabase, ouvre **SQL Editor** et exécute les cinq fichiers,
-dans l'ordre :
-
-1. `supabase/01_schema.sql` — les tables, les index, la sécurité
-2. `supabase/02_storage.sql` — le bucket des photos
-3. `supabase/03_formulaire_court.sql` — le formulaire court et la curation
-4. `supabase/04_signalement.sql` — le signalement des envois inhabituels
-5. `supabase/05_soirees.sql` — les soirées et les envois qu'elles déclenchent
-
-Tous sont **relançables sans risque** et toutes les tables sont préfixées
-`lil_`. Rien de ce que tu as déjà dans ce projet n'est touché.
-
-> Si le quatrième n'est pas encore passé, l'application continue de
-> fonctionner : elle enregistre les candidatures sans le signalement et
-> l'écrit dans les journaux. Une inscription ne dépend jamais d'une migration
-> oubliée.
-
-Vérifie ensuite dans **Table Editor** que tu vois : `lil_members`, `lil_photos`,
-`lil_curators`, `lil_reviews`, `lil_emails`.
-
----
-
-## 2. Resend — l'expéditeur
-
-### Aujourd'hui : `mariage-parfait.net`
-
-Ce domaine est déjà vérifié sur ton compte, on s'en sert donc en attendant :
-
-```bash
-EMAIL_FROM="Lille in Love <contact@mariage-parfait.net>"
-EMAIL_REPLY_TO=contact@lilleinlove.fr
-```
-
-L'adresse de réponse, elle, n'a pas besoin d'être vérifiée : c'est un simple
-en-tête. Quand quelqu'un répond à un email du club, sa réponse arrive bien sur
-`contact@lilleinlove.fr`.
-
-### À faire avant d'ouvrir au public : vérifier `lilleinlove.fr`
-
-Un email signé « Lille in Love » mais expédié depuis `mariage-parfait.net`
-détonne, et certains clients mail affichent un avertissement « via… ».
-
-1. **Domains → Add Domain** : saisis `lilleinlove.fr`.
-2. Resend affiche 3 enregistrements DNS (SPF, DKIM, et un DMARC conseillé).
-   Ajoute-les dans **Hostinger → Domaines → DNS**, sur `lilleinlove.fr`.
-3. Attends la validation (souvent 15 minutes, parfois quelques heures).
-4. Remplace `EMAIL_FROM` par `contact@lilleinlove.fr`. Rien d'autre à changer.
-
----
-
-## 3. Essayer en local
+## 1. Essayer en local
 
 ```bash
 npm install
 npm run dev
 ```
 
-- `http://localhost:3000/court` — le formulaire court (3 écrans)
-- `http://localhost:3000/` — le formulaire complet (16 écrans)
-- `http://localhost:3000/admin` — le back-office
-- `http://localhost:3000/api/health` — ce qui est configuré ou non
+| Adresse | Ce que c'est |
+| --- | --- |
+| `localhost:3000/court` | le formulaire court (3 écrans) |
+| `localhost:3000/` | le formulaire complet (16 étapes) |
+| `localhost:3000/admin` | le back-office : candidatures et soirées |
+| `localhost:3000/api/health` | ce qui est configuré, ou ce qui manque |
 
-Inscris-toi avec ta propre adresse, puis ouvre `/admin` : ta fiche est là.
-Clique **Valider** — l'email de bienvenue est programmé, et la fiche indique
-quand il partira. Change d'avis : l'envoi en attente est annulé.
+Inscris-toi avec ta propre adresse, puis valide ta fiche dans `/admin` :
+l'email de bienvenue part après le délai configuré.
+
+### Vérifier sans rien casser
+
+```bash
+npm run test:curation   # tout, de l'inscription aux emails — sans aucune clé
+npm run test:e2e        # le formulaire, dans un navigateur (npm run dev à côté)
+npm run test:reel       # en conditions réelles, puis efface ses propres traces
+```
+
+Les deux premières tournent contre un faux Supabase et un faux Resend : rien
+ne sort de la machine. `test:reel` écrit vraiment dans ta base et envoie
+vraiment (vers `delivered@resend.dev`, que personne ne lit), puis supprime ce
+qu'il a créé — il ne touche jamais aux autres candidatures.
 
 ---
 
-## 4. Déployer l'application sur `app.in-love.fr`
-
-### Pourquoi Hostinger, et pas Vercel gratuit
+## 2. Déployer l'application sur `app.in-love.fr`
 
 Le plan gratuit de Vercel est réservé à un usage **non commercial** ; Lille in
-Love vend des soirées. Il faudrait le plan Pro (payant). Ton hébergement
-Hostinger propose déjà « Déployer Application web » (offres Business et Cloud),
-reconnaît Next.js et n'impose pas cette restriction : c'est le choix retenu.
+Love vend des soirées. On passe donc par Hostinger, qui propose « Déployer
+Application web » sur les offres Business et Cloud.
 
 ### a. Mettre le code sur GitHub
 
-Le dossier n'est pas encore un dépôt git. Crée un dépôt **privé** vide sur
-github.com (sans README), puis, dans le dossier du projet :
+Crée un dépôt **privé** vide, puis :
 
 ```bash
-git init
 git add .
-git commit -m "Lille in Love — formulaire et curation"
-git branch -M main
-git remote add origin https://github.com/<ton-compte>/lille-in-love.git
+git commit -m "Formulaire, curation et soirées"
 git push -u origin main
 ```
 
-`.env.local` est exclu par `.gitignore` : aucune clé ne part sur GitHub.
+`.env.local` est exclu par `.gitignore` : aucune clé ne part sur GitHub. Ne
+mets **jamais** de vraie valeur dans `.env.example`, qui lui est versionné —
+GitHub bloque les envois contenant une clé.
 
-### b. Préparer Supabase
+### b. Créer l'application chez Hostinger
 
-Vérifie que les cinq scripts de `supabase/` sont passés dans le SQL Editor —
-en particulier `04_signalement.sql` et `05_soirees.sql`, les plus récents.
+hPanel → **Sites web → Ajouter un site web → Déployer Application web →
+Importer un dépôt Git**, puis :
 
-### c. Créer l'application chez Hostinger
+| Réglage | Valeur |
+| --- | --- |
+| Framework | Next.js |
+| Version de Node | 20 ou 22 |
+| Commande d'installation | `npm ci` |
+| Commande de build | `npm run build` |
+| Commande de démarrage | `npm run start` |
+| Dossier de sortie | `.next` |
 
-1. hPanel → **Sites web** → **Ajouter un site web** → **Déployer Application
-   web** → **Importer un dépôt Git**.
-2. Autorise GitHub, choisis le dépôt `lille-in-love`, branche `main`.
-3. Réglages de build :
+### c. Les variables d'environnement
 
-   | Réglage                | Valeur          |
-   | ---------------------- | --------------- |
-   | Framework              | Next.js         |
-   | Version de Node        | 20 ou 22        |
-   | Commande d'installation| `npm ci`        |
-   | Commande de build      | `npm run build` |
-   | Commande de démarrage  | `npm run start` |
-   | Dossier de sortie      | `.next`         |
+À saisir **avant le premier déploiement** : `ALLOWED_EMBED_ORIGINS` est lue au
+moment du build. Pars de ton `.env.local`, en changeant ces quatre lignes :
 
-4. **Variables d'environnement — avant le premier déploiement** : l'adresse
-   autorisée à afficher le formulaire est figée au moment du build.
+| Variable | En production | Pourquoi |
+| --- | --- | --- |
+| `DELAI_REPONSE_MINUTES` | **`1440`** | 24 h. Ton `.env.local` est à `2` pour les essais. |
+| `ADMIN_CODE` | **un code long** | sans lui, `/admin` est public une fois en ligne |
+| `IP_HASH_SALT` | **une nouvelle valeur** | `openssl rand -hex 32` |
+| `VOTES_REQUIS` | `1` ou `2` | `2` pour la règle des deux curateurs |
 
-   | Variable                    | Valeur de production                                  |
-   | --------------------------- | ----------------------------------------------------- |
-   | `SUPABASE_URL`              | la même qu'en local                                   |
-   | `SUPABASE_SERVICE_ROLE_KEY` | la même qu'en local                                   |
-   | `SUPABASE_STORAGE_BUCKET`   | `lil-photos`                                          |
-   | `RESEND_API_KEY`            | la même qu'en local                                   |
-   | `EMAIL_FROM`                | `Lille in Love <contact@mariage-parfait.net>` en attendant `lilleinlove.fr` |
-   | `EMAIL_REPLY_TO`            | `contact@lilleinlove.fr`                              |
-   | `IP_HASH_SALT`              | une nouvelle valeur : `openssl rand -hex 32`          |
-   | `ALLOWED_EMBED_ORIGINS`     | `https://in-love.fr,https://www.in-love.fr`           |
-   | `DELAI_REPONSE_MINUTES`     | **`1440`** (24 h) — pas la valeur de test             |
-   | `VOTES_REQUIS`              | `1` (ou `2` pour la règle des deux curateurs)          |
-   | `ADMIN_CODE`                | **un code** — voir l'encadré ci-dessous               |
-   | `NEXT_PUBLIC_SITE_URL`      | `https://in-love.fr`                                  |
+Les autres se recopient telles quelles : `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`, `RESEND_API_KEY`,
+`EMAIL_FROM`, `EMAIL_REPLY_TO`, `ALLOWED_EMBED_ORIGINS`,
+`NEXT_PUBLIC_SITE_URL`.
 
-   Hostinger peut importer un fichier `.env` d'un coup : pars de `.env.local`,
-   mais **corrige `DELAI_REPONSE_MINUTES` et `ADMIN_CODE`** avant l'import.
+> **`/admin` en ligne sans `ADMIN_CODE`** : n'importe qui trouvant l'adresse
+> voit les noms, emails et photos des candidats — et peut publier une soirée,
+> ce qui envoie des emails. Renseigne-le.
 
-   > **Une fois en ligne, `/admin` est public.** Sans `ADMIN_CODE`, n'importe
-   > qui trouvant l'adresse voit les noms, emails et photos des candidats, et
-   > peut publier une soirée qui enverra des emails. Renseigne un code long.
+### d. Le sous-domaine
 
-5. Lance le déploiement. Hostinger attribue une adresse temporaire.
-6. Rattache le domaine : dans les réglages du site, section **Domaines**,
-   indique `app.in-love.fr`. Le domaine `in-love.fr` étant chez Hostinger, le
-   DNS et le certificat HTTPS se configurent seuls ; compte quelques minutes à
-   quelques heures.
+Dans les réglages du site, section **Domaines**, indique `app.in-love.fr`.
+Le domaine étant chez Hostinger, le DNS et le certificat HTTPS se configurent
+seuls. Compte quelques minutes à quelques heures.
 
-Chaque `git push` sur `main` redéploie ensuite automatiquement.
+### e. Vérifier
 
-### d. Vérifier
+- `https://app.in-love.fr/api/health` → `"ok": true`, `"problemes": []`
+- `https://app.in-love.fr/court` → le formulaire s'affiche
+- `https://app.in-love.fr/admin` → le code d'accès est demandé
 
-- `https://app.in-love.fr/api/health` doit répondre `"ok": true` avec
-  `"problemes": []`.
-- `https://app.in-love.fr/court` affiche le formulaire court.
-- `https://app.in-love.fr/admin` demande le code d'accès.
+Chaque `git push` sur `main` redéploie ensuite tout seul.
 
 ---
 
-## 5. WordPress — remplacer le formulaire Tally
+## 3. Brancher la page WordPress
 
-1. Modifie la page `in-love.fr/inscription/`.
-2. Supprime le bloc qui contient le formulaire Tally.
-3. Ajoute à sa place un bloc **HTML personnalisé** et colle le contenu de
+1. Modifie `in-love.fr/inscription/` et supprime le bloc Tally.
+2. À sa place, un bloc **HTML personnalisé** avec le contenu de
    [`widget-wordpress.html`](widget-wordpress.html) :
 
    ```html
@@ -209,111 +135,111 @@ Chaque `git push` sur `main` redéploie ensuite automatiquement.
    <script src="https://app.in-love.fr/embed.js" async></script>
    ```
 
-   **Garde `data-lil-app`.** LiteSpeed Cache, installé d'office sur les
-   WordPress Hostinger, peut regrouper les scripts de la page : sans cet
-   attribut, le formulaire chercherait l'application sur `in-love.fr` et ne
-   s'afficherait pas (reproduit en test).
-4. Mets à jour la page, puis **purge le cache** (barre d'admin WordPress →
-   LiteSpeed Cache → *Purger tout*).
-5. Ouvre la page en navigation privée : le formulaire s'affiche et sa hauteur
-   s'ajuste à chaque étape.
+3. Publie, puis **purge le cache** (LiteSpeed Cache → *Purger tout*).
+4. Ouvre la page en navigation privée.
 
-Si le formulaire n'apparaît pas :
-- console du navigateur, message `frame-ancestors` → `ALLOWED_EMBED_ORIGINS`
-  ne contient pas l'adresse exacte du site ; corrige-la puis **redéploie**
-  (elle est lue au build) ;
-- rien du tout → LiteSpeed Cache → *Optimisation de page* → *Réglages JS* :
-  ajoute `embed.js` dans les exclusions.
+**Garde `data-lil-app`.** LiteSpeed Cache peut regrouper les scripts de la
+page : sans cet attribut, le formulaire chercherait l'application sur
+in-love.fr et ne s'afficherait pas.
 
-Pour passer au questionnaire complet plus tard : `data-lil-form="complet"`.
+Pour passer au questionnaire entier : `data-lil-form="complet"`.
+
+Si rien ne s'affiche :
+- message `frame-ancestors` en console → `ALLOWED_EMBED_ORIGINS` ne contient
+  pas l'adresse exacte du site ; corrige, puis **redéploie** ;
+- rien du tout → LiteSpeed Cache → *Optimisation de page* → exclus `embed.js`
+  de l'optimisation JS.
 
 ---
 
-## 6. Le back-office
+## 4. Le back-office
 
 `https://app.in-love.fr/admin`
 
-La liste est filtrée par statut ; une fiche montre les photos en grand, les
-réponses, et le journal des emails. Trois issues, chacune avec son email :
+### Candidatures
 
-| Action                         | Email                         | Quand                               |
-| ------------------------------ | ----------------------------- | ----------------------------------- |
-| Valider — profil retenu        | 02 · Bienvenue dans le club   | 24 h après la validation            |
-| Refuser — profil non retenu    | 03 · On reviendra vers toi    | à la publication d'une soirée       |
-| *(automatique)*                | 04 · Ta tranche d'âge         | à la publication d'une soirée, pour les validés hors de sa classe d'âge |
+Une fiche par personne : photos en grand (clic pour agrandir, flèches pour
+passer de l'une à l'autre), réponses, et le journal des emails.
+
+| Bouton | Email envoyé | Quand |
+| --- | --- | --- |
+| Valider — profil retenu | 02 · Bienvenue dans le club | 24 h après le clic |
+| Refuser — profil non retenu | *(rien sur le moment)* | à la publication d'une soirée |
 
 Revenir sur une validation avant l'envoi annule la bienvenue en attente.
-Recliquer la même décision ne change rien — ni doublon, ni heure décalée.
-
-### Publier une soirée
-
-`/admin/soirees` : nom, classe d'âge, date, heure (facultative), lieu. Avant
-tout envoi, **« Voir qui sera prévenu »** affiche exactement qui recevra
-quoi. Publier envoie alors, immédiatement et par lots :
-
-- **03** à tous les profils non retenus ;
-- **04** aux validés dont l'âge, **le jour de la soirée**, sort de sa classe
-  d'âge.
-
-Ne reçoivent rien : les validés qui ont l'âge (ils attendront leur
-invitation), les candidatures pas encore examinées, et les personnes déjà
-prévenues lors d'une soirée précédente — personne ne reçoit deux fois le même
-message.
-
-> **Les validés du formulaire court n'ont pas de date de naissance.**
-> Impossible de savoir s'ils ont l'âge de la soirée : ils ne reçoivent rien
-> et l'aperçu les compte à part, en « âge inconnu ».
-
-
-> Resend n'accepte d'annuler un envoi qu'une fois celui-ci passé en
-> « programmé », et ce basculement prend un délai variable — de 3 à 17 secondes
-> selon nos mesures. Si tu te ravises dans les toutes premières secondes,
-> l'annulation peut échouer : la fiche l'affiche alors en rouge avec un bouton
-> **Annuler cet envoi**. Un clic quelques secondes plus tard suffit toujours.
-> L'application ne prétend jamais avoir arrêté un envoi qui va partir.
-
-Les photos s'ouvrent en grand d'un clic : flèches pour passer de l'une à
-l'autre, un second clic pour zoomer sur un visage, Échap pour refermer.
+Recliquer la même décision ne change rien. Si Resend refuse l'annulation
+— cela arrive dans les toutes premières secondes — la fiche l'affiche en
+rouge avec un bouton **Annuler cet envoi** ; un clic quelques secondes plus
+tard suffit toujours.
 
 Une fiche marquée **« à vérifier »** signale un envoi inhabituel (formulaire
-rempli très vite, par exemple). La candidature est conservée telle quelle :
-c'est souvent simplement quelqu'un de pressé.
+rempli très vite). La candidature est conservée : c'est souvent quelqu'un de
+pressé.
 
-> **L'accès est libre pour l'instant.** Cette page montre des noms, des emails
-> et des visages : quiconque connaît l'adresse y accède. Elle n'est indexée par
-> aucun moteur de recherche, mais pour la fermer vraiment, renseigne
-> `ADMIN_CODE` — un code te sera alors demandé à l'entrée, sans autre
-> changement.
+### Soirées
+
+`/admin/soirees` : nom, classe d'âge, date, heure, lieu. Avant tout envoi,
+**« Voir qui sera prévenu »** montre exactement qui recevra quoi. Publier
+envoie alors, immédiatement et par lots :
+
+- **03 · On reviendra vers toi** à tous les profils non retenus ;
+- **04 · Ta tranche d'âge** aux validés dont l'âge, **le jour de la soirée**,
+  sort de sa classe d'âge.
+
+Ne reçoivent rien : les validés qui ont l'âge (ils attendent leur invitation),
+les candidatures pas encore examinées, et les personnes déjà prévenues lors
+d'une soirée précédente.
+
+> **Les validés du formulaire court n'ont pas de date de naissance** : on ne
+> peut pas savoir s'ils ont l'âge. L'aperçu les compte à part, en « âge
+> inconnu », et ils ne reçoivent rien.
 
 ---
 
-## 7. La recette avant d'ouvrir
+## 5. En attendant le déploiement : le formulaire autonome
 
-- [ ] Le formulaire s'enchaîne sans accroc sur téléphone, en 4G.
-- [ ] L'email **01 · Candidature reçue** arrive — regarde aussi les spams.
-- [ ] La fiche apparaît dans `/admin` avec ses photos.
-- [ ] Valider programme bien l'email 02, et la fiche annonce l'heure d'envoi.
-- [ ] Passer `DELAI_REPONSE_MINUTES` à `1440` et `VOTES_REQUIS` à `2`.
-- [ ] Exécuter `supabase/05_soirees.sql` avant de publier la première soirée.
-- [ ] Renseigner `ADMIN_CODE` avant d'ouvrir les inscriptions au public.
+Si tu veux remplacer Tally **avant** d'avoir déployé, colle
+[`formulaire-autonome-court.html`](formulaire-autonome-court.html) ou
+[`formulaire-autonome-complet.html`](formulaire-autonome-complet.html) — un
+seul des deux — dans le bloc HTML de la page.
 
-Trois commandes de vérification :
+Le navigateur écrit alors directement dans Supabase. Les candidatures et les
+photos sont conservées, et tu les retrouves dans ton back-office local.
+**Aucun email n'est envoyé** : cela demande un serveur.
 
-```bash
-# Hors ligne : tout, de l'inscription aux emails. Démarre et éteint tout seul.
-npm run test:curation
+1. Exécute `supabase/06_formulaire_autonome.sql` — il autorise la clé publique
+   à écrire une candidature et ses photos, **et rien d'autre** : aucune
+   lecture, aucune modification, aucune suppression.
+2. Dans le fichier, renseigne la ligne `SUPABASE_ANON_KEY`
+   (Supabase → Settings → API → clé **anon public**). L'URL du projet est déjà
+   la bonne. Tant que la clé n'est pas mise, le formulaire le dit à l'écran.
+3. Colle, publie, purge le cache.
 
-# Hors ligne : le formulaire seul. Demande un « npm run dev » à côté.
-npm run test:e2e
+Dès l'application déployée : remets le widget iframe (section 3) et exécute
+`supabase/07_fermer_formulaire_autonome.sql`, qui referme tout.
 
-# En conditions réelles : écrit vraiment dans ton Supabase et envoie vraiment
-# par ton Resend (vers delivered@resend.dev, que personne ne lit), puis efface
-# tout. À lancer après chaque déploiement ou changement de clés.
-npm run test:reel
-```
+---
 
-`test:reel` refuse de démarrer si la base contient déjà des candidatures : il
-ne doit jamais tourner à côté de vraies personnes.
+## 6. La recette avant d'ouvrir
 
-Et pour relire les quatre emails :
+- [ ] `DELAI_REPONSE_MINUTES=1440` en production
+- [ ] `ADMIN_CODE` renseigné
+- [ ] `IP_HASH_SALT` différent de celui du poste local
+- [ ] `/api/health` répond `ok: true` sur `app.in-love.fr`
+- [ ] Une inscription de bout en bout depuis la page WordPress, sur téléphone
+- [ ] L'email « Candidature reçue » arrive (regarde aussi les spams)
+- [ ] La fiche apparaît dans `/admin` avec ses photos
+- [ ] `07_fermer_formulaire_autonome.sql` exécuté si tu avais posé le
+      formulaire autonome
+
+Pour relire les quatre emails sans rien envoyer :
 `https://app.in-love.fr/api/emails/preview?token=<EMAIL_PREVIEW_TOKEN>`
+
+---
+
+## Ce qui reste à construire
+
+- **L'email d'invitation à une soirée**, pour les validés qui ont l'âge. Son
+  texte n'a jamais été rédigé ; c'est la « deuxième partie » de la séquence.
+- **La date de naissance dans le formulaire court**, sans laquelle ces
+  inscrits ne peuvent être ni classés par âge ni invités.

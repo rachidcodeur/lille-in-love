@@ -28,16 +28,13 @@ const rest = async (path) => (await fetch(`${SB}/rest/v1/${path}`, { headers: H 
 let memberId = null;
 let soireeId = null;
 
-// Ce test supprime ce qu'il crée, mais on refuse de tourner sur une base déjà
-// peuplée : une erreur de nettoyage ne doit jamais toucher de vraies personnes.
-const dejaLa = await rest('lil_members?select=id');
-if (dejaLa.length > 0 && process.env.FORCE !== '1') {
-  console.log(
-    `\n[31mArrêt :[0m la base contient déjà ${dejaLa.length} candidature(s).\n` +
-      'Ce test ne doit pas tourner sur des données réelles.\n' +
-      'Relance avec FORCE=1 seulement si ces données sont des essais à toi.',
-  );
-  process.exit(1);
+// Ce test crée sa propre candidature puis la supprime. Il ne touche jamais
+// aux autres lignes : on relève le compte de départ et on vérifie à la fin
+// qu'il n'a pas bougé.
+const departMembres = (await rest('lil_members?select=id')).length;
+const departEmails = (await rest('lil_emails?select=id')).length;
+if (departMembres > 0) {
+  console.log(`  (la base contient déjà ${departMembres} candidature(s) : elles ne seront pas touchées)`);
 }
 
 try {
@@ -106,9 +103,12 @@ try {
       console.log(`      de      : ${mail.from}`);
       console.log(`      à       : ${Array.isArray(mail.to) ? mail.to.join(', ') : mail.to}`);
       console.log(`      objet   : ${mail.subject}`);
-      mail.from?.includes('mariage-parfait.net')
-        ? ok('expédié depuis le domaine vérifié')
-        : bad('mauvais domaine expéditeur', mail.from);
+      // On compare à EMAIL_FROM plutôt qu'à un domaine écrit en dur : le jour
+      // où l'expéditeur change, le test suit sans qu'on y pense.
+      const attendu = (process.env.EMAIL_FROM ?? '').replace(/^.*<|>.*$/g, '');
+      mail.from?.includes(attendu)
+        ? ok(`expédié depuis le domaine vérifié (${attendu})`)
+        : bad('expéditeur inattendu', `${mail.from} au lieu de ${attendu}`);
     } else {
       bad('Resend ne retrouve pas cet email', String(r.status));
     }
@@ -287,9 +287,10 @@ if (memberId) {
 
 const restants = await rest('lil_members?select=id');
 const mailsRestants = await rest('lil_emails?select=id');
-restants.length === 0 && mailsRestants.length === 0
-  ? ok('aucune trace laissée : 0 candidature, 0 email en base')
-  : bad('reste des données', `${restants.length} candidature(s), ${mailsRestants.length} email(s)`);
+restants.length === departMembres && mailsRestants.length === departEmails
+  ? ok(`aucune trace laissée : la base retrouve ses ${departMembres} candidature(s)`)
+  : bad('la base a changé',
+      `${departMembres} → ${restants.length} candidature(s), ${departEmails} → ${mailsRestants.length} email(s)`);
 
 console.log('\n' + (failures.length === 0
   ? '[32mTout est vert — la chaîne fonctionne avec tes vrais comptes.[0m'

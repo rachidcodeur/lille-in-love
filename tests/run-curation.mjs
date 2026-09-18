@@ -26,8 +26,8 @@ const testEnv = {
   SUPABASE_STORAGE_BUCKET: 'lil-photos',
   RESEND_API_KEY: 're_cle_de_test',
   RESEND_BASE_URL: `http://localhost:${FAKE_PORT}`,
-  EMAIL_FROM: 'Lille in Love <contact@lilleinlove.fr>',
-  EMAIL_REPLY_TO: 'contact@lilleinlove.fr',
+  EMAIL_FROM: 'Lille in Love <info@in-love.fr>',
+  EMAIL_REPLY_TO: 'info@in-love.fr',
   IP_HASH_SALT: 'sel-de-test',
   ADMIN_CODE: '',
   // Un seul vote suffit, et chaque réponse part 2 minutes après la décision :
@@ -41,6 +41,32 @@ const testEnv = {
 };
 
 const children = [];
+
+/**
+ * Un port déjà occupé ferait échouer le démarrage en silence : le test
+ * parlerait alors à un autre serveur, avec d'autres données, et échouerait
+ * pour de mauvaises raisons. On préfère s'arrêter net.
+ */
+async function exigerPortLibre(port, quoi) {
+  const { createServer } = await import('node:net');
+  await new Promise((resolve, reject) => {
+    const sonde = createServer();
+    sonde.once('error', (e) =>
+      reject(
+        e.code === 'EADDRINUSE'
+          ? new Error(
+              `Le port ${port} est déjà utilisé (${quoi}).\n` +
+                `  Arrête ce qui l'occupe :  lsof -ti tcp:${port} -sTCP:LISTEN | xargs kill`,
+            )
+          : e,
+      ),
+    );
+    sonde.once('listening', () => sonde.close(resolve));
+    // Sans hôte, comme les serveurs de test : écouter sur 127.0.0.1 seul
+    // réussirait alors qu'un autre processus occupe déjà toutes les interfaces.
+    sonde.listen(port);
+  });
+}
 
 function start(command, args, env, name) {
   const child = spawn(command, args, { cwd: ROOT, env, stdio: 'pipe' });
@@ -85,6 +111,9 @@ process.on('SIGINT', () => {
 });
 
 try {
+  await exigerPortLibre(FAKE_PORT, 'faux Supabase + Resend');
+  await exigerPortLibre(APP_PORT, 'application de test');
+
   console.log('Démarrage du faux Supabase + Resend…');
   start('node', [join(HERE, 'fake-backend/server.mjs')], { ...process.env, FAKE_PORT: String(FAKE_PORT) }, 'fake');
   await waitFor(`http://localhost:${FAKE_PORT}/__state`, 'le faux service');

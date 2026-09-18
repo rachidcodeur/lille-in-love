@@ -267,8 +267,13 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
       .filter((p) => p.status === 'pret' && p.path)
       .map((p) => ({ path: p.path!, mimeType: p.mimeType, sizeBytes: p.sizeBytes }));
 
+    // Une étape qui porte une mention remplace la case à cocher : l'envoi
+    // vaut acceptation.
+    const consentementImplicite = STEPS.some((etape) => Boolean(etape.mention));
+
     const payload = {
       ...values,
+      consent: consentementImplicite ? true : values.consent === true,
       formVersion: version,
       photos,
       ...(version === 'complet' ? { heightCm: Number(values.heightCm) } : {}),
@@ -472,17 +477,25 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
         <div className="lil-nav">
           {index > 0 && (
             <button type="button" className="lil-btn lil-btn-ghost" onClick={goBack}>
-              Retour
+              Précédent
             </button>
           )}
           <button type="submit" className="lil-btn lil-btn-primary" disabled={submitting}>
-            {submitting ? 'Envoi…' : isLast ? 'Envoyer ma candidature' : 'Continuer'}
+            {submitting ? 'Envoi…' : isLast ? 'Envoyer ma candidature' : 'Suivant'}
           </button>
         </div>
 
+        {step.mention && (
+          <p
+            className="lil-mention"
+            // Le texte vient de questions.ts, pas d'une saisie utilisateur.
+            dangerouslySetInnerHTML={{ __html: step.mention }}
+          />
+        )}
+
         {!isLast && canSubmitWithEnter && (
           <p className="lil-hint">
-            Appuie sur <kbd>Entrée</kbd> pour continuer
+            Appuie sur <kbd>Entrée</kbd> pour passer à la suite
           </p>
         )}
       </form>

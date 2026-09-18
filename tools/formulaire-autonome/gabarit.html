@@ -1,0 +1,770 @@
+<!-- =====================================================================
+     LILLE IN LOVE — inscription · __TITRE__
+     =====================================================================
+
+     __RESUME__
+
+     À COLLER dans un bloc « HTML personnalisé » de la page
+     in-love.fr/inscription/, à la place du formulaire Tally.
+     Ne colle qu'UN SEUL des deux fichiers : celui-ci, ou
+     __AUTRE_FICHIER__ (le parcours __AUTRE_NOM__).
+
+     C'est une solution d'ATTENTE, le temps de déployer l'application.
+     Le navigateur écrit directement dans Supabase : les candidatures et les
+     photos sont conservées, mais AUCUN email n'est envoyé (l'envoi demande
+     un serveur). L'écran de fin l'annonce sans rien promettre de faux.
+
+     AVANT DE COLLER :
+       1. exécute supabase/06_formulaire_autonome.sql dans Supabase ;
+       2. renseigne les deux lignes « À RENSEIGNER » plus bas
+          (Supabase → Settings → API → « Project URL » et clé « anon public »).
+     Il n'y a rien d'autre à régler : ce fichier est déjà le parcours __PARCOURS__.
+
+     UNE FOIS L'APPLICATION DÉPLOYÉE : remplace tout ce bloc par le widget
+     iframe (docs/widget-wordpress.html) et exécute
+     supabase/07_fermer_formulaire_autonome.sql.
+     ===================================================================== -->
+
+<div id="lilx-racine"></div>
+
+<style>
+/* Tout est préfixé « lilx- » et repart de zéro : le thème WordPress ne doit
+   ni déteindre sur le formulaire, ni être affecté par lui. */
+#lilx-racine, #lilx-racine * { box-sizing: border-box; }
+/* Un thème WordPress impose souvent ses propres règles à button, input et img.
+   On reprend la main sur chacun, sinon les pastilles s'étirent sur toute la
+   largeur, les images héritent d'une bordure, la case à cocher devient énorme. */
+#lilx-racine button { width: auto; min-width: 0; height: auto; min-height: 0; margin: 0;
+  box-shadow: none; text-shadow: none; float: none; }
+#lilx-racine img { border: 0; max-width: 100%; box-shadow: none; }
+#lilx-racine input[type="checkbox"] { appearance: auto; -webkit-appearance: checkbox;
+  border: 0; padding: 0; background: none; box-shadow: none; min-width: 0; min-height: 0; }
+#lilx-racine p, #lilx-racine h2, #lilx-racine label, #lilx-racine div { text-align: left; }
+#lilx-racine {
+  --lilx-cream:#fdfbf9; --lilx-sand:#f6f0e4; --lilx-sand2:#f1e9dc;
+  --lilx-gold:#c3b291; --lilx-gold-soft:#e4d6b4; --lilx-gold-deep:#a8946e;
+  --lilx-ink:#1c130f; --lilx-ink2:#2d1e16; --lilx-soft:#77664c; --lilx-muted:#9c9186;
+  --lilx-border:#e7dcc5; --lilx-error:#b3261e; --lilx-error-bg:#fdf0ef;
+  --lilx-font:'Bricolage Grotesque',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  font-family: var(--lilx-font);
+  color: var(--lilx-ink);
+  max-width: 620px; margin: 0 auto; padding: 8px 0 32px;
+  text-align: left; line-height: 1.5;
+}
+#lilx-racine .lilx-carte {
+  background:#fff; border:1px solid var(--lilx-border); border-radius:16px;
+  padding:32px 30px 28px; box-shadow:0 4px 16px rgba(28,19,15,.07);
+}
+@media (max-width:520px){ #lilx-racine .lilx-carte{ padding:24px 18px 22px; border-radius:12px; } }
+
+#lilx-racine .lilx-progres{ display:flex; align-items:center; gap:14px; margin-bottom:26px; }
+#lilx-racine .lilx-piste{ flex:1; height:5px; background:var(--lilx-sand2); border-radius:999px; overflow:hidden; }
+#lilx-racine .lilx-barre{ height:100%; background:linear-gradient(90deg,var(--lilx-gold-soft),var(--lilx-gold-deep));
+  border-radius:999px; transition:width .42s cubic-bezier(.22,1,.36,1); }
+#lilx-racine .lilx-compte{ font-size:12px; font-weight:600; letter-spacing:.08em; color:var(--lilx-muted);
+  font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+#lilx-racine .lilx-section{ font-size:11px; font-weight:700; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--lilx-gold-deep); margin:0 0 10px; }
+#lilx-racine .lilx-question{ font-size:26px; line-height:1.25; font-weight:600; letter-spacing:-.015em;
+  margin:0 0 8px; color:var(--lilx-ink); }
+#lilx-racine .lilx-aide{ font-size:15px; line-height:1.55; color:var(--lilx-soft); margin:0 0 6px; }
+#lilx-racine .lilx-note{ font-size:13.5px; line-height:1.55; font-style:italic; color:var(--lilx-muted); margin:0 0 6px; }
+@media (max-width:520px){ #lilx-racine .lilx-question{ font-size:22px; } }
+
+#lilx-racine .lilx-champs{ display:flex; flex-direction:column; gap:20px; margin-top:24px; }
+#lilx-racine .lilx-label{ display:block; font-size:14px; font-weight:600; color:var(--lilx-ink2); margin-bottom:8px; }
+#lilx-racine .lilx-sous{ font-size:13px; color:var(--lilx-muted); margin:6px 0 0; }
+#lilx-racine input.lilx-saisie, #lilx-racine textarea.lilx-saisie, #lilx-racine select.lilx-saisie{
+  width:100%; font-family:var(--lilx-font); font-size:16px; line-height:1.5; color:var(--lilx-ink);
+  background:var(--lilx-cream); border:1.5px solid var(--lilx-border); border-radius:12px; padding:13px 15px;
+  appearance:none; margin:0; transition:border-color .15s,box-shadow .15s,background .15s; height:auto;
+}
+#lilx-racine textarea.lilx-saisie{ min-height:112px; resize:vertical; }
+#lilx-racine .lilx-saisie:focus{ outline:none; border-color:var(--lilx-gold-deep); background:#fff;
+  box-shadow:0 0 0 3px rgba(195,178,145,.35); }
+#lilx-racine .lilx-saisie[aria-invalid="true"]{ border-color:var(--lilx-error); background:var(--lilx-error-bg); }
+#lilx-racine select.lilx-saisie{
+  background-image:url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%2377664C' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 15px center; padding-right:42px; cursor:pointer; }
+#lilx-racine .lilx-compteur{ display:block; text-align:right; font-size:12px; color:var(--lilx-muted); margin-top:6px;
+  font-variant-numeric:tabular-nums; }
+#lilx-racine .lilx-erreur{ display:flex; gap:6px; font-size:13.5px; line-height:1.45; color:var(--lilx-error); margin:8px 0 0; }
+
+#lilx-racine .lilx-choix{ display:flex; flex-direction:column; gap:10px; }
+#lilx-racine button.lilx-opt{ display:flex; align-items:center; gap:13px; width:100%; text-align:left;
+  font-family:var(--lilx-font); font-size:16.5px; font-weight:500; color:var(--lilx-ink); background:var(--lilx-cream);
+  border:1.5px solid var(--lilx-border); border-radius:12px; padding:16px 18px; cursor:pointer;
+  transition:border-color .14s,background .14s; text-transform:none; letter-spacing:normal; }
+#lilx-racine button.lilx-opt:hover{ border-color:var(--lilx-gold); background:#fff; }
+#lilx-racine button.lilx-opt[aria-checked="true"]{ border-color:var(--lilx-gold-deep); background:var(--lilx-sand); }
+#lilx-racine .lilx-puce{ flex:0 0 auto; width:20px; height:20px; border:1.5px solid var(--lilx-gold);
+  border-radius:50%; display:grid; place-items:center; }
+#lilx-racine button.lilx-opt[aria-checked="true"] .lilx-puce{ border-color:var(--lilx-gold-deep); background:var(--lilx-gold-deep); }
+#lilx-racine .lilx-puce::after{ content:''; width:8px; height:8px; border-radius:50%; background:#fff; transform:scale(0);
+  transition:transform .16s cubic-bezier(.22,1,.36,1); }
+#lilx-racine button.lilx-opt[aria-checked="true"] .lilx-puce::after{ transform:scale(1); }
+
+#lilx-racine .lilx-pastilles{ display:flex; flex-wrap:wrap; gap:9px; }
+#lilx-racine button.lilx-pastille{ width:auto; font-family:var(--lilx-font); font-size:15px; font-weight:500; color:var(--lilx-ink);
+  background:var(--lilx-cream); border:1.5px solid var(--lilx-border); border-radius:999px; padding:10px 17px;
+  cursor:pointer; transition:border-color .14s,background .14s,color .14s; text-transform:none; letter-spacing:normal; }
+#lilx-racine button.lilx-pastille:hover{ border-color:var(--lilx-gold); }
+#lilx-racine button.lilx-pastille[aria-pressed="true"]{ background:var(--lilx-ink); border-color:var(--lilx-ink); color:var(--lilx-sand); }
+
+#lilx-racine .lilx-consent{ display:flex; align-items:flex-start; gap:12px; background:var(--lilx-sand);
+  border:1.5px solid var(--lilx-border); border-radius:12px; padding:16px 18px; cursor:pointer; }
+#lilx-racine .lilx-consent input{ flex:0 0 auto; width:19px; height:19px; margin:1px 0 0; accent-color:var(--lilx-ink); }
+#lilx-racine .lilx-consent span{ font-size:14.5px; line-height:1.55; color:var(--lilx-ink2); }
+#lilx-racine .lilx-consent a{ color:var(--lilx-ink); text-underline-offset:2px; }
+
+#lilx-racine .lilx-depot, #lilx-racine .lilx-depot *{ text-align:center; }
+#lilx-racine .lilx-depot{ border:2px dashed var(--lilx-gold); border-radius:12px; background:var(--lilx-cream);
+  padding:30px 20px; text-align:center; cursor:pointer; transition:border-color .14s,background .14s; }
+#lilx-racine .lilx-depot:hover{ border-color:var(--lilx-gold-deep); background:var(--lilx-sand); }
+#lilx-racine .lilx-depot-titre{ font-size:16px; font-weight:600; color:var(--lilx-ink); margin:0 0 5px; }
+#lilx-racine .lilx-depot-sous{ font-size:13.5px; color:var(--lilx-soft); margin:0; }
+#lilx-racine .lilx-vignettes{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px; }
+#lilx-racine .lilx-vignette{ position:relative; aspect-ratio:3/4; border-radius:12px; overflow:hidden;
+  background:var(--lilx-sand2); border:1px solid var(--lilx-border); }
+#lilx-racine .lilx-vignette img{ width:100%; height:100%; object-fit:cover; display:block; border:0; }
+#lilx-racine button.lilx-retirer{ position:absolute; top:7px; right:7px; width:27px; height:27px; display:grid;
+  place-items:center; border:none; border-radius:50%; background:rgba(28,19,15,.72); color:#fff; font-size:15px;
+  line-height:1; cursor:pointer; padding:0; }
+
+#lilx-racine .lilx-nav{ display:flex; align-items:center; gap:12px; margin-top:28px; padding-top:22px;
+  border-top:1px solid var(--lilx-border); }
+#lilx-racine button.lilx-btn{ font-family:var(--lilx-font); font-size:16px; font-weight:600; border-radius:999px;
+  padding:14px 28px; border:1.5px solid transparent; cursor:pointer; text-transform:none; letter-spacing:normal;
+  transition:background .15s,color .15s,border-color .15s,opacity .15s; width:auto; }
+#lilx-racine button.lilx-principal{ background:var(--lilx-ink); color:var(--lilx-sand); margin-left:auto; }
+#lilx-racine button.lilx-principal:hover:not(:disabled){ background:var(--lilx-ink2); }
+#lilx-racine button.lilx-principal:disabled{ opacity:.5; cursor:not-allowed; }
+#lilx-racine button.lilx-discret{ background:transparent; color:var(--lilx-soft); border-color:var(--lilx-border); padding:14px 22px; }
+#lilx-racine button.lilx-discret:hover{ color:var(--lilx-ink); border-color:var(--lilx-gold); }
+
+#lilx-racine .lilx-alerte{ background:var(--lilx-error-bg); border:1px solid rgba(179,38,30,.25); border-radius:12px;
+  padding:14px 16px; font-size:14.5px; line-height:1.55; color:var(--lilx-error); margin-bottom:20px; }
+
+#lilx-racine .lilx-fin, #lilx-racine .lilx-fin *{ text-align:center; }
+#lilx-racine .lilx-fin{ text-align:center; padding:18px 6px 8px; }
+#lilx-racine .lilx-sceau{ width:62px; height:62px; margin:0 auto 22px; border-radius:50%; background:var(--lilx-sand);
+  border:1.5px solid var(--lilx-gold); display:grid; place-items:center; }
+#lilx-racine .lilx-fin-titre{ font-size:26px; font-weight:600; letter-spacing:-.015em; margin:0 0 12px; color:var(--lilx-ink); }
+#lilx-racine .lilx-fin-texte{ font-size:16px; line-height:1.65; color:var(--lilx-soft); margin:0 auto 14px; max-width:42ch; }
+#lilx-racine .lilx-fin-note{ font-size:13.5px; color:var(--lilx-muted); margin-top:22px; }
+/* L'adresse de contact, aux couleurs du club plutôt qu'en lien bleu souligné. */
+#lilx-racine .lilx-fin-note a{ color:var(--lilx-ink); font-weight:600; text-decoration:underline;
+  text-decoration-color:var(--lilx-gold); text-decoration-thickness:1.5px; text-underline-offset:3px;
+  transition:color .14s,text-decoration-color .14s; }
+#lilx-racine .lilx-fin-note a:hover{ color:var(--lilx-gold-deep); text-decoration-color:var(--lilx-gold-deep); }
+
+#lilx-racine .lilx-mention{ font-size:12.5px; line-height:1.55; color:var(--lilx-muted);
+  text-align:center; margin:14px 0 0; }
+#lilx-racine .lilx-mention a{ color:var(--lilx-soft); text-underline-offset:2px; }
+
+#lilx-racine .lilx-piege{ position:absolute!important; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+@keyframes lilx-entree{ from{ opacity:0; transform:translateY(9px); } to{ opacity:1; transform:none; } }
+#lilx-racine .lilx-etape{ animation:lilx-entree .32s cubic-bezier(.22,1,.36,1); }
+@media (prefers-reduced-motion:reduce){ #lilx-racine .lilx-etape,#lilx-racine .lilx-barre{ animation:none; transition:none; } }
+</style>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================== À RENSEIGNER ================== */
+  var SUPABASE_URL = 'https://sljvoplsedepnecgmjih.supabase.co';   // Settings → API → Project URL
+  var SUPABASE_ANON_KEY = 'COLLE_ICI_TA_CLE_ANON';          // Settings → API → clé « anon public »
+  /* ================================================== */
+
+  var PARCOURS = '__PARCOURS__';   // fixé par ce fichier, ne pas modifier
+  var CONTACT = 'info@in-love.fr';
+
+  var ETAPES = __ETAPES__;
+  var PIEGES = __PIEGES__;
+  var BUCKET = 'lil-photos';
+  var CLE_BROUILLON = 'lilx-brouillon-' + PARCOURS;
+
+  var etapes = ETAPES;
+  var racine = document.getElementById('lilx-racine');
+  if (!racine) return;
+
+  var valeurs = { interests: [], photos: [], consent: false };
+  var erreurs = {};
+  var index = 0;
+  var envoiEnCours = false;
+  var termine = null;
+  var alerte = null;
+
+  /* ---------------- Brouillon ---------------- */
+  try {
+    var brut = localStorage.getItem(CLE_BROUILLON);
+    if (brut) {
+      var sauve = JSON.parse(brut);
+      if (sauve && sauve.valeurs) {
+        Object.keys(sauve.valeurs).forEach(function (k) { valeurs[k] = sauve.valeurs[k]; });
+        valeurs.photos = [];
+      }
+      var plafond = etapes.findIndex(function (e) { return e.id === 'photos'; });
+      if (plafond < 0) plafond = etapes.length - 1;
+      if (typeof sauve.index === 'number') index = Math.max(0, Math.min(sauve.index, plafond));
+    }
+  } catch (e) { /* navigation privée : tant pis */ }
+
+  function sauverBrouillon() {
+    try {
+      var copie = {};
+      Object.keys(valeurs).forEach(function (k) { if (k !== 'photos') copie[k] = valeurs[k]; });
+      localStorage.setItem(CLE_BROUILLON, JSON.stringify({ valeurs: copie, index: index }));
+    } catch (e) { /* ignoré */ }
+  }
+
+  /* ---------------- Aides ---------------- */
+  function visible(champ) {
+    if (!champ.showIf) return true;
+    var actuel = valeurs[champ.showIf.field];
+    if (Array.isArray(actuel)) return actuel.indexOf(champ.showIf.equals) !== -1;
+    return actuel === champ.showIf.equals;
+  }
+
+  function ageDepuis(iso) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso || '');
+    if (!m) return null;
+    var a = +m[1], mo = +m[2], j = +m[3];
+    var d = new Date(Date.UTC(a, mo - 1, j));
+    if (d.getUTCFullYear() !== a || d.getUTCMonth() !== mo - 1 || d.getUTCDate() !== j) return null;
+    var now = new Date(), age = now.getUTCFullYear() - a;
+    var passe = now.getUTCMonth() + 1 > mo || (now.getUTCMonth() + 1 === mo && now.getUTCDate() >= j);
+    if (!passe) age -= 1;
+    return age;
+  }
+
+  function validerEtape(etape) {
+    var e = {};
+    etape.fields.forEach(function (champ) {
+      if (!visible(champ)) return;
+      var v = valeurs[champ.name];
+
+      if (champ.type === 'photos') {
+        var pretes = (v || []).filter(function (p) { return p.statut === 'prete'; });
+        if (!pretes.length) {
+          e[champ.name] = (v || []).some(function (p) { return p.statut === 'attente'; })
+            ? 'Patiente une seconde, la photo se prépare.'
+            : 'Ajoute au moins une photo.';
+        }
+        return;
+      }
+      if (champ.type === 'multi') {
+        if (champ.required && (!Array.isArray(v) || !v.length)) e[champ.name] = 'Choisis au moins une réponse.';
+        return;
+      }
+      if (champ.type === 'consent') {
+        if (champ.required && v !== true) e[champ.name] = 'Il faut accepter le règlement pour continuer.';
+        return;
+      }
+
+      var t = typeof v === 'string' ? v.trim() : '';
+      if (champ.required && !t) {
+        e[champ.name] = (champ.type === 'radio' || champ.type === 'select')
+          ? 'Choisis une réponse.' : 'Ce champ est nécessaire.';
+        return;
+      }
+      if (!t) return;
+
+      if (champ.minLength && t.length < champ.minLength) {
+        e[champ.name] = 'Encore un peu — ' + champ.minLength + ' caractères au minimum.';
+      } else if (champ.type === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(t)) {
+        e[champ.name] = 'Cet email ne semble pas valide.';
+      } else if (champ.type === 'tel' && !/^(?:\+?\d[\d\s.\-()]{7,20})$/.test(t)) {
+        e[champ.name] = 'Ce numéro ne semble pas valide.';
+      } else if (champ.name === 'postalCode' && !/^\d{5}$/.test(t)) {
+        e[champ.name] = 'Un code postal a 5 chiffres.';
+      } else if (champ.type === 'number') {
+        var n = Number(t);
+        if (!isFinite(n)) e[champ.name] = 'Indique un nombre.';
+        else if (champ.min !== undefined && n < champ.min) e[champ.name] = 'Au moins ' + champ.min + '.';
+        else if (champ.max !== undefined && n > champ.max) e[champ.name] = 'Au plus ' + champ.max + '.';
+      } else if (champ.type === 'date') {
+        var age = ageDepuis(t);
+        if (age === null) e[champ.name] = 'Cette date n’existe pas.';
+        else if (age < 18) e[champ.name] = 'Nos soirées sont réservées aux majeurs.';
+        else if (age > 99) e[champ.name] = 'Cette date ne semble pas juste.';
+      }
+    });
+    return e;
+  }
+
+  /* ---------------- Photos ---------------- */
+  function reduire(fichier) {
+    return new Promise(function (resolve) {
+      if (fichier.size < 900 * 1024 || !window.createImageBitmap) return resolve(fichier);
+      createImageBitmap(fichier).then(function (bmp) {
+        var cote = 1600, ratio = Math.min(1, cote / Math.max(bmp.width, bmp.height));
+        if (ratio === 1 && fichier.size < 2 * 1024 * 1024) return resolve(fichier);
+        var c = document.createElement('canvas');
+        c.width = Math.round(bmp.width * ratio); c.height = Math.round(bmp.height * ratio);
+        var ctx = c.getContext('2d');
+        if (!ctx) return resolve(fichier);
+        ctx.drawImage(bmp, 0, 0, c.width, c.height);
+        bmp.close();
+        c.toBlob(function (blob) {
+          if (!blob || blob.size >= fichier.size) return resolve(fichier);
+          resolve(new File([blob], 'photo.jpg', { type: 'image/jpeg' }));
+        }, 'image/jpeg', 0.86);
+      }).catch(function () { resolve(fichier); });
+    });
+  }
+
+  var EXT = { 'image/jpeg':'jpg', 'image/png':'png', 'image/webp':'webp', 'image/heic':'heic', 'image/heif':'heif' };
+
+  function ajouterPhotos(liste) {
+    var max = 3, place = max - valeurs.photos.length;
+    Array.prototype.slice.call(liste, 0, place).forEach(function (fichier) {
+      if (!EXT[fichier.type]) {
+        alerte = 'Format accepté : JPG, PNG, WEBP ou HEIC.';
+        rendre();
+        return;
+      }
+      if (fichier.size > 8 * 1024 * 1024) {
+        alerte = 'Photo trop lourde (8 Mo maximum).';
+        rendre();
+        return;
+      }
+      var entree = { cle: String(Date.now()) + Math.random(), apercu: URL.createObjectURL(fichier),
+                     statut: 'attente', fichier: fichier };
+      valeurs.photos.push(entree);
+      rendre();
+      reduire(fichier).then(function (pret) {
+        entree.fichier = pret;
+        entree.statut = 'prete';
+        rendre();
+      });
+    });
+  }
+
+  /* ---------------- Envoi ---------------- */
+  function entetes(extra) {
+    var h = { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY };
+    Object.keys(extra || {}).forEach(function (k) { h[k] = extra[k]; });
+    return h;
+  }
+
+  // Une étape qui porte une mention remplace la case à cocher : l'envoi vaut
+  // acceptation. On en garde la trace dans consent_at.
+  var CONSENTEMENT_IMPLICITE = etapes.some(function (e) { return Boolean(e.mention); });
+
+  function versLigne(id) {
+    var v = valeurs;
+    var ligne = {
+      id: id,
+      gender: v.gender,
+      first_name: (v.firstName || '').trim(),
+      last_name: (v.lastName || '').trim(),
+      email: (v.email || '').trim().toLowerCase(),
+      // L'envoi vaut acceptation quand une mention le dit ; sinon c'est la
+      // case cochée. La validation garantit que l'un des deux est vrai.
+      consent_at: (CONSENTEMENT_IMPLICITE || v.consent === true) ? new Date().toISOString() : null,
+      status: 'nouveau',
+      form_version: PARCOURS,
+      source: 'wordpress-autonome'
+    };
+    if (PARCOURS === 'complet') {
+      ligne.city = (v.city || '').trim();
+      ligne.postal_code = (v.postalCode || '').trim();
+      ligne.orientation = v.orientation;
+      ligne.has_children = v.hasChildren === 'oui';
+      ligne.looking_for = v.lookingFor;
+      ligne.height_cm = Number(v.heightCm);
+      ligne.about = (v.about || '').trim();
+      ligne.motivation = (v.motivation || '').trim();
+      ligne.interests = v.interests || [];
+      ligne.interests_other = (v.interestsOther || '').trim() || null;
+      ligne.zodiac = v.zodiac || null;
+      ligne.profession = (v.profession || '').trim();
+      ligne.instagram = (v.instagram || '').trim()
+        ? '@' + v.instagram.trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/\/+$/, '').replace(/^@/, '').split(/[/?]/)[0]
+        : null;
+      ligne.comes_with = v.comesWith === 'oui';
+      ligne.companion_first_name = (v.companionFirstName || '').trim() || null;
+      ligne.companion_email = v.comesWith === 'oui' ? ((v.companionEmail || '').trim() || null) : null;
+      ligne.referral = v.referral;
+      ligne.phone = (v.phone || '').replace(/[^\d+]/g, '').replace(/^0(\d{9})$/, '+33$1');
+      ligne.birth_date = v.birthDate;
+    }
+    return ligne;
+  }
+
+  function envoyer() {
+    var derniere = etapes[etapes.length - 1];
+    erreurs = validerEtape(derniere);
+    if (Object.keys(erreurs).length) return rendre();
+
+    // Champ piège rempli : un robot. On remercie sans rien enregistrer.
+    var attrape = PIEGES.some(function (nom) { return (valeurs[nom] || '').length > 0; });
+    if (attrape) {
+      termine = { prenom: valeurs.firstName || '', deja: false };
+      return rendre();
+    }
+
+    if (SUPABASE_ANON_KEY.indexOf('COLLE_ICI') === 0) {
+      alerte = 'Le formulaire n’est pas encore configuré (clé Supabase manquante).';
+      return rendre();
+    }
+
+    envoiEnCours = true; alerte = null; rendre();
+
+    var id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+      : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+          var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+        });
+
+    // 1. la candidature, 2. les fichiers, 3. le lien vers les fichiers.
+    fetch(SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/lil_members', {
+      method: 'POST',
+      headers: entetes({ 'Content-Type': 'application/json', Prefer: 'return=minimal' }),
+      body: JSON.stringify(versLigne(id))
+    }).then(function (r) {
+      if (r.status === 409) { termine = { prenom: valeurs.firstName || '', deja: true }; rendre(); return null; }
+      if (!r.ok) return r.text().then(function (t) { throw new Error('enregistrement refusé (' + r.status + ') ' + t.slice(0, 160)); });
+      return deposerPhotos(id);
+    }).then(function (suite) {
+      if (suite === null) return;
+      try { localStorage.removeItem(CLE_BROUILLON); } catch (e) {}
+      termine = { prenom: valeurs.firstName || '', deja: false };
+      rendre();
+    }).catch(function (err) {
+      envoiEnCours = false;
+      alerte = 'On n’a pas réussi à enregistrer ta candidature. Réessaie, ou écris-nous à ' + CONTACT + '.';
+      if (window.console) console.error('[Lille in Love]', err);
+      rendre();
+    });
+  }
+
+  function deposerPhotos(id) {
+    var base = SUPABASE_URL.replace(/\/+$/, '');
+    var pretes = valeurs.photos.filter(function (p) { return p.statut === 'prete'; });
+    var lignes = [];
+
+    var chaine = pretes.reduce(function (promesse, photo, i) {
+      return promesse.then(function () {
+        var ext = EXT[photo.fichier.type] || 'jpg';
+        var chemin = 'candidatures/' + id + '/' + (i + 1) + '.' + ext;
+        return fetch(base + '/storage/v1/object/' + BUCKET + '/' + chemin, {
+          method: 'POST',
+          headers: entetes({ 'Content-Type': photo.fichier.type, 'x-upsert': 'true' }),
+          body: photo.fichier
+        }).then(function (r) {
+          // Une photo perdue ne doit pas faire échouer une candidature valable.
+          if (r.ok) lignes.push({ member_id: id, storage_path: chemin, position: i + 1,
+                                  mime_type: photo.fichier.type, size_bytes: photo.fichier.size });
+          else if (window.console) console.warn('[Lille in Love] photo non déposée', r.status);
+        });
+      });
+    }, Promise.resolve());
+
+    return chaine.then(function () {
+      if (!lignes.length) return;
+      return fetch(base + '/rest/v1/lil_photos', {
+        method: 'POST',
+        headers: entetes({ 'Content-Type': 'application/json', Prefer: 'return=minimal' }),
+        body: JSON.stringify(lignes)
+      });
+    });
+  }
+
+  /* ---------------- Affichage ---------------- */
+  function el(tag, classe, texte) {
+    var n = document.createElement(tag);
+    if (classe) n.className = classe;
+    if (texte !== undefined) n.textContent = texte;
+    return n;
+  }
+
+  function messageErreur(nom) {
+    if (!erreurs[nom]) return null;
+    var p = el('p', 'lilx-erreur');
+    p.appendChild(el('span', null, '↳'));
+    p.appendChild(el('span', null, erreurs[nom]));
+    return p;
+  }
+
+  function dessinerChamp(champ, surSuite) {
+    var bloc = el('div');
+    if (champ.label && champ.type !== 'consent') {
+      var lab = el('label', 'lilx-label', champ.label);
+      lab.htmlFor = 'lilx-' + champ.name;
+      bloc.appendChild(lab);
+    }
+
+    if (champ.type === 'radio') {
+      var groupe = el('div', 'lilx-choix');
+      (champ.options || []).forEach(function (opt) {
+        var b = el('button', 'lilx-opt');
+        b.type = 'button'; b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', valeurs[champ.name] === opt.value ? 'true' : 'false');
+        b.appendChild(el('span', 'lilx-puce'));
+        b.appendChild(el('span', null, opt.label));
+        b.onclick = function () {
+          valeurs[champ.name] = opt.value;
+          delete erreurs[champ.name];
+          sauverBrouillon();
+          rendre();
+          if (champ.advanceOnSelect) setTimeout(surSuite, 260);
+        };
+        groupe.appendChild(b);
+      });
+      bloc.appendChild(groupe);
+
+    } else if (champ.type === 'multi') {
+      var pastilles = el('div', 'lilx-pastilles');
+      (champ.options || []).forEach(function (opt) {
+        var choisi = (valeurs[champ.name] || []).indexOf(opt.value) !== -1;
+        var b = el('button', 'lilx-pastille', opt.label);
+        b.type = 'button'; b.setAttribute('aria-pressed', choisi ? 'true' : 'false');
+        b.onclick = function () {
+          var liste = valeurs[champ.name] || [];
+          valeurs[champ.name] = choisi ? liste.filter(function (x) { return x !== opt.value; })
+                                       : liste.concat([opt.value]);
+          delete erreurs[champ.name];
+          sauverBrouillon(); rendre();
+        };
+        pastilles.appendChild(b);
+      });
+      bloc.appendChild(pastilles);
+
+    } else if (champ.type === 'select') {
+      var sel = el('select', 'lilx-saisie');
+      sel.id = 'lilx-' + champ.name;
+      var vide = el('option', null, champ.placeholder || 'Choisis une réponse');
+      vide.value = '';
+      sel.appendChild(vide);
+      (champ.options || []).forEach(function (opt) {
+        var o = el('option', null, opt.label); o.value = opt.value;
+        if (valeurs[champ.name] === opt.value) o.selected = true;
+        sel.appendChild(o);
+      });
+      if (erreurs[champ.name]) sel.setAttribute('aria-invalid', 'true');
+      sel.onchange = function () { valeurs[champ.name] = sel.value; delete erreurs[champ.name]; sauverBrouillon(); };
+      bloc.appendChild(sel);
+
+    } else if (champ.type === 'consent') {
+      var lab2 = el('label', 'lilx-consent');
+      var case_ = document.createElement('input');
+      case_.type = 'checkbox'; case_.checked = valeurs[champ.name] === true;
+      case_.onchange = function () { valeurs[champ.name] = case_.checked; delete erreurs[champ.name]; sauverBrouillon(); };
+      var txt = el('span');
+      txt.innerHTML = champ.label || '';
+      lab2.appendChild(case_); lab2.appendChild(txt);
+      bloc.appendChild(lab2);
+
+    } else if (champ.type === 'photos') {
+      bloc.appendChild(zonePhotos());
+
+    } else if (champ.type === 'textarea') {
+      var ta = el('textarea', 'lilx-saisie');
+      ta.id = 'lilx-' + champ.name;
+      ta.placeholder = champ.placeholder || '';
+      ta.value = valeurs[champ.name] || '';
+      if (champ.maxLength) ta.maxLength = champ.maxLength;
+      if (erreurs[champ.name]) ta.setAttribute('aria-invalid', 'true');
+      ta.oninput = function () { valeurs[champ.name] = ta.value; delete erreurs[champ.name]; sauverBrouillon(); maj(); };
+      bloc.appendChild(ta);
+      if (champ.maxLength) {
+        var c = el('span', 'lilx-compteur');
+        var maj = function () {
+          var n = (valeurs[champ.name] || '').length;
+          c.textContent = n >= champ.maxLength * 0.7 ? n + ' / ' + champ.maxLength : '';
+        };
+        maj();
+        bloc.appendChild(c);
+      }
+
+    } else {
+      var inp = document.createElement('input');
+      inp.className = 'lilx-saisie';
+      inp.id = 'lilx-' + champ.name;
+      inp.type = champ.type === 'date' ? 'date' : champ.type === 'email' ? 'email'
+               : champ.type === 'tel' ? 'tel' : 'text';
+      if (champ.type === 'date') {
+        inp.max = new Date(Date.now() - 18 * 365.25 * 864e5).toISOString().slice(0, 10);
+        inp.min = '1925-01-01';
+      }
+      if (champ.inputMode) inp.inputMode = champ.inputMode;
+      if (champ.autoComplete) inp.autocomplete = champ.autoComplete;
+      if (champ.maxLength) inp.maxLength = champ.maxLength;
+      inp.placeholder = champ.placeholder || '';
+      inp.value = valeurs[champ.name] || '';
+      if (erreurs[champ.name]) inp.setAttribute('aria-invalid', 'true');
+      inp.oninput = function () {
+        valeurs[champ.name] = champ.type === 'number' ? inp.value.replace(/[^\d]/g, '') : inp.value;
+        if (champ.type === 'number') inp.value = valeurs[champ.name];
+        delete erreurs[champ.name];
+        sauverBrouillon();
+      };
+      bloc.appendChild(inp);
+    }
+
+    if (champ.help) bloc.appendChild(el('p', 'lilx-sous', champ.help));
+    var err = messageErreur(champ.name);
+    if (err) bloc.appendChild(err);
+    return bloc;
+  }
+
+  function zonePhotos() {
+    var bloc = el('div');
+    var entree = document.createElement('input');
+    entree.type = 'file'; entree.accept = 'image/jpeg,image/png,image/webp,image/heic,image/heif';
+    entree.multiple = true; entree.hidden = true;
+    entree.onchange = function () { ajouterPhotos(entree.files); entree.value = ''; };
+
+    if (valeurs.photos.length < 3) {
+      var zone = el('div', 'lilx-depot');
+      zone.setAttribute('role', 'button'); zone.tabIndex = 0;
+      zone.appendChild(el('p', 'lilx-depot-titre',
+        valeurs.photos.length ? 'Ajouter une autre photo' : 'Choisis tes photos'));
+      zone.appendChild(el('p', 'lilx-depot-sous',
+        'JPG, PNG ou HEIC — ' + (3 - valeurs.photos.length) + ' restante' + (3 - valeurs.photos.length > 1 ? 's' : '')));
+      zone.onclick = function () { entree.click(); };
+      zone.onkeydown = function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); entree.click(); } };
+      zone.ondragover = function (ev) { ev.preventDefault(); };
+      zone.ondrop = function (ev) { ev.preventDefault(); ajouterPhotos(ev.dataTransfer.files); };
+      bloc.appendChild(zone);
+    }
+    bloc.appendChild(entree);
+
+    if (valeurs.photos.length) {
+      var grille = el('div', 'lilx-vignettes');
+      valeurs.photos.forEach(function (photo) {
+        var v = el('div', 'lilx-vignette');
+        var img = document.createElement('img');
+        img.src = photo.apercu; img.alt = '';
+        v.appendChild(img);
+        var x = el('button', 'lilx-retirer', '×');
+        x.type = 'button'; x.setAttribute('aria-label', 'Retirer cette photo');
+        x.onclick = function () {
+          URL.revokeObjectURL(photo.apercu);
+          valeurs.photos = valeurs.photos.filter(function (p) { return p.cle !== photo.cle; });
+          rendre();
+        };
+        v.appendChild(x);
+        grille.appendChild(v);
+      });
+      bloc.appendChild(grille);
+    }
+    return bloc;
+  }
+
+  function ecranFin() {
+    var carte = el('div', 'lilx-carte');
+    var fin = el('div', 'lilx-fin lilx-etape');
+    var sceau = el('div', 'lilx-sceau');
+    sceau.innerHTML = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">' +
+      '<path d="M4 12.5l5 5L20 6.5" stroke="#A8946E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    fin.appendChild(sceau);
+
+    if (termine.deja) {
+      fin.appendChild(el('h2', 'lilx-fin-titre', 'On t’a déjà, ' + termine.prenom));
+      fin.appendChild(el('p', 'lilx-fin-texte',
+        'Tu as déjà rempli le questionnaire avec cet email — pas besoin de recommencer. Ta candidature est bien dans nos mains.'));
+    } else {
+      fin.appendChild(el('h2', 'lilx-fin-titre', 'C’est envoyé, ' + termine.prenom));
+      fin.appendChild(el('p', 'lilx-fin-texte',
+        'Chez nous, pas d’algorithme : on lit chaque profil à la main. C’est plus lent, mais c’est exactement ce qui fait que les soirées se passent bien.'));
+      fin.appendChild(el('p', 'lilx-fin-texte',
+        'On revient vers toi très vite, par email. D’ici là, tu n’as rien à faire.'));
+    }
+
+    var note = el('p', 'lilx-fin-note');
+    note.appendChild(el('span', null, 'Une question ? Écris-nous à '));
+    var lien = el('a', null, CONTACT);
+    lien.href = 'mailto:' + CONTACT;
+    note.appendChild(lien);
+    fin.appendChild(note);
+
+    carte.appendChild(fin);
+    return carte;
+  }
+
+  function rendre() {
+    racine.innerHTML = '';
+    if (termine) { racine.appendChild(ecranFin()); return; }
+
+    var etape = etapes[index];
+    var derniere = index === etapes.length - 1;
+    var form = el('form', 'lilx-carte');
+    form.noValidate = true;
+    form.onsubmit = function (ev) { ev.preventDefault(); derniere ? envoyer() : suivante(); };
+
+    var progres = el('div', 'lilx-progres');
+    var piste = el('div', 'lilx-piste');
+    var barre = el('div', 'lilx-barre');
+    barre.style.width = Math.max(Math.round((index / etapes.length) * 100), 4) + '%';
+    piste.appendChild(barre);
+    progres.appendChild(piste);
+    progres.appendChild(el('span', 'lilx-compte', (index + 1) + ' / ' + etapes.length));
+    form.appendChild(progres);
+
+    if (alerte) form.appendChild(el('div', 'lilx-alerte', alerte));
+
+    var bloc = el('div', 'lilx-etape');
+    if (etape.section) bloc.appendChild(el('p', 'lilx-section', etape.section));
+    bloc.appendChild(el('h2', 'lilx-question', (etape.number ? etape.number + '. ' : '') + etape.title));
+    if (etape.help) bloc.appendChild(el('p', 'lilx-aide', etape.help));
+    if (etape.note) bloc.appendChild(el('p', 'lilx-note', etape.note));
+
+    var champs = el('div', 'lilx-champs');
+    etape.fields.filter(visible).forEach(function (champ) {
+      champs.appendChild(dessinerChamp(champ, suivante));
+    });
+    bloc.appendChild(champs);
+    form.appendChild(bloc);
+
+    var pieges = el('div', 'lilx-piege');
+    pieges.setAttribute('aria-hidden', 'true');
+    PIEGES.forEach(function (nom) {
+      var i = document.createElement('input');
+      i.type = 'text'; i.tabIndex = -1; i.autocomplete = 'off'; i.name = nom;
+      i.value = valeurs[nom] || '';
+      i.oninput = function () { valeurs[nom] = i.value; };
+      pieges.appendChild(i);
+    });
+    form.appendChild(pieges);
+
+    var nav = el('div', 'lilx-nav');
+    if (index > 0) {
+      var retour = el('button', 'lilx-btn lilx-discret', 'Précédent');
+      retour.type = 'button';
+      retour.onclick = function () { erreurs = {}; index -= 1; sauverBrouillon(); rendre(); };
+      nav.appendChild(retour);
+    }
+    var principal = el('button', 'lilx-btn lilx-principal',
+      envoiEnCours ? 'Envoi…' : (derniere ? 'Envoyer ma candidature' : 'Suivant'));
+    principal.type = 'submit';
+    principal.disabled = envoiEnCours;
+    nav.appendChild(principal);
+    form.appendChild(nav);
+
+    if (etape.mention) {
+      var mention = el('p', 'lilx-mention');
+      // Le texte vient du questionnaire, pas d'une saisie : on peut le poser tel quel.
+      mention.innerHTML = etape.mention;
+      form.appendChild(mention);
+    }
+
+    racine.appendChild(form);
+  }
+
+  function suivante() {
+    erreurs = validerEtape(etapes[index]);
+    if (Object.keys(erreurs).length) return rendre();
+    index = Math.min(etapes.length - 1, index + 1);
+    sauverBrouillon();
+    rendre();
+  }
+
+  rendre();
+})();
+</script>

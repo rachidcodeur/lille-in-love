@@ -42,12 +42,10 @@ export const inscriptionSchema = z
       .min(120, 'Taille invalide')
       .max(230, 'Taille invalide'),
 
-    about: trimmed
-      .min(30, 'Quelques mots de plus, on veut vraiment te connaître')
-      .max(600, 'Un peu plus court, si tu veux bien'),
-    motivation: trimmed
-      .min(20, 'Quelques mots de plus')
-      .max(600, 'Un peu plus court, si tu veux bien'),
+    // Aucune longueur minimale : on préfère deux mots sincères à un
+    // paragraphe écrit pour atteindre un quota.
+    about: trimmed.min(1, 'Dis-nous un mot').max(600, 'Un peu plus court, si tu veux bien'),
+    motivation: trimmed.min(1, 'Dis-nous un mot').max(600, 'Un peu plus court, si tu veux bien'),
 
     interests: z
       .array(z.enum(values(INTERESTS)))
@@ -61,6 +59,8 @@ export const inscriptionSchema = z
 
     comesWith: z.enum(['oui', 'non']),
     companionFirstName: optionalText(60),
+    // Plus demandé par le formulaire ; toléré pour ne pas casser un envoi
+    // qui viendrait d'une page en cache.
     companionEmail: z.string().trim().email('Email invalide').max(180).optional().or(z.literal('')),
 
     referral: z.enum(values(REFERRALS)),
@@ -103,15 +103,6 @@ export const inscriptionSchema = z
     source: optionalText(200),
   })
   .superRefine((data, ctx) => {
-    // Un accompagnant sans email, on ne saurait pas le contacter.
-    if (data.comesWith === 'oui' && !data.companionEmail) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['companionEmail'],
-        message: 'Indique son email pour qu’on puisse lui écrire',
-      });
-    }
-
     // « Autre » coché sans précision : on veut savoir quoi.
     if (data.interests.includes('autre') && !data.interestsOther) {
       ctx.addIssue({

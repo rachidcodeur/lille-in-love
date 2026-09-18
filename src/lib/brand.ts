@@ -10,8 +10,8 @@
 export const BRAND = {
   name: 'Lille in Love',
 
-  /** Adresse publiée sur lilleinlove.fr. */
-  contactEmail: 'contact@lilleinlove.fr',
+  /** L'adresse à laquelle on nous écrit, affichée partout. */
+  contactEmail: 'info@in-love.fr',
 
   /** Pages légales — elles vivent sur lilleinlove.fr, pas sur in-love.fr. */
   reglementUrl: 'https://lilleinlove.fr/reglement',

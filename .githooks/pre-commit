@@ -1,0 +1,26 @@
+#!/bin/sh
+# Refuse de committer une clé dans un fichier versionné.
+#
+# C'est déjà arrivé deux fois avec .env.example : GitHub bloque alors le push,
+# et il faut réécrire le commit. Autant s'arrêter avant.
+#
+# Installé par : git config core.hooksPath .githooks
+
+motif='re_[A-Za-z0-9_-]\{20,\}\|eyJhbGci[A-Za-z0-9._-]\{40,\}'
+
+trouve=$(git diff --cached --name-only --diff-filter=ACM | while read -r f; do
+  [ -f "$f" ] || continue
+  if git show ":$f" 2>/dev/null | grep -q "$motif"; then echo "$f"; fi
+done)
+
+if [ -n "$trouve" ]; then
+  echo ""
+  echo "  Commit refusé : une clé se trouve dans un fichier versionné."
+  echo ""
+  echo "$trouve" | sed 's/^/    /'
+  echo ""
+  echo "  Les vraies clés vont dans .env.local, qui est exclu par .gitignore."
+  echo "  .env.example est un MODÈLE : il ne doit contenir que des valeurs vides."
+  echo ""
+  exit 1
+fi

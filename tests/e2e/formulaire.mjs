@@ -52,7 +52,7 @@ section('Navigation et validation');
     ? ok('aucune erreur affichée à tort')
     : bad('erreur parasite après l’avance automatique');
 
-  await page.getByRole('button', { name: 'Continuer' }).click();
+  await page.getByRole('button', { name: 'Suivant' }).click();
   await page.waitForTimeout(300);
   (await page.locator('.lil-error').count()) >= 2
     ? ok('les champs obligatoires vides bloquent')
@@ -60,7 +60,7 @@ section('Navigation et validation');
 
   await page.fill('#city', 'Lille');
   await page.fill('#postalCode', '123');
-  await page.getByRole('button', { name: 'Continuer' }).click();
+  await page.getByRole('button', { name: 'Suivant' }).click();
   await page.waitForTimeout(300);
   ((await page.locator('#postalCode-error').innerText().catch(() => '')) || '').includes(
     '5 chiffres',
@@ -69,9 +69,9 @@ section('Navigation et validation');
     : bad('code postal invalide accepté');
 
   await page.fill('#postalCode', '59000');
-  await page.getByRole('button', { name: 'Continuer' }).click();
+  await page.getByRole('button', { name: 'Suivant' }).click();
   await page.waitForTimeout(400);
-  await page.getByRole('button', { name: 'Retour' }).click();
+  await page.getByRole('button', { name: 'Précédent' }).click();
   await page.waitForTimeout(400);
   (await page.inputValue('#city')) === 'Lille'
     ? ok('le bouton Retour conserve les réponses')
@@ -92,7 +92,7 @@ section('Reprise d’un brouillon');
   await page.waitForTimeout(600);
   await page.fill('#city', 'Roubaix');
   await page.fill('#postalCode', '59100');
-  await page.getByRole('button', { name: 'Continuer' }).click();
+  await page.getByRole('button', { name: 'Suivant' }).click();
   await page.waitForTimeout(400);
 
   // Chaque parcours a son propre brouillon : le court et le complet ne
@@ -155,7 +155,7 @@ section('Parcours complet et envoi');
   await page.reload({ waitUntil: 'networkidle' });
 
   const next = async () => {
-    await page.getByRole('button', { name: /Continuer|Envoyer/ }).click();
+    await page.getByRole('button', { name: /Suivant|Envoyer/ }).click();
     await page.waitForTimeout(280);
   };
   const pick = async (name) => {
@@ -172,10 +172,8 @@ section('Parcours complet et envoi');
   await pick('Une relation sérieuse');
   await page.fill('#heightCm', '168');
   await next();
-  await page.fill(
-    '#about',
-    "J'aime les librairies, les longues marches, et les gens qui rient fort au cinéma.",
-  );
+  // Plus de longueur minimale : deux mots suffisent.
+  await page.fill('#about', 'Deux mots.');
   await page.fill('#motivation', 'Marre des applis, envie de rencontrer des gens en vrai.');
   await next();
   await page.getByRole('button', { name: 'Culture & spectacles' }).click();

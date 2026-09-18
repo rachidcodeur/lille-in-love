@@ -130,6 +130,18 @@ async function readBody(req) {
 const server = createServer(async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   const path = url.pathname;
+
+  // Supabase autorise les appels depuis n'importe quelle page web : c'est ce
+  // qui permet au formulaire autonome d'écrire depuis WordPress. On reproduit
+  // ce comportement, sinon le navigateur bloquerait avant d'envoyer.
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin ?? '*');
+  res.setHeader('Access-Control-Allow-Headers', '*, apikey, authorization, content-type, prefer, x-upsert');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Expose-Headers', 'content-range, location');
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    return res.end();
+  }
   const body = await readBody(req);
   const prefer = req.headers['prefer'] ?? '';
   const wantsSingle = String(req.headers['accept'] ?? '').includes('pgrst.object');

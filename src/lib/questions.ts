@@ -54,6 +54,12 @@ export type Step = {
   help?: string;
   /** Précision en petits caractères, sous l'aide. */
   note?: string;
+  /**
+   * Mention affichée sous les boutons, en petits caractères.
+   * Sert au consentement implicite : quand une étape en porte une, envoyer
+   * le formulaire vaut acceptation — pas besoin d'une case à cocher.
+   */
+  mention?: string;
   fields: Field[];
 };
 
@@ -224,7 +230,6 @@ export const STEPS_COMPLET: Step[] = [
         name: 'about',
         type: 'textarea',
         required: true,
-        minLength: 30,
         maxLength: 600,
         placeholder: 'Ce qui te fait rire, ce que tu fais de tes dimanches, ce qui compte pour toi…',
       },
@@ -233,7 +238,6 @@ export const STEPS_COMPLET: Step[] = [
         type: 'textarea',
         label: 'Pourquoi tu veux participer à nos soirées Lille in Love ?',
         required: true,
-        minLength: 20,
         maxLength: 600,
         placeholder: 'Même une phrase honnête suffit.',
       },
@@ -324,15 +328,8 @@ export const STEPS_COMPLET: Step[] = [
         label: 'Son prénom',
         help: 'Optionnel.',
         maxLength: 60,
+        placeholder: 'Pour lui envoyer une invitation',
         showIf: { field: 'comesWith', equals: 'oui' },
-      },
-      {
-        name: 'companionEmail',
-        type: 'email',
-        label: 'Son email',
-        required: true,
-        showIf: { field: 'comesWith', equals: 'oui' },
-        placeholder: 'pour lui envoyer le questionnaire',
       },
     ],
   },
@@ -495,15 +492,11 @@ export const STEPS_COURT: Step[] = [
     title: 'Ajoute tes photos',
     help: '1 à 3 photos de toi, visage visible. Elles servent à te reconnaître le soir et restent privées.',
     note: 'Ta photo pourra éventuellement être utilisée pour t’identifier lors d’un jeu pendant la soirée.',
-    fields: [
-      { name: 'photos', type: 'photos', required: true, min: 1, max: 3 },
-      {
-        name: 'consent',
-        type: 'consent',
-        required: true,
-        label: `J’accepte le <a href="${BRAND.reglementUrl}" target="_blank" rel="noopener">règlement</a> et la <a href="${BRAND.confidentialiteUrl}" target="_blank" rel="noopener">politique de confidentialité</a>.`,
-      },
-    ],
+    // Pas de case à cocher ici : la personne choisit ses photos, on ne lui
+    // demande pas de cocher un encadré juridique au même moment. L'envoi vaut
+    // acceptation, et la mention ci-dessous le dit.
+    mention: `En envoyant ta candidature, tu acceptes le <a href="${BRAND.reglementUrl}" target="_blank" rel="noopener">règlement</a> et la politique de confidentialité.`,
+    fields: [{ name: 'photos', type: 'photos', required: true, min: 1, max: 3 }],
   },
 ];
 

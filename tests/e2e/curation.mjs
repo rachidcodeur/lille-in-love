@@ -47,7 +47,7 @@ await page.waitForTimeout(600);
 await page.fill('#firstName', 'Camille');
 await page.fill('#lastName', 'Dupont');
 await page.fill('#email', 'Camille.Dupont@Example.com');
-await page.getByRole('button', { name: 'Continuer' }).click();
+await page.getByRole('button', { name: 'Suivant' }).click();
 await page.waitForTimeout(400);
 
 const title = await page.locator('.lil-question').innerText();
@@ -59,7 +59,14 @@ await page.waitForTimeout(2500);
   ? ok('2 photos envoyées au stockage')
   : bad('photo bloquée à l’envoi');
 
-await page.locator('.lil-consent input').check();
+// Plus de case à cocher sur l'étape des photos : l'envoi vaut acceptation,
+// et une mention sous le bouton le dit.
+(await page.locator('.lil-consent').count()) === 0
+  ? ok('aucune case à cocher sur l’étape des photos')
+  : bad('la case de consentement est revenue');
+((await page.locator('.lil-mention').innerText().catch(() => '')) || '').includes('acceptes')
+  ? ok('la mention d’acceptation est affichée sous le bouton')
+  : bad('mention d’acceptation absente');
 // Le garde anti-robot écarte tout formulaire rempli en moins de 12 secondes.
 await page.waitForTimeout(11000);
 await page.getByRole('button', { name: 'Envoyer ma candidature' }).click();
