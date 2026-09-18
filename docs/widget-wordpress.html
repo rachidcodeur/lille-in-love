@@ -1,0 +1,25 @@
+<!-- =====================================================================
+     LILLE IN LOVE — formulaire d'inscription
+     À coller dans un bloc « HTML personnalisé » sur in-love.fr/inscription/,
+     à l'emplacement exact où se trouve aujourd'hui le formulaire Tally.
+
+     Deux choses à adapter :
+       • https://app.in-love.fr → l'adresse réelle de ton application,
+         aux DEUX endroits (data-lil-app et src du script)
+       • data-lil-form → "court" pendant les tests, "complet" ensuite
+
+     data-lil-app n'est pas facultatif sur un WordPress Hostinger : LiteSpeed
+     Cache peut regrouper les scripts, et le formulaire ne saurait plus où
+     se trouve l'application.
+     ===================================================================== -->
+
+<div data-lil-form="court" data-lil-app="https://app.in-love.fr" data-min-height="560"></div>
+<script src="https://app.in-love.fr/embed.js" async></script>
+
+<noscript>
+  <p style="text-align:center;font-family:'Bricolage Grotesque',sans-serif;color:#77664C;">
+    Le formulaire a besoin de JavaScript pour s'afficher.
+    Écris-nous à <a href="mailto:contact@lilleinlove.fr">contact@lilleinlove.fr</a>
+    et on t'envoie le questionnaire.
+  </p>
+</noscript>

@@ -1,0 +1,682 @@
+/* =====================================================================
+   LILLE IN LOVE — Formulaire d'inscription
+   Palette et typographie reprises de in-love.fr pour que l'iframe se fonde
+   dans la page WordPress sans raccord visible.
+   ===================================================================== */
+
+:root {
+  --cream: #fdfbf9;
+  --sand: #f6f0e4;
+  --sand-deep: #f1e9dc;
+  --gold: #c3b291;
+  --gold-soft: #e4d6b4;
+  --gold-deep: #a8946e;
+  --ink: #1c130f;
+  --ink-2: #2d1e16;
+  --ink-soft: #77664c;
+  --ink-muted: #9c9186;
+  --border: #e7dcc5;
+  --white: #ffffff;
+  --error: #b3261e;
+  --error-bg: #fdf0ef;
+  --success: #3f6b4f;
+
+  --radius: 12px;
+  --radius-lg: 16px;
+  --shadow-sm: 0 1px 2px rgba(28, 19, 15, 0.05);
+  --shadow-md: 0 4px 16px rgba(28, 19, 15, 0.07);
+  --shadow-focus: 0 0 0 3px rgba(195, 178, 145, 0.35);
+
+  --font: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Le formulaire vit dans une iframe : fond transparent pour laisser voir la
+   page WordPress derrière. La page de test, elle, pose son propre fond. */
+body {
+  background: transparent;
+}
+
+/* ------------------------------------------------------------------ */
+/* Ossature                                                            */
+/* ------------------------------------------------------------------ */
+
+.lil-shell {
+  width: 100%;
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 24px 20px 40px;
+}
+
+.lil-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 32px 30px 28px;
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 520px) {
+  .lil-shell {
+    padding: 16px 14px 32px;
+  }
+  .lil-card {
+    padding: 24px 18px 22px;
+    border-radius: var(--radius);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Progression                                                         */
+/* ------------------------------------------------------------------ */
+
+.lil-progress {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 26px;
+}
+
+.lil-progress-track {
+  flex: 1;
+  height: 5px;
+  background: var(--sand-deep);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.lil-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold-soft), var(--gold-deep));
+  border-radius: 999px;
+  transition: width 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lil-progress-count {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------------ */
+/* En-tête de question                                                 */
+/* ------------------------------------------------------------------ */
+
+.lil-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  margin: 0 0 10px;
+}
+
+.lil-question {
+  font-size: 26px;
+  line-height: 1.25;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin: 0 0 8px;
+}
+
+.lil-help {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin: 0 0 24px;
+}
+
+.lil-note {
+  font-size: 13.5px;
+  line-height: 1.55;
+  font-style: italic;
+  color: var(--ink-muted);
+  margin: -14px 0 22px;
+}
+
+.lil-question + .lil-fields {
+  margin-top: 24px;
+}
+
+@media (max-width: 520px) {
+  .lil-question {
+    font-size: 22px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Champs                                                              */
+/* ------------------------------------------------------------------ */
+
+.lil-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.lil-field-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-2);
+  margin-bottom: 8px;
+}
+
+.lil-field-help {
+  font-size: 13px;
+  color: var(--ink-muted);
+  margin: 6px 0 0;
+}
+
+.lil-input,
+.lil-textarea,
+.lil-select {
+  width: 100%;
+  font-family: var(--font);
+  font-size: 16px; /* < 16px déclenche le zoom automatique sur iOS */
+  line-height: 1.5;
+  color: var(--ink);
+  background: var(--cream);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 13px 15px;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+  appearance: none;
+}
+
+.lil-input::placeholder,
+.lil-textarea::placeholder {
+  color: var(--ink-muted);
+  opacity: 0.75;
+}
+
+.lil-input:focus,
+.lil-textarea:focus,
+.lil-select:focus {
+  outline: none;
+  border-color: var(--gold-deep);
+  background: var(--white);
+  box-shadow: var(--shadow-focus);
+}
+
+.lil-textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.lil-select {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%2377664C' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 15px center;
+  padding-right: 42px;
+  cursor: pointer;
+}
+
+.lil-counter {
+  display: block;
+  text-align: right;
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lil-counter[data-over='true'] {
+  color: var(--error);
+}
+
+/* Champs invalides */
+.lil-input[aria-invalid='true'],
+.lil-textarea[aria-invalid='true'],
+.lil-select[aria-invalid='true'] {
+  border-color: var(--error);
+  background: var(--error-bg);
+}
+
+.lil-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 13.5px;
+  line-height: 1.45;
+  color: var(--error);
+  margin: 8px 0 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Choix (radio) et sélection multiple                                 */
+/* ------------------------------------------------------------------ */
+
+.lil-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lil-choice {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  width: 100%;
+  text-align: left;
+  font-family: var(--font);
+  font-size: 16.5px;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--cream);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.lil-choice:hover {
+  border-color: var(--gold);
+  background: var(--white);
+}
+
+.lil-choice:focus-visible {
+  outline: none;
+  border-color: var(--gold-deep);
+  box-shadow: var(--shadow-focus);
+}
+
+.lil-choice[aria-checked='true'] {
+  border-color: var(--gold-deep);
+  background: var(--sand);
+}
+
+.lil-choice-mark {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: 1.5px solid var(--gold);
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  transition: border-color 140ms ease;
+}
+
+.lil-choice[aria-checked='true'] .lil-choice-mark {
+  border-color: var(--gold-deep);
+  background: var(--gold-deep);
+}
+
+.lil-choice-mark::after {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--white);
+  transform: scale(0);
+  transition: transform 160ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.lil-choice[aria-checked='true'] .lil-choice-mark::after {
+  transform: scale(1);
+}
+
+/* Sélection multiple : pastilles carrées */
+.lil-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.lil-chip {
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
+  background: var(--cream);
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  padding: 10px 17px;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+
+.lil-chip:hover {
+  border-color: var(--gold);
+}
+
+.lil-chip:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.lil-chip[aria-pressed='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--sand);
+}
+
+/* Case à cocher du consentement */
+.lil-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--sand);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  cursor: pointer;
+  transition: border-color 140ms ease;
+}
+
+.lil-consent:hover {
+  border-color: var(--gold);
+}
+
+.lil-consent input {
+  flex: 0 0 auto;
+  width: 19px;
+  height: 19px;
+  margin: 1px 0 0;
+  accent-color: var(--ink);
+  cursor: pointer;
+}
+
+.lil-consent span {
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.lil-consent a {
+  color: var(--ink);
+  text-underline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Photos                                                              */
+/* ------------------------------------------------------------------ */
+
+.lil-dropzone {
+  border: 2px dashed var(--gold);
+  border-radius: var(--radius);
+  background: var(--cream);
+  padding: 30px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease;
+}
+
+.lil-dropzone:hover,
+.lil-dropzone[data-dragging='true'] {
+  border-color: var(--gold-deep);
+  background: var(--sand);
+}
+
+.lil-dropzone:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.lil-dropzone-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 5px;
+}
+
+.lil-dropzone-sub {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.lil-thumbs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.lil-thumb {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--sand-deep);
+  border: 1px solid var(--border);
+}
+
+.lil-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.lil-thumb-remove {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 27px;
+  height: 27px;
+  display: grid;
+  place-items: center;
+  border: none;
+  border-radius: 50%;
+  background: rgba(28, 19, 15, 0.72);
+  color: var(--white);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  backdrop-filter: blur(2px);
+}
+
+.lil-thumb-remove:hover {
+  background: rgba(28, 19, 15, 0.9);
+}
+
+.lil-thumb-progress {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(253, 251, 249, 0.82);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+/* ------------------------------------------------------------------ */
+/* Navigation                                                          */
+/* ------------------------------------------------------------------ */
+
+.lil-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 28px;
+  padding-top: 22px;
+  border-top: 1px solid var(--border);
+}
+
+.lil-btn {
+  font-family: var(--font);
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 14px 28px;
+  border: 1.5px solid transparent;
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease, border-color 150ms ease,
+    opacity 150ms ease;
+}
+
+.lil-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.lil-btn-primary {
+  background: var(--ink);
+  color: var(--sand);
+  margin-left: auto;
+}
+
+.lil-btn-primary:hover:not(:disabled) {
+  background: var(--ink-2);
+}
+
+.lil-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.lil-btn-ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  border-color: var(--border);
+  padding: 14px 22px;
+}
+
+.lil-btn-ghost:hover {
+  color: var(--ink);
+  border-color: var(--gold);
+}
+
+.lil-hint {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  text-align: center;
+  margin: 14px 0 0;
+}
+
+.lil-hint kbd {
+  font-family: var(--font);
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--sand-deep);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 2px 6px;
+}
+
+@media (max-width: 400px) {
+  .lil-hint {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Messages globaux                                                    */
+/* ------------------------------------------------------------------ */
+
+.lil-alert {
+  background: var(--error-bg);
+  border: 1px solid rgba(179, 38, 30, 0.25);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--error);
+  margin-bottom: 20px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Écran de fin                                                        */
+/* ------------------------------------------------------------------ */
+
+.lil-done {
+  text-align: center;
+  padding: 18px 6px 8px;
+}
+
+.lil-done-seal {
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 22px;
+  border-radius: 50%;
+  background: var(--sand);
+  border: 1.5px solid var(--gold);
+  display: grid;
+  place-items: center;
+}
+
+.lil-done-title {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  margin: 0 0 12px;
+  color: var(--ink);
+}
+
+.lil-done-text {
+  font-size: 16px;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  margin: 0 auto 14px;
+  max-width: 42ch;
+}
+
+.lil-done-note {
+  font-size: 13.5px;
+  color: var(--ink-muted);
+  margin-top: 22px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Transition entre étapes                                             */
+/* ------------------------------------------------------------------ */
+
+@keyframes lil-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(9px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lil-step {
+  animation: lil-step-in 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lil-step,
+  .lil-progress-bar,
+  .lil-choice-mark::after {
+    animation: none;
+    transition: none;
+  }
+}
+
+/* Pièges anti-robot : hors écran, et annoncés comme décoratifs. */
+.lil-trap {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

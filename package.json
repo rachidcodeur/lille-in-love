@@ -1,0 +1,34 @@
+{
+  "name": "lille-in-love",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Formulaire d'inscription Lille in Love + back-office de curation",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "node tests/e2e/formulaire.mjs",
+    "test:curation": "node tests/run-curation.mjs",
+    "test:reel": "node --env-file=.env.local tests/reel.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "next": "^15.5.25",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "resend": "^4.1.2",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.12",
+    "@types/react": "^19.0.7",
+    "@types/react-dom": "^19.0.3",
+    "playwright-core": "^1.49.1",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  }
+}
