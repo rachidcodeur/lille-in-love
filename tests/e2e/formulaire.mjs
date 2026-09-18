@@ -12,7 +12,9 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const BASE = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
+const RACINE = process.env.E2E_BASE_URL ?? 'http://localhost:3000';
+// Le formulaire complet vit à /embed : la racine, elle, mène au back-office.
+const BASE = `${RACINE}/embed`;
 const CHROME =
   process.env.E2E_CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
@@ -291,7 +293,7 @@ section('Hydratation');
   // Les extensions de navigateur posent leurs attributs sur <html> et <body>
   // avant que React n'hydrate : sans suppressHydrationWarning, chaque visiteur
   // équipé d'un gestionnaire de mots de passe verrait une erreur en console.
-  for (const chemin of ['/', '/court', '/embed', '/embed/court']) {
+  for (const chemin of ['/embed', '/embed/court', '/admin']) {
     const page = await browser.newPage();
     const soucis = [];
     page.on('console', (m) => {
@@ -305,7 +307,7 @@ section('Hydratation');
     await page.addInitScript(() => {
       document.body?.setAttribute('data-ext-simulee', '1.0');
     });
-    await page.goto(`${BASE}${chemin}`, { waitUntil: 'networkidle' });
+    await page.goto(`${RACINE}${chemin}`, { waitUntil: 'networkidle' });
     await page.waitForTimeout(1200);
 
     soucis.length === 0

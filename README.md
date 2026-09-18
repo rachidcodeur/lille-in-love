@@ -15,7 +15,7 @@ personne n'est jamais définitivement écarté.
 ```bash
 npm install
 cp .env.example .env.local   # puis remplis les clés
-npm run dev                  # http://localhost:3000
+npm run dev                  # http://localhost:3000 → le back-office
 
 npm run test:curation        # tout, de l'inscription aux emails — sans aucune clé
 npm run test:e2e             # le formulaire seul, dans un navigateur

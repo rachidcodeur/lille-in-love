@@ -30,9 +30,9 @@ npm run dev
 
 | Adresse | Ce que c'est |
 | --- | --- |
-| `localhost:3000/court` | le formulaire court (3 écrans) |
-| `localhost:3000/` | le formulaire complet (16 étapes) |
-| `localhost:3000/admin` | le back-office : candidatures et soirées |
+| `localhost:3000/` | le back-office (la racine y mène directement) |
+| `localhost:3000/embed/court` | le formulaire court (3 écrans) |
+| `localhost:3000/embed` | le formulaire complet (16 étapes) |
 | `localhost:3000/api/health` | ce qui est configuré, ou ce qui manque |
 
 Inscris-toi avec ta propre adresse, puis valide ta fiche dans `/admin` :
@@ -89,20 +89,42 @@ Importer un dépôt Git**, puis :
 
 ### c. Les variables d'environnement
 
-À saisir **avant le premier déploiement** : `ALLOWED_EMBED_ORIGINS` est lue au
-moment du build. Pars de ton `.env.local`, en changeant ces quatre lignes :
+**Le plus simple : importer le fichier tout prêt.** `.env.hostinger.local`, à
+la racine du projet, contient déjà les 14 variables avec les valeurs de
+production (délai à 24 h, nouveau sel, code d'accès). Dans le tableau de bord
+du site : **Variables d'environnement → Importer .env**.
+
+> Ce fichier contient tes clés. Il est exclu de git, ne le partage pas. Il
+> comporte aussi un `ADMIN_CODE` tout neuf : si tu en as déjà saisi un chez
+> Hostinger et que tu préfères le garder, supprime cette ligne avant
+> d'importer.
+
+Si tu préfères les saisir à la main, voilà les 14 noms — **il faut les 14**,
+une seule manquante et l'application ne démarre pas :
+
+```
+SUPABASE_URL                 RESEND_API_KEY          ADMIN_CODE
+SUPABASE_SERVICE_ROLE_KEY    EMAIL_FROM              DELAI_REPONSE_MINUTES
+SUPABASE_STORAGE_BUCKET      EMAIL_REPLY_TO          VOTES_REQUIS
+IP_HASH_SALT                 ALLOWED_EMBED_ORIGINS   MAX_INSCRIPTIONS_PAR_HEURE
+NEXT_PUBLIC_SITE_URL         MAX_PHOTOS_PAR_10MIN
+```
+
+Quatre valeurs diffèrent de ton `.env.local` :
 
 | Variable | En production | Pourquoi |
 | --- | --- | --- |
-| `DELAI_REPONSE_MINUTES` | **`1440`** | 24 h. Ton `.env.local` est à `2` pour les essais. |
+| `DELAI_REPONSE_MINUTES` | **`1440`** | 24 h. En local, c'est `2` pour les essais. |
 | `ADMIN_CODE` | **un code long** | sans lui, `/admin` est public une fois en ligne |
 | `IP_HASH_SALT` | **une nouvelle valeur** | `openssl rand -hex 32` |
 | `VOTES_REQUIS` | `1` ou `2` | `2` pour la règle des deux curateurs |
 
-Les autres se recopient telles quelles : `SUPABASE_URL`,
-`SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`, `RESEND_API_KEY`,
-`EMAIL_FROM`, `EMAIL_REPLY_TO`, `ALLOWED_EMBED_ORIGINS`,
-`NEXT_PUBLIC_SITE_URL`.
+**Après toute modification, redéploie** : les variables sont lues au démarrage,
+et `ALLOWED_EMBED_ORIGINS` dès la construction.
+
+> **`EMAIL_FROM` sans guillemets.** Sa valeur contient des espaces et des
+> chevrons : `Lille in Love <info@in-love.fr>`. Si l'importateur laisse des
+> guillemets autour, Resend refuse l'expéditeur — `/api/health` le signale.
 
 > **`/admin` en ligne sans `ADMIN_CODE`** : n'importe qui trouvant l'adresse
 > voit les noms, emails et photos des candidats — et peut publier une soirée,
@@ -116,9 +138,13 @@ seuls. Compte quelques minutes à quelques heures.
 
 ### e. Vérifier
 
-- `https://app.in-love.fr/api/health` → `"ok": true`, `"problemes": []`
-- `https://app.in-love.fr/court` → le formulaire s'affiche
-- `https://app.in-love.fr/admin` → le code d'accès est demandé
+- `https://app.in-love.fr/api/health` → `"ok": true`, `"problemes": []`,
+  et `"expediteur"` affiche bien `Lille in Love <info@in-love.fr>`
+- `https://app.in-love.fr/` → redirige vers le back-office, qui demande le code
+- `https://app.in-love.fr/embed/court` → le formulaire s'affiche
+
+Si `/api/health` liste des variables vides, elles ne sont pas arrivées jusqu'à
+l'application : vérifie-les dans le tableau de bord, puis **redéploie**.
 
 Chaque `git push` sur `main` redéploie ensuite tout seul.
 

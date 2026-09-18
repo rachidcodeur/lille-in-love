@@ -34,7 +34,7 @@ page.on('pageerror', (e) => bad('erreur JS', e.message));
 /* ================================================================ */
 section('1. Inscription par le formulaire court');
 
-await page.goto(`${BASE}/court`, { waitUntil: 'networkidle' });
+await page.goto(`${BASE}/embed/court`, { waitUntil: 'networkidle' });
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'networkidle' });
 

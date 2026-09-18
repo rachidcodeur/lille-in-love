@@ -49,6 +49,21 @@ export async function GET() {
     problemes.push('RESEND_API_KEY ne ressemble pas à une clé Resend (elle commence par « re_ »).');
   }
 
+  // EMAIL_FROM contient des espaces et des chevrons : selon l'importateur de
+  // variables, les guillemets peuvent être conservés, et Resend refuse alors
+  // l'expéditeur. Autant s'en apercevoir ici plutôt qu'au premier envoi.
+  const expediteur = process.env.EMAIL_FROM ?? '';
+  if (!expediteur) {
+    problemes.push('EMAIL_FROM est vide.');
+  } else if (/["']/.test(expediteur)) {
+    problemes.push(
+      `EMAIL_FROM contient des guillemets (${expediteur}). Retire-les : ` +
+        'Resend refuserait cet expéditeur.',
+    );
+  } else if (!/^[^<>@]*<?[^\s<>@]+@[^\s<>@]+\.[a-z]{2,}>?$/i.test(expediteur.trim())) {
+    problemes.push(`EMAIL_FROM ne ressemble pas à un expéditeur valide (${expediteur}).`);
+  }
+
   if (!process.env.IP_HASH_SALT) {
     // Sans conséquence sur le fonctionnement : on le signale sans bloquer.
     problemes.push('IP_HASH_SALT est vide : aucune trace d’IP ne sera conservée (facultatif).');
@@ -62,6 +77,7 @@ export async function GET() {
       configured: {
         supabase: Boolean(supabaseUrl && serviceKey),
         resend: Boolean(resendKey),
+        expediteur: expediteur || null,
         ipSalt: Boolean(process.env.IP_HASH_SALT),
         adminOuvert: !(process.env.ADMIN_CODE ?? '').trim(),
       },
