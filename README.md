@@ -81,6 +81,8 @@ mettre à jour sans jamais retoucher à la page.
 | `src/emails/templates.ts`     | Les quatre emails de la séquence                         |
 | `src/components/form/`        | Le formulaire multi-étapes                               |
 | `src/app/api/`                | `inscription`, `upload`, `health`, `emails/preview`      |
+| `src/lib/heic.ts`             | Conversion des photos d'iPhone (HEIC) dans le navigateur  |
+| `src/lib/format-image.ts`     | Le format réel d'un fichier, lu dans ses octets          |
 | `src/lib/brand.ts`            | Adresses et liens légaux — un seul endroit à modifier     |
 | `supabase/`                   | Le schéma SQL et le bucket photos                        |
 | `tests/e2e/`                  | Les parcours, joués dans un navigateur                   |
@@ -105,7 +107,28 @@ Le rendu et la navigation suivent tout seuls.
 - tout est revalidé côté serveur, le navigateur n'a autorité sur rien ;
 - les IP ne sont conservées que hachées et salées, jamais en clair ;
 - le bucket photos est privé, sans aucune URL publique ;
-- la RLS est active et sans policy : hors serveur, les tables sont fermées.
+- la RLS est active et sans policy : hors serveur, les tables sont fermées ;
+- le format d'une photo est déterminé par ses octets, jamais par ce que le
+  navigateur annonce : ce qui n'est pas une image est refusé.
+
+## Les photos d'iPhone
+
+Le HEIC est le format par défaut de l'appareil photo d'un iPhone. Safari sait
+l'afficher ; ni Chrome, ni Firefox, ni Android. Une photo déposée telle quelle
+devient un carré blanc dans l'espace de curation.
+
+Elle est donc convertie en JPEG **dans le navigateur**, avant l'envoi. Quand
+le navigateur sait décoder — c'est le cas sur iPhone — c'est gratuit. Sinon on
+charge [heic-to](https://github.com/hoppergee/heic-to) (libheif, 3 Mo) à la
+demande : un morceau à part, téléchargé seulement par qui dépose vraiment une
+photo d'iPhone, jamais pour un JPEG. Le formulaire autonome fait de même,
+depuis jsDelivr, avec une empreinte qui interdit au CDN de servir autre chose.
+
+Les candidatures déposées avant cette conversion portent encore des HEIC : le
+back-office les décode à l'affichage, dans le navigateur du curateur.
+
+> `heic-to` embarque libheif, sous licence **LGPL-3.0**. Il est utilisé tel
+> quel, sans modification, et chargé comme un fichier distinct.
 
 ## Encore à faire
 

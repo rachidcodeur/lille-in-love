@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { reparerHeic } from '@/lib/heic';
 
 type Props = {
   photos: string[];
@@ -18,6 +19,32 @@ export function PhotoGallery({ photos, firstName }: Props) {
   const [ouverte, setOuverte] = useState<number | null>(null);
   const [zoom, setZoom] = useState(false);
   const [origine, setOrigine] = useState({ x: 50, y: 50 });
+
+  // Les photos déposées avant la conversion à l'envoi peuvent être des HEIC,
+  // que seul Safari affiche. On les décode ici, dans le navigateur du
+  // curateur, et seulement celles qui n'ont pas su se charger.
+  const [reparees, setReparees] = useState<Record<string, string>>({});
+  const tentees = useRef(new Set<string>());
+
+  const lisible = (url: string) => reparees[url] ?? url;
+
+  const auSecours = useCallback(async (url: string) => {
+    if (tentees.current.has(url)) return;
+    tentees.current.add(url);
+    const jpeg = await reparerHeic(url);
+    if (jpeg) setReparees((avant) => ({ ...avant, [url]: jpeg }));
+  }, []);
+
+  // La fiche arrive toute faite du serveur : une image a le temps d'échouer
+  // avant que React n'écoute, et son « error » se perd. On regarde donc
+  // l'état de chacune à l'hydratation, sans attendre l'événement.
+  const cadre = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    cadre.current?.querySelectorAll('img').forEach((img) => {
+      const origine = img.dataset.origine;
+      if (origine && img.complete && img.naturalWidth === 0) void auSecours(origine);
+    });
+  }, [auSecours, reparees]);
 
   const fermerRef = useRef<HTMLButtonElement>(null);
   // Pour rendre le focus à la vignette d'où l'on vient.
@@ -88,12 +115,14 @@ export function PhotoGallery({ photos, firstName }: Props) {
 
   return (
     <>
-      <div className="adm-photos">
+      <div className="adm-photos" ref={cadre}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           className="adm-photo adm-photo-cliquable"
-          src={photos[0]}
+          src={lisible(photos[0])}
+          data-origine={photos[0]}
           alt={legende(0)}
+          onError={() => auSecours(photos[0])}
           tabIndex={0}
           role="button"
           onClick={(e) => ouvrir(0, e.currentTarget)}
@@ -112,8 +141,10 @@ export function PhotoGallery({ photos, firstName }: Props) {
               <img
                 key={url}
                 className="adm-photo adm-photo-cliquable"
-                src={url}
+                src={lisible(url)}
+                data-origine={url}
                 alt={legende(index + 1)}
+                onError={() => auSecours(url)}
                 tabIndex={0}
                 role="button"
                 onClick={(e) => ouvrir(index + 1, e.currentTarget)}
@@ -232,8 +263,9 @@ export function PhotoGallery({ photos, firstName }: Props) {
               style={
                 zoom ? { transformOrigin: `${origine.x}% ${origine.y}%` } : undefined
               }
-              src={photos[ouverte]}
+              src={lisible(photos[ouverte])}
               alt={legende(ouverte)}
+              onError={() => auSecours(photos[ouverte])}
               onClick={(e) => {
                 e.stopPropagation();
                 setZoom((z) => !z);

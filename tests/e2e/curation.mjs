@@ -8,6 +8,7 @@
  * envoyé, y compris la date de programmation de l'email de bienvenue.
  */
 import { chromium } from 'playwright-core';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -778,6 +779,106 @@ s = await state();
 s.members.find((m) => m.id === idAmande)?.soiree_group == null
   ? ok('la touche « — » retire la candidature de tout groupe')
   : bad('groupe non retiré', String(s.members.find((m) => m.id === idAmande)?.soiree_group));
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
+/* ================================================================ */
+section('12. Une photo d’iPhone (HEIC)');
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
+// Chrome ne sait pas décoder le HEIC : si la vignette s'affiche et que le
+// fichier déposé est un JPEG, c'est que la conversion a bien eu lieu dans le
+// navigateur. Le format par défaut de l'iPhone ne doit jamais atteindre
+// l'espace de curation tel quel — personne ne l'y verrait.
+await page.goto(`${BASE}/embed/court`, { waitUntil: 'networkidle' });
+await page.evaluate(() => localStorage.clear());
+await page.reload({ waitUntil: 'networkidle' });
+
+await page.getByRole('radio', { name: 'Un homme' }).click();
+await page.waitForTimeout(600);
+await page.fill('#firstName', 'Gaspard');
+await page.fill('#lastName', 'Iphone');
+await page.fill('#email', 'gaspard@example.com');
+await page.getByRole('button', { name: 'Suivant' }).click();
+await page.waitForTimeout(400);
+
+await page.setInputFiles('input[type=file]', [fixture('photo-iphone.heic')]);
+// Le décodeur fait 3 Mo : on lui laisse le temps d'arriver et de travailler.
+await page.waitForFunction(() => document.querySelectorAll('.lil-thumb-progress').length === 0, null, {
+  timeout: 30000,
+}).catch(() => {});
+
+(await page.locator('.lil-thumb-progress').count()) === 0
+  ? ok('la photo HEIC est acceptée et envoyée')
+  : bad('photo HEIC bloquée', await page.locator('.lil-thumb-progress').first().innerText().catch(() => ''));
+
+const vignetteLisible = await page
+  .locator('.lil-thumb img')
+  .first()
+  .evaluate((el) => el.naturalWidth > 0)
+  .catch(() => false);
+vignetteLisible
+  ? ok('la vignette s’affiche — convertie, elle ne resterait pas vide')
+  : bad('vignette illisible : le HEIC n’a pas été converti');
+
+await page.waitForTimeout(11000);
+await page.getByRole('button', { name: 'Envoyer ma candidature' }).click();
+await page.waitForTimeout(1500);
+
+s = await state();
+const deposee = s.storage.find((k) => k.includes('candidatures/'));
+deposee?.endsWith('.jpg')
+  ? ok(`déposée en JPEG (${deposee.split('/').pop()})`)
+  : bad('format déposé', String(deposee));
+s.photos[0]?.mime_type === 'image/jpeg'
+  ? ok('le journal des photos enregistre bien image/jpeg')
+  : bad('mime_type', String(s.photos[0]?.mime_type));
+
+/* ---------------------------------------------------------------- */
+section('12 bis. Un HEIC déjà en base reste visible');
+
+// Les candidatures déposées avant cette conversion portent encore des HEIC.
+// Le back-office doit les décoder à l'affichage, sinon le curateur juge un
+// carré blanc.
+const heicBrut = readFileSync(fixture('photo-iphone.heic'));
+const idIphone = await (async () => {
+  const r = await fetch(`${FAKE}/rest/v1/lil_members`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({
+      first_name: 'Ancienne', last_name: 'Photo', email: 'ancienne@example.com',
+      gender: 'femme', status: 'nouveau', form_version: 'court',
+      consent_at: new Date().toISOString(),
+    }),
+  });
+  return (await r.json())[0].id;
+})();
+
+const cheminHeic = `candidatures/${idIphone}/1.heic`;
+await fetch(`${FAKE}/storage/v1/object/lil-photos/${cheminHeic}`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'image/heic' },
+  body: heicBrut,
+});
+await fetch(`${FAKE}/rest/v1/lil_photos`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ member_id: idIphone, storage_path: cheminHeic, position: 1, mime_type: 'image/heic' }),
+});
+
+await page.goto(`${BASE}/admin/${idIphone}`, { waitUntil: 'networkidle' });
+const heicAffiche = await page
+  .waitForFunction(() => {
+    const img = document.querySelector('.adm-photo');
+    return img && img.naturalWidth > 0;
+  }, null, { timeout: 30000 })
+  .then(() => true)
+  .catch(() => false);
+
+heicAffiche
+  ? ok('le HEIC déjà stocké est décodé et affiché sur la fiche')
+  : bad('photo HEIC invisible dans le back-office');
 
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 

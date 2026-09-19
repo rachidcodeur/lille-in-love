@@ -15,6 +15,7 @@ import {
   versParams,
 } from '@/lib/groupes';
 import { GroupePicker } from '@/components/admin/GroupePicker';
+import { Vignette } from '@/components/admin/Vignette';
 
 export const dynamic = 'force-dynamic';
 
@@ -185,8 +186,11 @@ export default async function AdminListPage({ searchParams }: Props) {
             <article key={member.id} className="adm-row">
               <Link href={`/admin/${member.id}`} className="adm-row-lien">
                 {thumbnails[index] ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img className="adm-avatar" src={thumbnails[index]!} alt="" />
+                  <Vignette
+                    className="adm-avatar"
+                    src={thumbnails[index]!}
+                    initiale={member.first_name.slice(0, 1).toUpperCase()}
+                  />
                 ) : (
                   <div className="adm-avatar adm-avatar-empty" aria-hidden="true">
                     {member.first_name.slice(0, 1).toUpperCase()}

@@ -372,7 +372,14 @@ async function traiter(req, res) {
     const key = encoded ? Buffer.from(encoded, 'base64url').toString('utf8') : null;
     const file = key ? storage.get(key) : null;
     if (!file?.bytes) return json(res, 404, { message: 'photo absente' });
-    res.writeHead(200, { 'Content-Type': 'image/png', 'Content-Length': file.bytes.length });
+    // Le type suit l'extension, comme le ferait Supabase : le back-office
+    // doit rencontrer un vrai image/heic pour qu'on puisse tester sa reprise.
+    const TYPES = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', heic: 'image/heic' };
+    const ext = (key.split('.').pop() ?? '').toLowerCase();
+    res.writeHead(200, {
+      'Content-Type': TYPES[ext] ?? 'application/octet-stream',
+      'Content-Length': file.bytes.length,
+    });
     return res.end(file.bytes);
   }
 

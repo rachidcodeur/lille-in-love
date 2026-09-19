@@ -298,49 +298,167 @@
   }
 
   /* ---------------- Photos ---------------- */
-  function reduire(fichier) {
-    return new Promise(function (resolve) {
-      if (fichier.size < 900 * 1024 || !window.createImageBitmap) return resolve(fichier);
-      createImageBitmap(fichier).then(function (bmp) {
-        var cote = 1600, ratio = Math.min(1, cote / Math.max(bmp.width, bmp.height));
-        if (ratio === 1 && fichier.size < 2 * 1024 * 1024) return resolve(fichier);
-        var c = document.createElement('canvas');
-        c.width = Math.round(bmp.width * ratio); c.height = Math.round(bmp.height * ratio);
-        var ctx = c.getContext('2d');
-        if (!ctx) return resolve(fichier);
-        ctx.drawImage(bmp, 0, 0, c.width, c.height);
-        bmp.close();
-        c.toBlob(function (blob) {
-          if (!blob || blob.size >= fichier.size) return resolve(fichier);
-          resolve(new File([blob], 'photo.jpg', { type: 'image/jpeg' }));
-        }, 'image/jpeg', 0.86);
-      }).catch(function () { resolve(fichier); });
+
+  /* Le HEIC est le format par défaut de l'appareil photo d'un iPhone. Safari
+     sait le lire ; ni Chrome, ni Firefox, ni Android. Déposée telle quelle,
+     la photo devient un carré blanc dans l'espace de curation — et la
+     candidature part avec un handicap qui n'a rien à voir avec la personne.
+     On la convertit donc en JPEG ici, avant l'envoi. */
+
+  var MARQUES_HEIF = ['heic','heix','hevc','hevx','heim','heis','hevm','hevs','mif1','msf1'];
+  var DECODEUR = 'https://cdn.jsdelivr.net/npm/heic-to@1.5.2/dist/iife/heic-to.js';
+  var DECODEUR_SIGNATURE = 'sha384-cVm8gaWQ5+URpoh6ACKXpm8TuyoHkfIDDBkxvDoUdIZ18w8nV5en0lVQvWMwO/6S';
+
+  /* Les douze premiers octets du fichier. Le type annoncé par le navigateur
+     ne vaut rien : il est vide sur beaucoup d'Android, et faux dès que le
+     fichier vient d'un gestionnaire de fichiers. */
+  function signature(fichier) {
+    return new Promise(function (resoudre) {
+      var lecteur = new FileReader();
+      lecteur.onload = function () { resoudre(new Uint8Array(lecteur.result)); };
+      lecteur.onerror = function () { resoudre(new Uint8Array(0)); };
+      try { lecteur.readAsArrayBuffer(fichier.slice(0, 12)); }
+      catch (e) { resoudre(new Uint8Array(0)); }
     });
   }
 
-  var EXT = { 'image/jpeg':'jpg', 'image/png':'png', 'image/webp':'webp', 'image/heic':'heic', 'image/heif':'heif' };
+  function lire(octets, debut, longueur) {
+    var texte = '';
+    for (var i = debut; i < debut + longueur && i < octets.length; i++) {
+      texte += String.fromCharCode(octets[i]);
+    }
+    return texte;
+  }
+
+  function formatDe(octets) {
+    if (octets.length < 12) return null;
+    if (octets[0] === 0xff && octets[1] === 0xd8 && octets[2] === 0xff) {
+      return { ext: 'jpg', mime: 'image/jpeg' };
+    }
+    if (octets[0] === 0x89 && lire(octets, 1, 3) === 'PNG') {
+      return { ext: 'png', mime: 'image/png' };
+    }
+    if (lire(octets, 0, 4) === 'RIFF' && lire(octets, 8, 4) === 'WEBP') {
+      return { ext: 'webp', mime: 'image/webp' };
+    }
+    if (lire(octets, 4, 4) === 'ftyp') {
+      var marque = lire(octets, 8, 4);
+      if (MARQUES_HEIF.indexOf(marque) >= 0) return { ext: 'heic', mime: 'image/heic', heic: true };
+      if (marque === 'avif' || marque === 'avis') return { ext: 'avif', mime: 'image/avif' };
+    }
+    return null;
+  }
+
+  /* 3 Mo de décodeur, chargés une seule fois et seulement pour qui dépose
+     vraiment une photo d'iPhone depuis un navigateur qui ne sait pas la lire.
+     L'empreinte interdit au CDN de servir autre chose que cette version. */
+  var promesseDecodeur = null;
+  function chargerDecodeur() {
+    if (promesseDecodeur) return promesseDecodeur;
+    promesseDecodeur = new Promise(function (resoudre, rejeter) {
+      if (window.HeicTo) return resoudre(window.HeicTo);
+      var balise = document.createElement('script');
+      balise.src = DECODEUR;
+      balise.integrity = DECODEUR_SIGNATURE;
+      balise.crossOrigin = 'anonymous';
+      balise.onload = function () {
+        window.HeicTo ? resoudre(window.HeicTo) : rejeter(new Error('décodeur absent'));
+      };
+      balise.onerror = function () { rejeter(new Error('décodeur injoignable')); };
+      document.head.appendChild(balise);
+    });
+    return promesseDecodeur;
+  }
+
+  function dessiner(bmp) {
+    var cote = 1600, ratio = Math.min(1, cote / Math.max(bmp.width, bmp.height));
+    var c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(bmp.width * ratio));
+    c.height = Math.max(1, Math.round(bmp.height * ratio));
+    var ctx = c.getContext('2d');
+    if (!ctx) return Promise.reject(new Error('canvas indisponible'));
+    ctx.drawImage(bmp, 0, 0, c.width, c.height);
+    if (bmp.close) bmp.close();
+    return new Promise(function (resoudre, rejeter) {
+      c.toBlob(function (blob) {
+        blob ? resoudre(new File([blob], 'photo.jpg', { type: 'image/jpeg' }))
+             : rejeter(new Error('encodage impossible'));
+      }, 'image/jpeg', 0.86);
+    });
+  }
+
+  /* Réduit la photo, et convertit le HEIC au passage. Si rien n'y parvient,
+     on renvoie le fichier d'origine : une candidature ne se perd pas pour
+     un format. */
+  function preparer(fichier, format) {
+    var heic = !!(format && format.heic);
+    if (!heic && fichier.size < 900 * 1024) return Promise.resolve(fichier);
+    if (!window.createImageBitmap) return Promise.resolve(fichier);
+
+    return createImageBitmap(fichier)
+      .catch(function (err) {
+        // Sur iPhone, le navigateur a déjà su lire le HEIC. Ailleurs, non.
+        if (!heic) throw err;
+        return chargerDecodeur().then(function (HeicTo) {
+          return HeicTo({ blob: fichier, type: 'bitmap' });
+        });
+      })
+      .then(dessiner)
+      .then(function (jpeg) {
+        return !heic && jpeg.size >= fichier.size ? fichier : jpeg;
+      })
+      .catch(function () { return fichier; });
+  }
 
   function ajouterPhotos(liste) {
     var max = 3, place = max - valeurs.photos.length;
     Array.prototype.slice.call(liste, 0, place).forEach(function (fichier) {
-      if (!EXT[fichier.type]) {
-        alerte = 'Format accepté : JPG, PNG, WEBP ou HEIC.';
+      /* La limite des 8 Mo s'applique à ce qui part, pas à ce qui est
+         choisi : une photo d'iPhone de 12 Mo devient un JPEG de 400 Ko. */
+      if (fichier.size > 30 * 1024 * 1024) {
+        alerte = 'Fichier trop lourd (30 Mo maximum).';
         rendre();
         return;
       }
-      if (fichier.size > 8 * 1024 * 1024) {
-        alerte = 'Photo trop lourde (8 Mo maximum).';
-        rendre();
-        return;
-      }
+
       var entree = { cle: String(Date.now()) + Math.random(), apercu: URL.createObjectURL(fichier),
-                     statut: 'attente', fichier: fichier };
+                     statut: 'attente', fichier: fichier, ext: 'jpg', mime: 'image/jpeg' };
       valeurs.photos.push(entree);
       rendre();
-      reduire(fichier).then(function (pret) {
-        entree.fichier = pret;
-        entree.statut = 'prete';
-        rendre();
+
+      signature(fichier).then(function (octets) {
+        var format = formatDe(octets);
+        if (!format) {
+          URL.revokeObjectURL(entree.apercu);
+          valeurs.photos = valeurs.photos.filter(function (p) { return p.cle !== entree.cle; });
+          alerte = 'Format accepté : JPG, PNG, WEBP ou HEIC (photo d’iPhone).';
+          rendre();
+          return;
+        }
+
+        return preparer(fichier, format).then(function (pret) {
+          if (pret.size > 8 * 1024 * 1024) {
+            URL.revokeObjectURL(entree.apercu);
+            valeurs.photos = valeurs.photos.filter(function (p) { return p.cle !== entree.cle; });
+            alerte = 'Photo trop lourde (8 Mo maximum).';
+            rendre();
+            return;
+          }
+          entree.fichier = pret;
+          if (pret !== fichier) {
+            // La vignette montrait le fichier d'origine : hors de Safari, un
+            // HEIC n'y apparaît pas. On la remplace par la version convertie.
+            URL.revokeObjectURL(entree.apercu);
+            entree.apercu = URL.createObjectURL(pret);
+            entree.ext = 'jpg';
+            entree.mime = 'image/jpeg';
+          } else {
+            entree.ext = format.ext;
+            entree.mime = format.mime;
+          }
+          entree.statut = 'prete';
+          rendre();
+        });
       });
     });
   }
@@ -450,16 +568,15 @@
 
     var chaine = pretes.reduce(function (promesse, photo, i) {
       return promesse.then(function () {
-        var ext = EXT[photo.fichier.type] || 'jpg';
-        var chemin = 'candidatures/' + id + '/' + (i + 1) + '.' + ext;
+        var chemin = 'candidatures/' + id + '/' + (i + 1) + '.' + photo.ext;
         return fetch(base + '/storage/v1/object/' + BUCKET + '/' + chemin, {
           method: 'POST',
-          headers: entetes({ 'Content-Type': photo.fichier.type, 'x-upsert': 'true' }),
+          headers: entetes({ 'Content-Type': photo.mime, 'x-upsert': 'true' }),
           body: photo.fichier
         }).then(function (r) {
           // Une photo perdue ne doit pas faire échouer une candidature valable.
           if (r.ok) lignes.push({ member_id: id, storage_path: chemin, position: i + 1,
-                                  mime_type: photo.fichier.type, size_bytes: photo.fichier.size });
+                                  mime_type: photo.mime, size_bytes: photo.fichier.size });
           else if (window.console) console.warn('[Lille in Love] photo non déposée', r.status);
         });
       });
@@ -616,7 +733,7 @@
   function zonePhotos() {
     var bloc = el('div');
     var entree = document.createElement('input');
-    entree.type = 'file'; entree.accept = 'image/jpeg,image/png,image/webp,image/heic,image/heif';
+    entree.type = 'file'; entree.accept = 'image/*';
     entree.multiple = true; entree.hidden = true;
     entree.onchange = function () { ajouterPhotos(entree.files); entree.value = ''; };
 

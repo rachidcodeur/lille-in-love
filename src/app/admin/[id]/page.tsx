@@ -14,6 +14,7 @@ import { PhotoGallery } from '@/components/admin/PhotoGallery';
 import { AnnulerEnvoi } from '@/components/admin/AnnulerEnvoi';
 import { GroupePicker } from '@/components/admin/GroupePicker';
 import { Icone, type NomIcone } from '@/components/admin/Icones';
+import { Vignette } from '@/components/admin/Vignette';
 import { DECISION_TEMPLATES, templateAttendu } from '@/lib/decision';
 
 export const dynamic = 'force-dynamic';
@@ -135,8 +136,11 @@ export default async function FichePage({ params }: Props) {
       {/* ---- Bandeau : le visage, le nom, l'état ---- */}
       <section className="adm-hero">
         {photos[0] ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img className="adm-avatar adm-avatar-hero" src={photos[0]} alt="" />
+          <Vignette
+            className="adm-avatar adm-avatar-hero"
+            src={photos[0]}
+            initiale={member.first_name.slice(0, 1).toUpperCase()}
+          />
         ) : (
           <div className="adm-avatar adm-avatar-hero adm-avatar-empty" aria-hidden="true">
             {member.first_name.slice(0, 1).toUpperCase()}

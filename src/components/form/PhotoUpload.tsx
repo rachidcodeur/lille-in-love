@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useRef, useState } from 'react';
+import { decoder, estHeic, versJpeg } from '@/lib/heic';
 
 export type UploadedPhoto = {
   /** Identifiant local, le temps de l'affichage. */
@@ -22,45 +23,46 @@ type Props = {
   error?: string;
 };
 
-const ACCEPT = 'image/jpeg,image/png,image/webp,image/heic,image/heif';
+// « image/* » plutôt qu'une liste : sur iPhone, restreindre les types pousse
+// le sélecteur à proposer « Parcourir » plutôt que la photothèque, et certains
+// Android ne déclarent aucun type pour un HEIC — il serait alors refusé avant
+// même d'être lu. Le format réel est vérifié à la lecture, puis sur le serveur.
+const ACCEPT = 'image/*';
 const MAX_BYTES = 8 * 1024 * 1024;
+// La limite des 8 Mo s'applique à ce qui part, pas à ce qui est choisi : une
+// photo d'iPhone de 12 Mo devient un JPEG de 400 Ko. On écarte seulement ce
+// qui serait déraisonnable à charger en mémoire pour être converti.
+const MAX_BRUT = 30 * 1024 * 1024;
 
 /**
- * Réduit une photo avant l'envoi.
+ * Met une photo en état d'être envoyée.
  *
- * Les photos de téléphone font 4 à 10 Mo : les redimensionner ici évite les
- * envois qui échouent sur une connexion moyenne, et suffit largement pour
- * reconnaître quelqu'un le soir venu. Si le navigateur n'y arrive pas (HEIC
- * non décodé, par exemple), on renvoie le fichier d'origine.
+ * Deux problèmes d'un coup : le poids (4 à 10 Mo sur un téléphone) et le
+ * format. Le HEIC de l'iPhone n'est lisible que par Safari : converti ici en
+ * JPEG, il s'affiche ensuite partout — dans la vignette, dans le back-office,
+ * et dans le navigateur du curateur.
+ *
+ * Si rien ne parvient à décoder le fichier, on renvoie l'original : une
+ * candidature ne se perd pas pour un format.
  */
-async function shrink(file: File): Promise<File> {
-  if (file.size < 900 * 1024) return file;
-
+async function preparer(fichier: File): Promise<File> {
   try {
-    const bitmap = await createImageBitmap(file);
-    const maxSide = 1600;
-    const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-    if (scale === 1 && file.size < 2 * 1024 * 1024) return file;
+    const heic = await estHeic(fichier, fichier.name);
 
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
+    // Une petite photo déjà lisible partout n'a aucune raison d'être retouchée.
+    if (!heic && fichier.size < 900 * 1024) return fichier;
 
-    const context = canvas.getContext('2d');
-    if (!context) return file;
-    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const bitmap = await decoder(fichier, heic);
+    if (!bitmap) return fichier;
+
+    const jpeg = await versJpeg(bitmap, fichier.name);
     bitmap.close();
 
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, 'image/jpeg', 0.86),
-    );
-    if (!blob || blob.size >= file.size) return file;
-
-    return new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', {
-      type: 'image/jpeg',
-    });
+    if (!jpeg) return fichier;
+    // Ne pas alourdir : une photo déjà légère et lisible reste telle quelle.
+    return !heic && jpeg.size >= fichier.size ? fichier : jpeg;
   } catch {
-    return file;
+    return fichier;
   }
 }
 
@@ -91,7 +93,22 @@ export function PhotoUpload({ apiBase, photos, max, onChange, error }: Props) {
       };
 
       try {
-        const prepared = await shrink(file);
+        const prepared = await preparer(file);
+
+        // La vignette montrait le fichier d'origine : un HEIC n'y apparaît
+        // pas hors de Safari. Une fois converti, on la remplace — la personne
+        // voit enfin ce qu'elle vient de choisir.
+        if (prepared !== file) {
+          const ancienne = latest.current.find((p) => p.key === key)?.previewUrl;
+          patch({ previewUrl: URL.createObjectURL(prepared) });
+          if (ancienne) URL.revokeObjectURL(ancienne);
+        }
+
+        if (prepared.size > MAX_BYTES) {
+          patch({ status: 'echec', error: 'Photo trop lourde (8 Mo max).' });
+          return;
+        }
+
         const body = new FormData();
         body.append('file', prepared);
 
@@ -133,12 +150,12 @@ export function PhotoUpload({ apiBase, photos, max, onChange, error }: Props) {
 
       for (const file of Array.from(fileList).slice(0, room)) {
         const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-        if (file.size > MAX_BYTES) {
+        if (file.size > MAX_BRUT) {
           incoming.push({
             key,
             previewUrl: '',
             status: 'echec',
-            error: 'Photo trop lourde (8 Mo max).',
+            error: 'Fichier trop lourd (30 Mo max).',
           });
           continue;
         }

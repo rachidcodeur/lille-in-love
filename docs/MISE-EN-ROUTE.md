@@ -244,6 +244,16 @@ questionnaire actuel ne pose pas la question : elle reste vide pour les
 nouvelles candidatures, et la fiche ne l'affiche que lorsqu'elle est
 renseignée.
 
+### Les photos d'iPhone
+
+Rien à faire : le HEIC, format par défaut de l'appareil photo d'un iPhone, est
+converti en JPEG par le navigateur au moment du dépôt. Les deux formulaires le
+font — celui de l'application comme le formulaire autonome.
+
+Les candidatures reçues **avant** cette conversion peuvent encore porter un
+HEIC. La fiche le décode alors à l'affichage : rien à réparer à la main, mais
+la photo met une seconde de plus à apparaître.
+
 ### Soirées
 
 `/admin/soirees` : nom, classe d'âge, date, heure, lieu. Avant tout envoi,

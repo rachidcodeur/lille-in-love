@@ -3,18 +3,12 @@ import { randomUUID } from 'node:crypto';
 import { env } from '@/lib/env';
 import { supabaseAdmin } from '@/lib/supabase';
 import { clientIp, corsHeaders, rateLimit } from '@/lib/security';
+import { formatDe } from '@/lib/format-image';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8 Mo, aligné sur le bucket
-const ACCEPTED: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/heic': 'heic',
-  'image/heif': 'heif',
-};
 
 export async function OPTIONS(request: Request) {
   return new NextResponse(null, { status: 204, headers: corsHeaders(request) });
@@ -55,14 +49,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Aucun fichier reçu.' }, { status: 400, headers: cors });
   }
 
-  const extension = ACCEPTED[file.type];
-  if (!extension) {
-    return NextResponse.json(
-      { error: 'Format accepté : JPG, PNG, WEBP ou HEIC.' },
-      { status: 415, headers: cors },
-    );
-  }
-
   if (file.size === 0) {
     return NextResponse.json({ error: 'Le fichier est vide.' }, { status: 400, headers: cors });
   }
@@ -74,12 +60,24 @@ export async function POST(request: Request) {
     );
   }
 
-  const path = `pending/${randomUUID()}.${extension}`;
   const bytes = new Uint8Array(await file.arrayBuffer());
+
+  // Le format se lit dans les octets, jamais dans ce que le navigateur
+  // annonce : beaucoup d'Android n'annoncent rien du tout pour une photo
+  // d'iPhone, et le reste est de toute façon choisi par le client.
+  const format = formatDe(bytes);
+  if (!format) {
+    return NextResponse.json(
+      { error: 'Format accepté : JPG, PNG, WEBP ou HEIC (photo d’iPhone).' },
+      { status: 415, headers: cors },
+    );
+  }
+
+  const path = `pending/${randomUUID()}.${format.extension}`;
 
   const { error } = await supabaseAdmin()
     .storage.from(env.storageBucket())
-    .upload(path, bytes, { contentType: file.type, upsert: false });
+    .upload(path, bytes, { contentType: format.mimeType, upsert: false });
 
   if (error) {
     console.error('[upload] échec du dépôt', error.message);
@@ -90,7 +88,7 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json(
-    { path, mimeType: file.type, sizeBytes: file.size },
+    { path, mimeType: format.mimeType, sizeBytes: file.size },
     { status: 201, headers: cors },
   );
 }
