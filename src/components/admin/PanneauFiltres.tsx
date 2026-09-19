@@ -1,36 +1,70 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   GENRE_CHOIX,
   GENRE_LABELS,
   GROUPE_CHOIX,
   GROUPE_LABELS,
+  compter,
+  correspond,
+  type FicheFiltrable,
   type Filtres,
 } from '@/lib/groupes';
 import { Icone } from './Icones';
 
 type Props = {
   filtres: Filtres;
-  parGroupe: Record<string, number>;
-  parGenre: Record<string, number>;
+  /** Les fiches réduites à ce qui sert à filtrer — de quoi compter à la volée. */
+  fiches: FicheFiltrable[];
   /** Combien de critères sont posés, en dehors du statut. */
   criteres: number;
 };
 
+/** Un âge saisi à la main, ou rien du tout. */
+function nombre(valeur: string): number | null {
+  const n = Number.parseInt(valeur, 10);
+  return Number.isFinite(n) ? n : null;
+}
+
 /**
  * Le tri des candidatures : une icône à droite, un panneau au clic.
  *
- * Neuf fois sur dix on parcourt la liste sans rien filtrer ; la barre de
- * réglages n'a pas à occuper le haut de la page en permanence. Elle se replie
- * donc derrière une icône, qui porte le nombre de critères en cours — de quoi
+ * Neuf fois sur dix on parcourt la liste sans rien filtrer ; les réglages
+ * n'ont pas à occuper le haut de la page en permanence. Ils se replient donc
+ * derrière une icône, qui porte le nombre de critères en cours — de quoi
  * savoir, sans ouvrir, qu'on ne regarde pas tout le monde.
+ *
+ * Le panneau compte au fur et à mesure : le bouton annonce toujours le
+ * nombre de fiches que donneront les critères affichés, pas ceux d'avant.
  */
-export function PanneauFiltres({ filtres, parGroupe, parGenre, criteres }: Props) {
+export function PanneauFiltres({ filtres, fiches, criteres }: Props) {
   const [ouvert, setOuvert] = useState(false);
+  const [brouillon, setBrouillon] = useState(filtres);
+
   const bouton = useRef<HTMLButtonElement>(null);
   const panneau = useRef<HTMLDivElement>(null);
+
+  const parGroupe = useMemo(
+    () => compter(fiches, brouillon, 'groupe', GROUPE_CHOIX),
+    [fiches, brouillon],
+  );
+  const parGenre = useMemo(
+    () => compter(fiches, brouillon, 'genre', GENRE_CHOIX),
+    [fiches, brouillon],
+  );
+  const selection = useMemo(
+    () => fiches.filter((fiche) => correspond(fiche, brouillon)).length,
+    [fiches, brouillon],
+  );
+
+  function ouvrir() {
+    // On repart toujours des critères réellement appliqués, pas d'un
+    // brouillon laissé en plan à la fermeture précédente.
+    setBrouillon(filtres);
+    setOuvert(true);
+  }
 
   useEffect(() => {
     if (!ouvert) return;
@@ -57,6 +91,8 @@ export function PanneauFiltres({ filtres, parGroupe, parGenre, criteres }: Props
     };
   }, [ouvert]);
 
+  const fiche = (n: number) => `${n} ${n > 1 ? 'fiches' : 'fiche'}`;
+
   return (
     <>
       <button
@@ -66,7 +102,7 @@ export function PanneauFiltres({ filtres, parGroupe, parGenre, criteres }: Props
         data-actif={criteres > 0}
         aria-expanded={ouvert}
         aria-haspopup="dialog"
-        onClick={() => setOuvert(true)}
+        onClick={ouvrir}
       >
         <Icone nom="filtre" taille={18} />
         <span className="adm-filtres-mot">Filtres</span>
@@ -109,7 +145,11 @@ export function PanneauFiltres({ filtres, parGroupe, parGenre, criteres }: Props
 
               <label className="adm-tri-champ">
                 <span>Groupe</span>
-                <select name="groupe" defaultValue={filtres.groupe}>
+                <select
+                  name="groupe"
+                  value={brouillon.groupe}
+                  onChange={(e) => setBrouillon({ ...brouillon, groupe: e.target.value })}
+                >
                   {GROUPE_CHOIX.map((choix) => (
                     <option key={choix} value={choix}>
                       {GROUPE_LABELS[choix]} ({parGroupe[choix] ?? 0})
@@ -120,7 +160,11 @@ export function PanneauFiltres({ filtres, parGroupe, parGenre, criteres }: Props
 
               <label className="adm-tri-champ">
                 <span>Qui</span>
-                <select name="genre" defaultValue={filtres.genre}>
+                <select
+                  name="genre"
+                  value={brouillon.genre}
+                  onChange={(e) => setBrouillon({ ...brouillon, genre: e.target.value })}
+                >
                   {GENRE_CHOIX.map((choix) => (
                     <option key={choix} value={choix}>
                       {GENRE_LABELS[choix]} ({parGenre[choix] ?? 0})
@@ -138,7 +182,8 @@ export function PanneauFiltres({ filtres, parGroupe, parGenre, criteres }: Props
                     min={18}
                     max={120}
                     placeholder="18"
-                    defaultValue={filtres.ageMin ?? ''}
+                    value={brouillon.ageMin ?? ''}
+                    onChange={(e) => setBrouillon({ ...brouillon, ageMin: nombre(e.target.value) })}
                     aria-label="Âge minimum"
                   />
                   <i>–</i>
@@ -148,7 +193,8 @@ export function PanneauFiltres({ filtres, parGroupe, parGenre, criteres }: Props
                     min={18}
                     max={120}
                     placeholder="99"
-                    defaultValue={filtres.ageMax ?? ''}
+                    value={brouillon.ageMax ?? ''}
+                    onChange={(e) => setBrouillon({ ...brouillon, ageMax: nombre(e.target.value) })}
                     aria-label="Âge maximum"
                   />
                 </span>
@@ -160,8 +206,22 @@ export function PanneauFiltres({ filtres, parGroupe, parGenre, criteres }: Props
 
               <div className="adm-panneau-pied">
                 <button type="submit" className="adm-btn adm-btn-appliquer">
-                  Voir les candidatures
+                  Voir {fiche(selection)}
                 </button>
+
+                {/* Même formulaire, autre destination : le fichier reprend
+                    exactement les critères affichés, y compris ceux qu'on
+                    vient de changer sans avoir encore validé. */}
+                <button
+                  type="submit"
+                  formAction="/api/admin/export"
+                  className="adm-btn adm-btn-exporter"
+                  disabled={selection === 0}
+                >
+                  <Icone nom="telecharger" taille={17} />
+                  Exporter en CSV
+                </button>
+
                 {criteres > 0 && (
                   <Link
                     className="adm-tri-effacer"

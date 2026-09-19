@@ -109,7 +109,9 @@ rows === 1 ? ok('la candidature apparaît dans la liste') : bad('lignes affiché
 
 const rowText = await page.locator('.adm-row').first().innerText();
 rowText.includes('Camille Dupont') ? ok('nom affiché') : bad('nom absent', rowText);
-rowText.toLowerCase().includes('court') ? ok('marquée « court »') : bad('marqueur court absent');
+!rowText.toLowerCase().includes('court')
+  ? ok('pas d’étiquette « court » : la ligne reste lisible')
+  : bad('l’étiquette « court » est revenue sur la ligne');
 
 const avatarOk = await page.locator('.adm-avatar').first().evaluate(
   (el) => el.tagName === 'IMG' && el.naturalWidth > 0,
@@ -678,7 +680,7 @@ await page.selectOption('.adm-panneau select[name="groupe"]', 'C');
 await page.selectOption('.adm-panneau select[name="genre"]', 'femme');
 await page.fill('.adm-panneau input[name="ageMin"]', '27');
 await page.fill('.adm-panneau input[name="ageMax"]', '35');
-await page.getByRole('button', { name: 'Voir les candidatures' }).click();
+await page.locator('.adm-btn-appliquer').click();
 await page.waitForTimeout(1500);
 
 page.url().includes('groupe=C') && page.url().includes('ageMax=35')
@@ -692,7 +694,32 @@ page.url().includes('groupe=C') && page.url().includes('ageMax=35')
   : bad('l’icône ne signale aucun critère');
 
 await page.locator('.adm-filtres-bouton').click();
+await page.waitForTimeout(400);
+
+// Le bouton annonce le nombre de fiches des critères affichés, et se met à
+// jour à la saisie — pas après coup.
+((await page.locator('.adm-btn-appliquer').innerText().catch(() => '')) || '').includes('Voir 2 fiches')
+  ? ok('le panneau compte la sélection en cours')
+  : bad('compteur du panneau', await page.locator('.adm-btn-appliquer').innerText().catch(() => ''));
+
+await page.selectOption('.adm-panneau select[name="groupe"]', 'tous');
 await page.waitForTimeout(300);
+((await page.locator('.adm-btn-appliquer').innerText().catch(() => '')) || '').includes('Voir 3 fiches')
+  ? ok('changer un critère recompte aussitôt, sans valider')
+  : bad('compteur figé', await page.locator('.adm-btn-appliquer').innerText().catch(() => ''));
+
+// L'export vit dans le panneau et part du même formulaire : il emporte donc
+// les critères affichés, y compris celui qu'on vient de changer.
+const telechargement = page.waitForEvent('download', { timeout: 15000 });
+await page.locator('.adm-btn-exporter').click();
+const fichier = await telechargement.catch(() => null);
+fichier?.suggestedFilename()?.endsWith('.csv')
+  ? ok(`l’export du panneau télécharge ${fichier.suggestedFilename()}`)
+  : bad('aucun fichier téléchargé depuis le panneau');
+// On attend la fin du téléchargement : laissé en cours, il perturbe la
+// navigation suivante et rend le test instable une fois sur deux.
+await fichier?.path().catch(() => null);
+
 await page.keyboard.press('Escape');
 await page.waitForTimeout(300);
 (await page.locator('.adm-panneau').count()) === 0
@@ -801,6 +828,8 @@ sansGroupeCsv.length === 1
 // indication. Elle ne doit pas avaler le clic — c'est arrivé, et une ligne
 // qui ne s'ouvre pas quand on clique au milieu ne se remarque pas tout de suite.
 await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+await page.waitForSelector('.adm-row');
+await page.waitForTimeout(500);
 // Un clic à la souris, aux coordonnées exactes de la pastille : Playwright
 // refuserait de « cliquer la pastille » puisqu'elle est recouverte par le
 // lien — et c'est précisément ce recouvrement qu'on veut vérifier.

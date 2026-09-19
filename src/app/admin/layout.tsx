@@ -1,7 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { isAdminAllowed } from '@/lib/admin';
-import { env } from '@/lib/env';
 import { GateForm } from '@/components/admin/GateForm';
 import { AdminNav } from '@/components/admin/AdminNav';
 import './admin.css';
@@ -43,13 +42,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <p className="adm-sub">Saisis le code d’accès pour voir les candidatures.</p>
           <GateForm />
         </div>
-      )}
-
-      {!env.adminCode() && (
-        <p className="adm-hint" style={{ textAlign: 'center', paddingBottom: 28 }}>
-          Accès libre : toute personne connaissant cette adresse voit les candidatures.
-          Renseigne <code>ADMIN_CODE</code> pour la fermer.
-        </p>
       )}
     </div>
   );

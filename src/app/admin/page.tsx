@@ -2,15 +2,12 @@ import Link from 'next/link';
 import { facettes, listMembers, photoUrls } from '@/lib/admin';
 import { STATUS_ORDER, label, relative } from '@/lib/libelles';
 import {
-  GENRE_CHOIX,
-  GROUPE_CHOIX,
   compter,
   correspond,
   filtresActifs,
   lien,
   parseFiltres,
   resume,
-  versParams,
 } from '@/lib/groupes';
 import { GroupePicker } from '@/components/admin/GroupePicker';
 import { PanneauFiltres } from '@/components/admin/PanneauFiltres';
@@ -50,8 +47,6 @@ export default async function AdminListPage({ searchParams }: Props) {
   }
 
   const parStatut = compter(fiches, filtres, 'statut', STATUS_ORDER);
-  const parGroupe = compter(fiches, filtres, 'groupe', GROUPE_CHOIX);
-  const parGenre = compter(fiches, filtres, 'genre', GENRE_CHOIX);
   const selection = fiches.filter((fiche) => correspond(fiche, filtres)).length;
   const aDesFiltres = filtresActifs(filtres);
   const detail = resume(filtres);
@@ -85,15 +80,6 @@ export default async function AdminListPage({ searchParams }: Props) {
           </p>
         </div>
 
-        <a
-          className="adm-btn adm-btn-export"
-          href={lien('/api/admin/export', filtres)}
-          // download : le navigateur enregistre le fichier au lieu de l'ouvrir,
-          // même si le serveur renvoie déjà un Content-Disposition.
-          download
-        >
-          Exporter {selection} {selection > 1 ? 'fiches' : 'fiche'} en CSV
-        </a>
       </div>
 
       <div className="adm-barre-filtres">
@@ -110,12 +96,7 @@ export default async function AdminListPage({ searchParams }: Props) {
           ))}
         </nav>
 
-        <PanneauFiltres
-          filtres={filtres}
-          parGroupe={parGroupe}
-          parGenre={parGenre}
-          criteres={criteres}
-        />
+        <PanneauFiltres filtres={filtres} fiches={fiches} criteres={criteres} />
       </div>
 
       {members.length === 0 ? (
@@ -168,7 +149,6 @@ export default async function AdminListPage({ searchParams }: Props) {
                     à vérifier
                   </span>
                 )}
-                {member.form_version === 'court' && <span className="adm-tag">court</span>}
                 <span className="adm-chip" data-status={member.status}>
                   {label.status(member.status)}
                 </span>
@@ -181,15 +161,8 @@ export default async function AdminListPage({ searchParams }: Props) {
 
       {selection > members.length && (
         <p className="adm-hint">
-          {members.length} fiches affichées sur {selection}. L’export CSV, lui, les emporte
-          toutes.
-        </p>
-      )}
-
-      {aDesFiltres && (
-        <p className="adm-hint">
-          Le fichier exporté reprend la sélection ci-dessus —{' '}
-          <code>?{versParams(filtres).toString()}</code>.
+          {members.length} fiches affichées sur {selection}. L’export CSV, dans le panneau des
+          filtres, les emporte toutes.
         </p>
       )}
     </main>
