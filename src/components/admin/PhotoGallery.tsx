@@ -105,7 +105,7 @@ export function PhotoGallery({ photos, firstName }: Props) {
           }}
         />
 
-        {photos.length > 1 && (
+        {photos.length < 3 || photos.length > 1 ? (
           <div className="adm-photo-strip">
             {photos.slice(1).map((url, index) => (
               // eslint-disable-next-line @next/next/no-img-element
@@ -125,8 +125,30 @@ export function PhotoGallery({ photos, firstName }: Props) {
                 }}
               />
             ))}
+
+            {/* Les emplacements laissés vides : « 2 / 3 » en haut de la carte
+                se comprend mieux quand on voit la place qui manque. */}
+            {Array.from({ length: 3 - Math.max(photos.length, 1) }, (_, index) => (
+              <div className="adm-photo-manquante" key={`vide-${index}`}>
+                <svg
+                  viewBox="0 0 24 24"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.6"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="5" width="18" height="14" rx="3" />
+                  <circle cx="9" cy="10" r="1.8" />
+                  <path d="m21 16-5-5-8 8" />
+                </svg>
+                <span>Pas de photo</span>
+              </div>
+            ))}
           </div>
-        )}
+        ) : null}
 
         <p className="adm-photo-aide">
           Clique une photo pour l’agrandir

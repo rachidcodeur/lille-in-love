@@ -17,6 +17,7 @@ export default async function SoireesPage() {
 
   return (
     <main className="adm-main">
+      <p className="adm-eyebrow">Espace curation</p>
       <h1 className="adm-title">Soirées</h1>
       <p className="adm-sub">
         Publier une soirée prévient aussitôt les profils non retenus (03) et les validés hors de

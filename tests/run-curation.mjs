@@ -21,6 +21,9 @@ const APP_PORT = 3100;
 const testEnv = {
   ...process.env,
   NODE_ENV: 'development',
+  // Un dossier de build à part : le serveur de développement du poste peut
+  // continuer de tourner pendant que les tests s'exécutent.
+  NEXT_DIST_DIR: '.next-test',
   SUPABASE_URL: `http://localhost:${FAKE_PORT}`,
   SUPABASE_SERVICE_ROLE_KEY: 'cle-de-test',
   SUPABASE_STORAGE_BUCKET: 'lil-photos',

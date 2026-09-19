@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { isAdminAllowed } from '@/lib/admin';
 import { env } from '@/lib/env';
 import { GateForm } from '@/components/admin/GateForm';
+import { AdminNav } from '@/components/admin/AdminNav';
 import './admin.css';
 
 export const metadata: Metadata = {
@@ -24,14 +25,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       <header className="adm-bar">
         <div className="adm-bar-inner">
           <Link href="/admin" className="adm-brand">
-            Lille in Love <span>· curation</span>
+            <span className="adm-brand-mark" aria-hidden="true">
+              L
+            </span>
+            <span className="adm-brand-nom">Lille in Love</span>
+            <span className="adm-brand-tag">Curation</span>
           </Link>
-          {allowed && (
-            <nav className="adm-nav">
-              <Link href="/admin">Candidatures</Link>
-              <Link href="/admin/soirees">Soirées</Link>
-            </nav>
-          )}
+          {allowed && <AdminNav />}
         </div>
       </header>
 

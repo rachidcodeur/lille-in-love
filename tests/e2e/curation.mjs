@@ -757,6 +757,20 @@ sansGroupeCsv.length === 1
   ? ok('« sans groupe » ne renvoie plus personne : tout le monde est rangé')
   : bad('fiches sans groupe', sansGroupeCsv.slice(1).map((l) => l.split(',')[1]).join(', '));
 
+// Symétrique du test précédent : une pastille de statut n'est qu'une
+// indication. Elle ne doit pas avaler le clic — c'est arrivé, et une ligne
+// qui ne s'ouvre pas quand on clique au milieu ne se remarque pas tout de suite.
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+// Un clic à la souris, aux coordonnées exactes de la pastille : Playwright
+// refuserait de « cliquer la pastille » puisqu'elle est recouverte par le
+// lien — et c'est précisément ce recouvrement qu'on veut vérifier.
+const pastille = await page.locator('.adm-row', { hasText: 'Carmen' }).locator('.adm-chip').boundingBox();
+await page.mouse.click(pastille.x + pastille.width / 2, pastille.y + pastille.height / 2);
+await page.waitForTimeout(1500);
+((await page.locator('.adm-name').innerText().catch(() => '')) || '').includes('Carmen')
+  ? ok('cliquer une pastille de statut ouvre la fiche, comme le reste de la ligne')
+  : bad('la pastille de statut avale le clic', page.url());
+
 await page.goto(`${BASE}/admin/${idAmande}`, { waitUntil: 'networkidle' });
 await page.locator('.adm-groupes[data-compact="false"] .adm-groupe-btn-vide').click();
 await page.waitForTimeout(900);

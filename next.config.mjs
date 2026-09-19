@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Deux serveurs Next qui partagent le même dossier de build se corrompent
+  // l'un l'autre : les tests s'en donnent donc un bien à eux. En temps
+  // normal, la variable est absente et rien ne change.
+  distDir: process.env.NEXT_DIST_DIR ?? '.next',
   // Le formulaire est servi dans une iframe posée sur le site WordPress.
   // On autorise explicitement ces parents-là, et personne d'autre.
   async headers() {

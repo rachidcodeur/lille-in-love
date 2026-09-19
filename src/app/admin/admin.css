@@ -19,9 +19,9 @@
 }
 
 .adm-bar-inner {
-  max-width: 1100px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 16px 24px;
+  padding: 14px 24px;
   display: flex;
   align-items: center;
   gap: 16px;
@@ -29,38 +29,104 @@
 }
 
 .adm-brand {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--gold-deep);
+  display: flex;
+  align-items: center;
+  gap: 12px;
   text-decoration: none;
 }
 
-.adm-brand span {
+.adm-brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gold);
+  color: var(--gold-deep);
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.adm-brand-nom {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.adm-brand-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
   color: var(--ink-muted);
-  font-weight: 500;
+  padding-left: 14px;
+  border-left: 1px solid var(--border);
 }
 
 .adm-nav {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 6px;
   margin-left: auto;
 }
 
 .adm-nav a {
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--ink-soft);
   text-decoration: none;
-  padding: 7px 13px;
+  padding: 10px 18px;
   border-radius: 999px;
-  transition: background 140ms ease, color 140ms ease;
+  border: 1.5px solid transparent;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease,
+    box-shadow 140ms ease;
 }
 
 .adm-nav a:hover {
   background: var(--sand);
   color: var(--ink);
+}
+
+.adm-nav a[data-on='true'] {
+  background: var(--sand-deep);
+  border-color: var(--gold-soft);
+  color: var(--ink);
+}
+
+/* Publier une soirée est le geste rare et lourd de conséquences : l'onglet
+   se voit, sans pour autant crier plus fort que la page. */
+.adm-nav .adm-nav-soirees {
+  color: var(--gold-deep);
+  border-color: var(--gold-soft);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+.adm-nav .adm-nav-soirees:hover {
+  background: var(--sand);
+  border-color: var(--gold);
+  color: var(--ink);
+}
+
+.adm-nav .adm-nav-soirees[data-on='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--sand);
+  box-shadow: none;
+}
+
+@media (max-width: 520px) {
+  .adm-brand-tag {
+    display: none;
+  }
+  .adm-nav a {
+    padding: 9px 14px;
+    font-size: 14px;
+  }
 }
 
 /* --- Soirées -------------------------------------------------------- */
@@ -205,9 +271,10 @@
 }
 
 .adm-main {
-  max-width: 1100px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 28px 24px 64px;
+  padding: 36px 24px 72px;
+  font-size: 15.5px;
 }
 
 @media (max-width: 620px) {
@@ -239,7 +306,7 @@
 }
 
 .adm-title {
-  font-size: 34px;
+  font-size: 38px;
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.1;
@@ -248,7 +315,7 @@
 }
 
 .adm-sub {
-  font-size: 14.5px;
+  font-size: 16px;
   color: var(--ink-soft);
   margin: 0;
 }
@@ -259,7 +326,11 @@
 
 /* Hors de l'en-tête (fiche, soirées), le sous-titre garde son air. */
 .adm-main > .adm-sub {
-  margin-bottom: 24px;
+  margin-bottom: 26px;
+}
+
+.adm-main > .adm-eyebrow {
+  margin-top: 0;
 }
 
 /* --- Filtres ------------------------------------------------------- */
@@ -280,12 +351,12 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--ink-soft);
   background: transparent;
   border-radius: 999px;
-  padding: 8px 16px;
+  padding: 10px 18px;
   text-decoration: none;
   transition: background 140ms ease, color 140ms ease, box-shadow 140ms ease;
 }
@@ -304,9 +375,9 @@
 .adm-filter b {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  font-size: 12px;
-  min-width: 24px;
-  padding: 2px 7px;
+  font-size: 12.5px;
+  min-width: 26px;
+  padding: 3px 8px;
   border-radius: 999px;
   text-align: center;
   color: var(--gold-deep);
@@ -345,7 +416,7 @@
 }
 
 .adm-tri-champ > span:first-child {
-  font-size: 11px;
+  font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -355,13 +426,13 @@
 .adm-tri select,
 .adm-tri input {
   font-family: var(--font);
-  font-size: 14.5px;
+  font-size: 15.5px;
   color: var(--ink);
   background: var(--cream);
   border: 1.5px solid var(--border);
-  border-radius: 10px;
-  padding: 9px 11px;
-  height: 40px;
+  border-radius: 11px;
+  padding: 10px 12px;
+  height: 46px;
 }
 
 .adm-tri select:focus-visible,
@@ -378,7 +449,7 @@
 }
 
 .adm-tri-bornes input {
-  width: 74px;
+  width: 82px;
 }
 
 .adm-tri-bornes i {
@@ -431,7 +502,7 @@
   border: 0;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
-  padding: 14px 18px 14px 16px;
+  padding: 18px 22px 18px 18px;
   color: inherit;
   overflow: hidden;
   transition: transform 180ms ease, box-shadow 180ms ease;
@@ -486,8 +557,8 @@
 
 .adm-avatar {
   flex: 0 0 auto;
-  width: 48px;
-  height: 48px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   object-fit: cover;
   background: var(--sand-deep);
@@ -497,7 +568,7 @@
 .adm-avatar-empty {
   display: grid;
   place-items: center;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--gold-deep);
 }
@@ -508,14 +579,15 @@
 }
 
 .adm-row-name {
-  font-size: 16px;
+  font-size: 18.5px;
   font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--ink);
-  margin: 0 0 3px;
+  margin: 0 0 4px;
 }
 
 .adm-row-meta {
-  font-size: 13.5px;
+  font-size: 14.5px;
   color: var(--ink-muted);
   margin: 0;
   overflow: hidden;
@@ -524,12 +596,20 @@
 }
 
 .adm-row-side {
-  position: relative;
-  z-index: 1;
   flex: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 10px;
+  /* Les pastilles ne sont que des indications : un clic dessus doit ouvrir
+     la fiche comme ailleurs sur la ligne. Seules les touches de groupe
+     interceptent le clic — elles, on les vise vraiment. */
+  pointer-events: none;
+}
+
+.adm-row-side .adm-groupes {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
 }
 
 @media (max-width: 620px) {
@@ -552,10 +632,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12.5px;
+  font-size: 13.5px;
   font-weight: 600;
   border-radius: 999px;
-  padding: 5px 11px;
+  padding: 7px 14px;
   white-space: nowrap;
   border: 1px solid transparent;
 }
@@ -592,7 +672,7 @@
 }
 
 .adm-tag {
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -646,7 +726,7 @@
 
 .adm-fiche {
   display: grid;
-  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
   gap: 26px;
   /* Les deux colonnes prennent la même hauteur : sans cela, la carte de
      décision n'a aucune marge pour suivre le défilement. */
@@ -679,13 +759,135 @@
   }
 }
 
+.adm-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
 .adm-card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--gold-deep);
   margin: 0 0 16px;
+}
+
+/* Un petit trait avant le titre : il pose la carte sans ajouter de ligne. */
+.adm-card-title::before {
+  content: '';
+  width: 18px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--gold);
+  flex: 0 0 auto;
+}
+
+.adm-card-head .adm-card-title {
+  margin: 0;
+}
+
+.adm-card-aside {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Combien de réponses sur le total attendu. */
+.adm-progres {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.adm-progres-barre {
+  display: block;
+  width: 120px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--sand-deep);
+  overflow: hidden;
+}
+
+.adm-progres-barre i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--gold-deep), var(--gold));
+}
+
+/* ---- Bandeau de fiche ---------------------------------------------- */
+
+.adm-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  background: linear-gradient(120deg, var(--white) 0%, var(--sand) 100%);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 26px 30px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+/* Un cercle à peine visible dans l'angle : la page respire sans bordure. */
+.adm-hero::after {
+  content: '';
+  position: absolute;
+  right: -80px;
+  top: -80px;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  border: 1px solid rgba(195, 178, 145, 0.4);
+  pointer-events: none;
+}
+
+.adm-hero-main {
+  flex: 1;
+  min-width: 220px;
+}
+
+.adm-hero .adm-chip {
+  position: relative;
+  z-index: 1;
+  margin-left: auto;
+}
+
+.adm-avatar-hero {
+  width: 84px;
+  height: 84px;
+  border: 3px solid var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+.adm-avatar-hero.adm-avatar-empty {
+  font-size: 30px;
+  background: var(--sand-deep);
+}
+
+@media (max-width: 620px) {
+  .adm-hero {
+    padding: 20px;
+    gap: 16px;
+  }
+  .adm-hero .adm-chip {
+    margin-left: 0;
+  }
 }
 
 /* Une photo en grand, les autres en bande : la décision reste atteignable
@@ -926,54 +1128,130 @@
 }
 
 .adm-name {
-  font-size: 26px;
+  font-size: 32px;
   font-weight: 600;
-  letter-spacing: -0.015em;
-  margin: 0 0 6px;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  margin: 0 0 8px;
   color: var(--ink);
 }
 
 .adm-ident {
-  font-size: 14.5px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 15px;
   color: var(--ink-soft);
-  margin: 0 0 18px;
+  margin: 0;
   line-height: 1.6;
 }
 
 .adm-ident a {
-  color: var(--ink-soft);
+  color: var(--ink);
+  text-decoration: none;
+  border-bottom: 1px solid var(--gold);
 }
 
+.adm-ident a:hover {
+  border-color: var(--gold-deep);
+}
+
+.adm-ident .adm-tag {
+  background: var(--white);
+}
+
+/* Une case par réponse : le libellé ne se perd plus dans la valeur, et une
+   question sans réponse se reconnaît de loin à son trait pointillé. */
 .adm-answers {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px 22px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
   margin: 0;
 }
 
+@media (max-width: 1040px) {
+  .adm-answers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .adm-answers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.adm-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 16px 15px;
+  transition: border-color 140ms ease;
+}
+
+.adm-fact[data-rempli='true'] {
+  background: var(--sand);
+  border-color: var(--gold-soft);
+}
+
+.adm-fact[data-rempli='false'] {
+  background: var(--white);
+  border-style: dashed;
+}
+
+.adm-fact:hover {
+  border-color: var(--gold);
+}
+
 .adm-answer dt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   font-size: 11.5px;
   font-weight: 700;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--ink-muted);
-  margin-bottom: 4px;
+  color: var(--ink-2);
+  margin: 0;
+}
+
+.adm-fact-ico {
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: var(--sand-deep);
+  color: var(--gold-deep);
+  display: grid;
+  place-items: center;
+}
+
+.adm-fact[data-rempli='true'] .adm-fact-ico {
+  background: var(--white);
 }
 
 .adm-answer dd {
   margin: 0;
-  font-size: 15px;
-  line-height: 1.55;
+  padding-left: 35px;
+  font-size: 16.5px;
+  font-weight: 600;
+  line-height: 1.45;
   color: var(--ink);
+  overflow-wrap: anywhere;
 }
 
 .adm-answer dd.vide {
   color: var(--ink-muted);
+  font-size: 15px;
+  font-weight: 500;
   font-style: italic;
 }
 
 .adm-prose {
-  font-size: 15.5px;
+  font-size: 16px;
   line-height: 1.65;
   color: var(--ink);
   margin: 0 0 18px;
@@ -1079,7 +1357,7 @@
 }
 
 .adm-hint {
-  font-size: 13px;
+  font-size: 13.5px;
   line-height: 1.55;
   color: var(--ink-muted);
   margin: 14px 0 0;
@@ -1096,11 +1374,39 @@
 .adm-mail {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 11px 14px;
+  border-radius: 14px;
+  padding: 14px 16px;
   background: var(--cream);
+}
+
+.adm-mail-ico {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--sand-deep);
+  color: var(--gold-deep);
+  display: grid;
+  place-items: center;
+}
+
+.adm-mail-etat {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  white-space: nowrap;
+}
+
+.adm-mail-etat[data-status='echec'] {
+  color: var(--error);
 }
 
 .adm-mail-main {
@@ -1109,16 +1415,20 @@
 }
 
 .adm-mail-name {
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--ink);
   margin: 0 0 2px;
 }
 
 .adm-mail-meta {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--ink-muted);
-  margin: 0;
+  margin: 2px 0 0;
+}
+
+.adm-mail-meta:empty {
+  display: none;
 }
 
 .adm-dot {
@@ -1221,9 +1531,9 @@
 }
 
 .adm-groupes[data-compact='true'] .adm-groupe-btn {
-  width: 28px;
-  height: 28px;
-  font-size: 12.5px;
+  width: 32px;
+  height: 32px;
+  font-size: 13.5px;
 }
 
 .adm-groupes[data-compact='true'] .adm-feedback {
@@ -1252,13 +1562,13 @@
   display: inline-flex;
   align-items: center;
   gap: 9px;
-  font-size: 14.5px;
+  font-size: 15.5px;
   font-weight: 600;
   color: var(--sand);
   background: var(--ink);
   border: 1.5px solid var(--ink);
   border-radius: 999px;
-  padding: 12px 20px;
+  padding: 14px 24px;
   text-decoration: none;
   white-space: nowrap;
   transition: background 150ms ease, box-shadow 150ms ease;
@@ -1273,9 +1583,9 @@
   background: var(--white);
   color: var(--ink);
   border-color: var(--gold);
-  height: 40px;
-  padding: 0 22px;
-  font-size: 14.5px;
+  height: 46px;
+  padding: 0 26px;
+  font-size: 15.5px;
 }
 
 .adm-btn-filtrer:hover:not(:disabled) {
@@ -1287,4 +1597,28 @@
     width: 100%;
     justify-content: center;
   }
+}
+
+/* --- Emplacements de photo restés vides ----------------------------- */
+
+.adm-photo-manquante {
+  flex: 1;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 6px;
+  border: 1.5px dashed var(--gold);
+  border-radius: var(--radius);
+  background: var(--white);
+  color: var(--gold-deep);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-align: center;
+  padding: 8px;
+}
+
+.adm-photo-manquante svg {
+  opacity: 0.7;
 }

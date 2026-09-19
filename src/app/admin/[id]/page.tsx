@@ -13,18 +13,26 @@ import { FicheActions } from '@/components/admin/FicheActions';
 import { PhotoGallery } from '@/components/admin/PhotoGallery';
 import { AnnulerEnvoi } from '@/components/admin/AnnulerEnvoi';
 import { GroupePicker } from '@/components/admin/GroupePicker';
+import { Icone, type NomIcone } from '@/components/admin/Icones';
 import { DECISION_TEMPLATES, templateAttendu } from '@/lib/decision';
 
 export const dynamic = 'force-dynamic';
 
 type Props = { params: Promise<{ id: string }> };
 
-/** Une réponse du questionnaire, ou la mention qu'elle n'a pas été demandée. */
-function Answer({ term, value }: { term: string; value: string | null | undefined }) {
+type Fait = { terme: string; valeur: string | null; icone: NomIcone };
+
+/** Une réponse du questionnaire, ou la mention qu'elle n'a pas été donnée. */
+function Answer({ terme, valeur, icone }: Fait) {
   return (
-    <div className="adm-answer">
-      <dt>{term}</dt>
-      <dd className={value ? undefined : 'vide'}>{value || 'non renseigné'}</dd>
+    <div className="adm-answer adm-fact" data-rempli={Boolean(valeur)}>
+      <dt>
+        <span className="adm-fact-ico">
+          <Icone nom={icone} taille={14} />
+        </span>
+        {terme}
+      </dt>
+      <dd className={valeur ? undefined : 'vide'}>{valeur || 'non renseigné'}</dd>
     </div>
   );
 }
@@ -48,6 +56,60 @@ export default async function FichePage({ params }: Props) {
       mail.template !== attendu,
   );
 
+  // Les réponses, décrites une fois : l'affichage et le compteur
+  // « N / M renseignés » lisent la même liste.
+  const faits: Fait[] = [
+    { terme: 'Je suis', valeur: label.gender(member.gender), icone: 'personne' },
+    {
+      terme: 'Âge',
+      valeur: member.age
+        ? `${member.age} ans${member.birth_date ? ` (${formatDate(member.birth_date)})` : ''}`
+        : null,
+      icone: 'calendrier',
+    },
+    {
+      terme: 'Où',
+      valeur: member.city
+        ? `${member.city}${member.postal_code ? ` (${member.postal_code})` : ''}`
+        : null,
+      icone: 'lieu',
+    },
+    { terme: 'Orientation', valeur: label.orientation(member.orientation), icone: 'coeur' },
+    {
+      terme: 'Enfants',
+      valeur: member.has_children === null ? null : member.has_children ? 'Oui' : 'Non',
+      icone: 'enfants',
+    },
+    { terme: 'Cherche', valeur: label.lookingFor(member.looking_for), icone: 'loupe' },
+    { terme: 'Taille', valeur: member.height_cm ? `${member.height_cm} cm` : null, icone: 'taille' },
+    { terme: 'Profession', valeur: member.profession, icone: 'mallette' },
+    { terme: 'Signe', valeur: label.zodiac(member.zodiac), icone: 'etoile' },
+    { terme: 'Instagram', valeur: member.instagram, icone: 'instagram' },
+    { terme: 'Nous a connus par', valeur: label.referral(member.referral), icone: 'avion' },
+    {
+      terme: 'Vient avec',
+      valeur: member.comes_with
+        ? [member.companion_first_name, member.companion_email].filter(Boolean).join(' · ') || 'Oui'
+        : member.comes_with === false
+          ? 'Seul·e'
+          : null,
+      icone: 'duo',
+    },
+  ];
+
+  // Reprise de l'ancien formulaire : la question n'est plus posée, on ne
+  // montre la case que lorsqu'une réponse existe.
+  if (member.children_preference) {
+    faits.splice(5, 0, {
+      terme: 'Enfants du partenaire',
+      valeur: label.childrenPreference(member.children_preference),
+      icone: 'enfants',
+    });
+  }
+
+  const renseignes = faits.filter((fait) => fait.valeur).length;
+  const recit = member.about || member.motivation || member.interests?.length;
+
   return (
     <main className="adm-main">
       <Link href="/admin" className="adm-back">
@@ -70,11 +132,42 @@ export default async function FichePage({ params }: Props) {
         </div>
       )}
 
+      {/* ---- Bandeau : le visage, le nom, l'état ---- */}
+      <section className="adm-hero">
+        {photos[0] ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="adm-avatar adm-avatar-hero" src={photos[0]} alt="" />
+        ) : (
+          <div className="adm-avatar adm-avatar-hero adm-avatar-empty" aria-hidden="true">
+            {member.first_name.slice(0, 1).toUpperCase()}
+          </div>
+        )}
+
+        <div className="adm-hero-main">
+          <h1 className="adm-name">
+            {member.first_name} {member.last_name}
+          </h1>
+          <p className="adm-ident">
+            <a href={`mailto:${member.email}`}>{member.email}</a>
+            {member.phone && <> · {member.phone}</>} · Candidature reçue{' '}
+            {relative(member.created_at)}
+            {isCourt && <span className="adm-tag">formulaire court</span>}
+          </p>
+        </div>
+
+        <span className="adm-chip" data-status={member.status}>
+          {label.status(member.status)}
+        </span>
+      </section>
+
       <div className="adm-fiche">
-        {/* ---- Colonne gauche : le visage et la décision ---- */}
+        {/* ---- Colonne gauche : les photos, le rangement, la décision ---- */}
         <div>
           <div className="adm-card">
-            <p className="adm-card-title">Photos</p>
+            <div className="adm-card-head">
+              <p className="adm-card-title">Photos</p>
+              <span className="adm-card-aside">{photos.length} / 3</span>
+            </div>
             <PhotoGallery photos={photos} firstName={member.first_name} />
           </div>
 
@@ -83,7 +176,9 @@ export default async function FichePage({ params }: Props) {
           </div>
 
           <div className="adm-card adm-decision">
-            <p className="adm-card-title">Décision</p>
+            <div className="adm-card-head">
+              <p className="adm-card-title">Décision</p>
+            </div>
             <FicheActions
               memberId={member.id}
               status={member.status}
@@ -97,70 +192,28 @@ export default async function FichePage({ params }: Props) {
         {/* ---- Colonne droite : ce que la personne a répondu ---- */}
         <div>
           <div className="adm-card">
-            <h1 className="adm-name">
-              {member.first_name} {member.last_name}
-            </h1>
-            <p className="adm-ident">
-              <a href={`mailto:${member.email}`}>{member.email}</a>
-              {member.phone && <> · {member.phone}</>}
-              <br />
-              Candidature reçue {relative(member.created_at)}
-              {isCourt && ' · formulaire court'}
-            </p>
+            <div className="adm-card-head">
+              <p className="adm-card-title">Profil</p>
+              <span className="adm-progres">
+                {renseignes} / {faits.length} renseignés
+                <span className="adm-progres-barre">
+                  <i style={{ width: `${Math.round((renseignes / faits.length) * 100)}%` }} />
+                </span>
+              </span>
+            </div>
 
-            <dl className="adm-answers">
-              <Answer term="Je suis" value={label.gender(member.gender)} />
-              <Answer
-                term="Âge"
-                value={
-                  member.age
-                    ? `${member.age} ans${
-                        member.birth_date ? ` (${formatDate(member.birth_date)})` : ''
-                      }`
-                    : null
-                }
-              />
-              <Answer
-                term="Où"
-                value={
-                  member.city ? `${member.city}${member.postal_code ? ` (${member.postal_code})` : ''}` : null
-                }
-              />
-              <Answer term="Orientation" value={label.orientation(member.orientation)} />
-              <Answer
-                term="Enfants"
-                value={member.has_children === null ? null : member.has_children ? 'Oui' : 'Non'}
-              />
-              <Answer term="Cherche" value={label.lookingFor(member.looking_for)} />
-              {member.children_preference && (
-                <Answer
-                  term="Enfants du partenaire"
-                  value={label.childrenPreference(member.children_preference)}
-                />
-              )}
-              <Answer term="Taille" value={member.height_cm ? `${member.height_cm} cm` : null} />
-              <Answer term="Profession" value={member.profession} />
-              <Answer term="Signe" value={label.zodiac(member.zodiac)} />
-              <Answer term="Instagram" value={member.instagram} />
-              <Answer term="Nous a connus par" value={label.referral(member.referral)} />
-              <Answer
-                term="Vient avec"
-                value={
-                  member.comes_with
-                    ? [member.companion_first_name, member.companion_email]
-                        .filter(Boolean)
-                        .join(' · ') || 'Oui'
-                    : member.comes_with === false
-                      ? 'Seul·e'
-                      : null
-                }
-              />
+            <dl className="adm-answers adm-facts">
+              {faits.map((fait) => (
+                <Answer key={fait.terme} {...fait} />
+              ))}
             </dl>
           </div>
 
-          {(member.about || member.motivation || member.interests?.length) && (
+          {recit ? (
             <div className="adm-card">
-              <p className="adm-card-title">Ce qu’elle ou il raconte</p>
+              <div className="adm-card-head">
+                <p className="adm-card-title">Ce qu’elle ou il raconte</p>
+              </div>
               {member.about && (
                 <>
                   <p className="adm-prose-label">En deux lignes</p>
@@ -183,10 +236,14 @@ export default async function FichePage({ params }: Props) {
                 </>
               ) : null}
             </div>
-          )}
+          ) : null}
 
           <div className="adm-card">
-            <p className="adm-card-title">Emails</p>
+            <div className="adm-card-head">
+              <p className="adm-card-title">Emails</p>
+              {emails.length > 0 && <span className="adm-card-aside">{emails.length}</span>}
+            </div>
+
             {emails.length === 0 ? (
               <p className="adm-hint" style={{ margin: 0 }}>
                 Aucun email pour l’instant.
@@ -195,21 +252,26 @@ export default async function FichePage({ params }: Props) {
               <div className="adm-mails">
                 {emails.map((mail) => (
                   <div className="adm-mail" key={mail.id}>
-                    <span className="adm-dot" data-status={mail.status} aria-hidden="true" />
+                    <span className="adm-mail-ico" aria-hidden="true">
+                      <Icone nom="enveloppe" taille={17} />
+                    </span>
                     <div className="adm-mail-main">
                       <p className="adm-mail-name">{label.template(mail.template)}</p>
                       <p className="adm-mail-meta">
-                        {EMAIL_STATUS_LABELS[mail.status] ?? mail.status}
                         {mail.status === 'programme' && mail.scheduled_at && (
-                          <> · part {relative(mail.scheduled_at)} ({formatDateTime(mail.scheduled_at)})</>
+                          <>
+                            part {relative(mail.scheduled_at)} ({formatDateTime(mail.scheduled_at)})
+                          </>
                         )}
-                        {mail.status === 'envoye' && mail.sent_at && (
-                          <> · {formatDateTime(mail.sent_at)}</>
-                        )}
-                        {mail.status === 'echec' && mail.error && <> · {mail.error}</>}
+                        {mail.status === 'envoye' && mail.sent_at && formatDateTime(mail.sent_at)}
+                        {mail.status === 'echec' && mail.error}
                         {mail.soiree_nom && <> · soirée « {mail.soiree_nom} »</>}
                       </p>
                     </div>
+                    <span className="adm-mail-etat" data-status={mail.status}>
+                      <span className="adm-dot" data-status={mail.status} aria-hidden="true" />
+                      {EMAIL_STATUS_LABELS[mail.status] ?? mail.status}
+                    </span>
                   </div>
                 ))}
               </div>
