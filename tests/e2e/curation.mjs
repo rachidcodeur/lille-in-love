@@ -660,6 +660,45 @@ s.members.find((m) => m.id === idAmande)?.status === 'valide'
   : bad('le statut a changé avec le groupe');
 s.sent.length === 0 ? ok('aucun email déclenché par un changement de groupe') : bad('email envoyé à tort', String(s.sent.length));
 
+// --- Le panneau de filtres, par le chemin d'un curateur -----------
+// Les réglages ne s'affichent plus en permanence : ils vivent derrière
+// l'icône, à droite. On refait donc le geste complet, du clic au résultat.
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+(await page.locator('.adm-panneau').count()) === 0
+  ? ok('la page s’ouvre sans barre de réglages : seulement l’icône')
+  : bad('le panneau est ouvert d’emblée');
+
+await page.locator('.adm-filtres-bouton').click();
+await page.waitForTimeout(400);
+(await page.locator('.adm-panneau').count()) === 1
+  ? ok('l’icône ouvre le panneau de droite')
+  : bad('le panneau ne s’ouvre pas');
+
+await page.selectOption('.adm-panneau select[name="groupe"]', 'C');
+await page.selectOption('.adm-panneau select[name="genre"]', 'femme');
+await page.fill('.adm-panneau input[name="ageMin"]', '27');
+await page.fill('.adm-panneau input[name="ageMax"]', '35');
+await page.getByRole('button', { name: 'Voir les candidatures' }).click();
+await page.waitForTimeout(1500);
+
+page.url().includes('groupe=C') && page.url().includes('ageMax=35')
+  ? ok('le panneau applique bien les critères choisis')
+  : bad('critères non appliqués', page.url());
+(await page.locator('.adm-panneau').count()) === 0
+  ? ok('le panneau se referme une fois la liste filtrée')
+  : bad('le panneau reste ouvert après l’envoi');
+(await page.locator('.adm-filtres-bouton').getAttribute('data-actif')) === 'true'
+  ? ok('l’icône signale qu’on ne regarde pas tout le monde')
+  : bad('l’icône ne signale aucun critère');
+
+await page.locator('.adm-filtres-bouton').click();
+await page.waitForTimeout(300);
+await page.keyboard.press('Escape');
+await page.waitForTimeout(300);
+(await page.locator('.adm-panneau').count()) === 0
+  ? ok('Échap referme le panneau sans rien changer')
+  : bad('Échap reste sans effet');
+
 // --- Filtres croisés : les femmes de 27 à 35 ans du groupe C ------
 const urlFiltre = `${BASE}/admin?groupe=C&genre=femme&ageMin=27&ageMax=35`;
 await page.goto(urlFiltre, { waitUntil: 'networkidle' });

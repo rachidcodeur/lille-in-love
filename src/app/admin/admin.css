@@ -346,6 +346,15 @@
 
 /* --- Filtres ------------------------------------------------------- */
 
+.adm-barre-filtres {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: var(--adm-section);
+}
+
 .adm-filters {
   display: flex;
   flex-wrap: wrap;
@@ -353,9 +362,7 @@
   padding: 6px;
   background: var(--sand);
   border-radius: 999px;
-  width: fit-content;
   max-width: 100%;
-  margin-bottom: 12px;
 }
 
 .adm-filter {
@@ -408,18 +415,6 @@
 
 /* --- Tri : groupe, qui, âge ---------------------------------------- */
 
-.adm-tri {
-  display: flex;
-  align-items: flex-end;
-  flex-wrap: wrap;
-  gap: 12px;
-  background: var(--white);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-  padding: 16px 18px;
-  margin-bottom: var(--adm-section);
-}
-
 .adm-tri-champ {
   display: flex;
   flex-direction: column;
@@ -434,8 +429,8 @@
   color: var(--ink-muted);
 }
 
-.adm-tri select,
-.adm-tri input {
+.adm-tri-champ select,
+.adm-tri-champ input {
   font-family: var(--font);
   font-size: 15.5px;
   color: var(--ink);
@@ -446,8 +441,8 @@
   height: 46px;
 }
 
-.adm-tri select:focus-visible,
-.adm-tri input:focus-visible {
+.adm-tri-champ select:focus-visible,
+.adm-tri-champ input:focus-visible {
   outline: none;
   border-color: var(--gold);
   box-shadow: var(--shadow-focus);
@@ -481,18 +476,9 @@
   text-decoration: underline;
 }
 
-/* Deux classes, pour passer devant le « margin » raccourci de .adm-hint,
-   déclaré plus bas : la note appartient à la barre de tri, elle se glisse
-   dans l'écart au lieu de flotter au milieu. */
-.adm-hint.adm-tri-note {
-  margin-top: calc(-1 * var(--adm-section) + 12px);
-  margin-bottom: var(--adm-section);
-}
-
 @media (max-width: 620px) {
-  .adm-tri-champ,
-  .adm-tri select {
-    width: 100%;
+  .adm-barre-filtres {
+    gap: 10px;
   }
 }
 
@@ -1640,4 +1626,208 @@
 
 .adm-photo-manquante svg {
   opacity: 0.7;
+}
+
+/* --- Filtres : une icône, puis un panneau ---------------------------- */
+
+.adm-filtres-bouton {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  padding: 11px 20px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 140ms ease, color 140ms ease, box-shadow 140ms ease,
+    background 140ms ease;
+}
+
+.adm-filtres-bouton:hover {
+  border-color: var(--gold);
+  color: var(--ink);
+  box-shadow: var(--shadow-card);
+}
+
+.adm-filtres-bouton:focus-visible {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: var(--shadow-focus);
+}
+
+/* Des critères sont posés : on ne regarde pas tout le monde, et ça se voit
+   sans ouvrir le panneau. */
+.adm-filtres-bouton[data-actif='true'] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--sand);
+}
+
+.adm-filtres-bouton[data-actif='true']:hover {
+  background: var(--ink-2);
+  color: var(--sand);
+}
+
+.adm-filtres-compte {
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--sand);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  display: grid;
+  place-items: center;
+}
+
+@media (max-width: 520px) {
+  .adm-filtres-mot {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+  .adm-filtres-bouton {
+    padding: 11px 14px;
+  }
+}
+
+.adm-voile {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(28, 19, 15, 0.38);
+  backdrop-filter: blur(2px);
+  animation: adm-fondu 160ms ease-out;
+}
+
+.adm-panneau {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 61;
+  width: min(420px, 100%);
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+  box-shadow: -24px 0 60px -20px rgba(28, 19, 15, 0.35);
+  animation: adm-glisse 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.adm-panneau:focus {
+  outline: none;
+}
+
+@keyframes adm-glisse {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-voile,
+  .adm-panneau {
+    animation: none;
+  }
+}
+
+.adm-panneau-barre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.adm-panneau-barre .adm-card-title {
+  margin: 0;
+}
+
+.adm-panneau-fermer {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--cream);
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.adm-panneau-fermer:hover {
+  background: var(--sand);
+  color: var(--ink);
+}
+
+.adm-panneau-fermer:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.adm-panneau-corps {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 24px;
+}
+
+.adm-panneau-corps .adm-tri-champ {
+  width: 100%;
+}
+
+.adm-panneau-corps select,
+.adm-panneau-corps .adm-tri-bornes {
+  width: 100%;
+}
+
+.adm-panneau-corps .adm-tri-bornes input {
+  flex: 1;
+  min-width: 0;
+}
+
+.adm-panneau-note {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+  margin: 2px 0 0;
+}
+
+/* Le pied reste sous la main, même quand le panneau défile. */
+.adm-panneau-pied {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-top: 8px;
+}
+
+.adm-btn-appliquer {
+  width: 100%;
+  background: var(--ink);
+  color: var(--sand);
+  border-color: var(--ink);
+}
+
+.adm-btn-appliquer:hover:not(:disabled) {
+  background: var(--ink-2);
 }

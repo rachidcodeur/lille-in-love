@@ -3,9 +3,7 @@ import { facettes, listMembers, photoUrls } from '@/lib/admin';
 import { STATUS_ORDER, label, relative } from '@/lib/libelles';
 import {
   GENRE_CHOIX,
-  GENRE_LABELS,
   GROUPE_CHOIX,
-  GROUPE_LABELS,
   compter,
   correspond,
   filtresActifs,
@@ -15,6 +13,7 @@ import {
   versParams,
 } from '@/lib/groupes';
 import { GroupePicker } from '@/components/admin/GroupePicker';
+import { PanneauFiltres } from '@/components/admin/PanneauFiltres';
 import { Vignette } from '@/components/admin/Vignette';
 
 export const dynamic = 'force-dynamic';
@@ -57,6 +56,14 @@ export default async function AdminListPage({ searchParams }: Props) {
   const aDesFiltres = filtresActifs(filtres);
   const detail = resume(filtres);
 
+  // Ce que porte la pastille de l'icône : les critères posés en dehors du
+  // statut, qui a ses propres boutons juste à côté.
+  const criteres = [
+    filtres.groupe !== 'tous',
+    filtres.genre !== 'tous',
+    filtres.ageMin !== null || filtres.ageMax !== null,
+  ].filter(Boolean).length;
+
   // Une vignette par fiche : c'est le premier repère quand on parcourt la liste.
   const thumbnails = await Promise.all(
     members.map(async (member) =>
@@ -89,87 +96,27 @@ export default async function AdminListPage({ searchParams }: Props) {
         </a>
       </div>
 
-      <nav className="adm-filters" aria-label="Statut">
-        {STATUS_ORDER.map((status) => (
-          <Link
-            key={status}
-            href={lien('/admin', filtres, { statut: status })}
-            className="adm-filter"
-            data-on={filtres.statut === status}
-          >
-            {label.status(status)} <b>{parStatut[status] ?? 0}</b>
-          </Link>
-        ))}
-      </nav>
+      <div className="adm-barre-filtres">
+        <nav className="adm-filters" aria-label="Statut">
+          {STATUS_ORDER.map((status) => (
+            <Link
+              key={status}
+              href={lien('/admin', filtres, { statut: status })}
+              className="adm-filter"
+              data-on={filtres.statut === status}
+            >
+              {label.status(status)} <b>{parStatut[status] ?? 0}</b>
+            </Link>
+          ))}
+        </nav>
 
-      <form className="adm-tri" method="get" action="/admin">
-        {/* Le statut est choisi par les pastilles au-dessus : on le reconduit. */}
-        {filtres.statut !== 'tous' && <input type="hidden" name="statut" value={filtres.statut} />}
-
-        <label className="adm-tri-champ">
-          <span>Groupe</span>
-          <select name="groupe" defaultValue={filtres.groupe}>
-            {GROUPE_CHOIX.map((choix) => (
-              <option key={choix} value={choix}>
-                {GROUPE_LABELS[choix]} ({parGroupe[choix] ?? 0})
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="adm-tri-champ">
-          <span>Qui</span>
-          <select name="genre" defaultValue={filtres.genre}>
-            {GENRE_CHOIX.map((choix) => (
-              <option key={choix} value={choix}>
-                {GENRE_LABELS[choix]} ({parGenre[choix] ?? 0})
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="adm-tri-champ adm-tri-age">
-          <span>Âge</span>
-          <span className="adm-tri-bornes">
-            <input
-              type="number"
-              name="ageMin"
-              min={18}
-              max={120}
-              placeholder="18"
-              defaultValue={filtres.ageMin ?? ''}
-              aria-label="Âge minimum"
-            />
-            <i>–</i>
-            <input
-              type="number"
-              name="ageMax"
-              min={18}
-              max={120}
-              placeholder="99"
-              defaultValue={filtres.ageMax ?? ''}
-              aria-label="Âge maximum"
-            />
-          </span>
-        </label>
-
-        <button type="submit" className="adm-btn adm-btn-filtrer">
-          Filtrer
-        </button>
-
-        {aDesFiltres && (
-          <Link className="adm-tri-effacer" href="/admin">
-            Tout effacer
-          </Link>
-        )}
-      </form>
-
-      {(filtres.ageMin !== null || filtres.ageMax !== null) && (
-        <p className="adm-hint adm-tri-note">
-          Les fiches du formulaire court n’ont pas de date de naissance : dès qu’une borne d’âge
-          est posée, elles sortent de la sélection.
-        </p>
-      )}
+        <PanneauFiltres
+          filtres={filtres}
+          parGroupe={parGroupe}
+          parGenre={parGenre}
+          criteres={criteres}
+        />
+      </div>
 
       {members.length === 0 ? (
         <div className="adm-empty">
