@@ -1,34 +1,57 @@
 # Mise en route
 
-État au 18 septembre 2026. Supabase et Resend sont configurés et vérifiés ;
-il reste à déployer l'application et à brancher la page WordPress.
+État au 20 septembre 2026.
+
+Le formulaire tourne, la curation aussi. Il reste **une migration SQL à
+passer** et **le déploiement de l'application** sur `app.in-love.fr`.
 
 ---
 
-## 0. Ce qui est déjà fait
+## 0. Où on en est
 
 | Élément | État |
 | --- | --- |
-| Projet Supabase | `sljvoplsedepnecgmjih` — les 5 premiers scripts SQL sont passés, bucket `lil-photos` privé |
+| Projet Supabase | `sljvoplsedepnecgmjih`, bucket `lil-photos` privé |
+| Scripts SQL passés | `01` à `05`, et `08` |
+| **Script à passer** | **`09_simplification.sql`** — il ouvre le groupe G |
 | Resend | domaine **`in-love.fr` vérifié**, clé en place |
-| Expéditeur | `Lille in Love <info@in-love.fr>` |
-| Adresse de réponse | `info@in-love.fr` |
+| Expéditeur / réponse | `Lille in Love <info@in-love.fr>` |
 | `.env.local` | rempli et valide — `/api/health` répond `ok: true` |
+| Sur WordPress | le **formulaire autonome** est en ligne sur `/inscription/` |
+| Application | **pas encore déployée** |
 
-> **Deux scripts restent à passer : `supabase/08_groupes.sql` puis
-> `supabase/09_simplification.sql`.** Le premier ajoute les groupes et la
-> colonne `children_preference` — sans lui, la liste des candidatures affiche
-> une erreur. Le second ouvre le **groupe G**. Tous deux sont relançables sans
-> risque, n'envoient aucun email et ne touchent à aucune candidature
-> existante.
+`09_simplification.sql` est relançable sans risque : il n'envoie aucun email
+et ne modifie aucune candidature. Sans lui, attribuer le groupe G échoue.
 
 Les pages légales vivent sur **lilleinlove.fr** (`/reglement`,
-`/confidentialite`). Les mêmes adresses sur in-love.fr renvoient 404, c'est
-pourquoi les liens du formulaire pointent sur lilleinlove.fr.
+`/confidentialite`) : les mêmes adresses sur in-love.fr renvoient 404, d'où
+les liens du formulaire.
 
 ---
 
-## 1. Essayer en local
+## 1. Comment ça marche, en une page
+
+**Deux emails partent au candidat, pas un de plus :**
+
+| Email | Quand |
+| --- | --- |
+| 01 · Candidature reçue | à l'inscription, tout de suite |
+| 02 · Bienvenue dans le club | **6 h après la validation** |
+
+**Un troisième message vient à toi**, pas au candidat : à chaque inscription,
+une alerte part sur `info@in-love.fr` avec le nom, l'adresse et un lien vers
+la fiche. Répondre à ce message écrit directement à la personne.
+
+**On ne refuse personne.** Chaque candidature est validée, et c'est son
+**groupe** — A, B, C ou G (soirées gays) — qui dit à quelle soirée elle
+correspond.
+
+**Les soirées n'envoient rien.** On les note pour s'en souvenir ; l'email
+d'invitation reste à écrire.
+
+---
+
+## 2. Essayer en local
 
 ```bash
 npm install
@@ -37,58 +60,63 @@ npm run dev
 
 | Adresse | Ce que c'est |
 | --- | --- |
-| `localhost:3000/` | le back-office (la racine y mène directement) |
-| `localhost:3000/embed/court` | le formulaire court (3 écrans) |
-| `localhost:3000/embed` | le formulaire complet (16 étapes) |
+| `localhost:3000/` | le back-office (la racine y mène) |
+| `localhost:3000/embed` | le formulaire complet, 16 étapes |
+| `localhost:3000/embed/court` | le formulaire court, 3 écrans |
 | `localhost:3000/api/health` | ce qui est configuré, ou ce qui manque |
 
-Inscris-toi avec ta propre adresse, puis valide ta fiche dans `/admin` :
-l'email de bienvenue part après le délai configuré.
+Inscris-toi avec ta propre adresse, valide ta fiche dans `/admin`, et la
+bienvenue part au délai configuré (`DELAI_REPONSE_MINUTES=2` en local, pour
+ne pas attendre six heures).
 
 ### Vérifier sans rien casser
 
 ```bash
 npm run test:curation   # tout, de l'inscription aux emails — sans aucune clé
-npm run test:e2e        # le formulaire, dans un navigateur (npm run dev à côté)
+npm run test:e2e        # le formulaire dans un navigateur (npm run dev à côté)
 npm run test:reel       # en conditions réelles, puis efface ses propres traces
 ```
 
 Les deux premières tournent contre un faux Supabase et un faux Resend : rien
-ne sort de la machine. `test:reel` écrit vraiment dans ta base et envoie
-vraiment (vers `delivered@resend.dev`, que personne ne lit), puis supprime ce
-qu'il a créé — il ne touche jamais aux autres candidatures.
+ne sort de la machine, et elles ont leur propre dossier de build — ton
+`npm run dev` peut continuer de tourner pendant ce temps. `test:reel` écrit
+vraiment dans ta base et envoie vraiment (vers `delivered@resend.dev`, que
+personne ne lit), puis supprime ce qu'il a créé.
+
+### Un écran sans aucun style ?
+
+C'est le symptôme d'un `.next` effacé sous un serveur qui tournait. `Ctrl+C`,
+puis `npm run dev`.
 
 ---
 
-## 2. Déployer l'application sur `app.in-love.fr`
+## 3. Déployer sur `app.in-love.fr`
 
 Le plan gratuit de Vercel est réservé à un usage **non commercial** ; Lille in
 Love vend des soirées. On passe donc par Hostinger, qui propose « Déployer
 Application web » sur les offres Business et Cloud.
 
-### a. Mettre le code sur GitHub
-
-Crée un dépôt **privé** vide, puis :
+### a. Le code est sur GitHub
 
 ```bash
-git add .
-git commit -m "Formulaire, curation et soirées"
-git push -u origin main
+git push origin main
 ```
 
-`.env.local` est exclu par `.gitignore` : aucune clé ne part sur GitHub. Ne
-mets **jamais** de vraie valeur dans `.env.example`, qui lui est versionné —
-GitHub bloque les envois contenant une clé.
+`.env.local` et `.env.hostinger.local` sont exclus par `.gitignore` : aucune
+clé ne part sur GitHub. Ne mets **jamais** de vraie valeur dans
+`.env.example`, qui lui est versionné — GitHub bloque les envois contenant
+une clé, et un crochet de pré-commit le bloque avant lui.
 
-### b. Créer l'application chez Hostinger
+### b. Créer l'application
 
 hPanel → **Sites web → Ajouter un site web → Déployer Application web →
 Importer un dépôt Git**, puis :
 
 | Réglage | Valeur |
 | --- | --- |
+| Dépôt / branche | `lille-in-love` / `main` |
 | Framework | Next.js |
-| Version de Node | 20 ou 22 |
+| Version de Node | **20 ou 22** |
 | Commande d'installation | `npm ci` |
 | Commande de build | `npm run build` |
 | Commande de démarrage | `npm run start` |
@@ -97,101 +125,108 @@ Importer un dépôt Git**, puis :
 ### c. Les variables d'environnement
 
 **Le plus simple : importer le fichier tout prêt.** `.env.hostinger.local`, à
-la racine du projet, contient déjà les 14 variables avec les valeurs de
-production (délai à 6 h, nouveau sel, code d'accès). Dans le tableau de bord
-du site : **Variables d'environnement → Importer .env**.
+la racine du projet, contient les **15 variables** avec les valeurs de
+production.
+Dans le tableau de bord du site : **Variables d'environnement → Importer .env**.
 
 > Ce fichier contient tes clés. Il est exclu de git, ne le partage pas. Il
-> comporte aussi un `ADMIN_CODE` tout neuf : si tu en as déjà saisi un chez
-> Hostinger et que tu préfères le garder, supprime cette ligne avant
-> d'importer.
+> comporte un `ADMIN_CODE` tout neuf : si tu en as déjà un chez Hostinger et
+> que tu préfères le garder, supprime cette ligne avant d'importer.
 
-Si tu préfères les saisir à la main, voilà les 14 noms — **il faut les 14**,
-une seule manquante et l'application ne démarre pas :
+À la main, ce sont ces quinze noms — **il les faut tous** :
 
 ```
 SUPABASE_URL                 RESEND_API_KEY          ADMIN_CODE
 SUPABASE_SERVICE_ROLE_KEY    EMAIL_FROM              DELAI_REPONSE_MINUTES
 SUPABASE_STORAGE_BUCKET      EMAIL_REPLY_TO          VOTES_REQUIS
 IP_HASH_SALT                 ALLOWED_EMBED_ORIGINS   MAX_INSCRIPTIONS_PAR_HEURE
-NEXT_PUBLIC_SITE_URL         MAX_PHOTOS_PAR_10MIN
+NEXT_PUBLIC_SITE_URL         MAX_PHOTOS_PAR_10MIN    EMAIL_PREVIEW_TOKEN
 ```
 
 Quatre valeurs diffèrent de ton `.env.local` :
 
 | Variable | En production | Pourquoi |
 | --- | --- | --- |
-| `DELAI_REPONSE_MINUTES` | **`360`** | 6 h. En local, c'est `2` pour les essais. |
+| `DELAI_REPONSE_MINUTES` | **`360`** | 6 h. En local, `2` pour les essais. |
 | `ADMIN_CODE` | **un code long** | sans lui, `/admin` est public une fois en ligne |
 | `IP_HASH_SALT` | **une nouvelle valeur** | `openssl rand -hex 32` |
 | `VOTES_REQUIS` | `1` ou `2` | `2` pour la règle des deux curateurs |
 
-**Après toute modification, redéploie** : les variables sont lues au démarrage,
-et `ALLOWED_EMBED_ORIGINS` dès la construction.
+**Après toute modification, redéploie** : les variables sont lues au
+démarrage, et `ALLOWED_EMBED_ORIGINS` dès la construction.
 
 > **`EMAIL_FROM` sans guillemets.** Sa valeur contient des espaces et des
 > chevrons : `Lille in Love <info@in-love.fr>`. Si l'importateur laisse des
 > guillemets autour, Resend refuse l'expéditeur — `/api/health` le signale.
 
 > **`/admin` en ligne sans `ADMIN_CODE`** : n'importe qui trouvant l'adresse
-> voit les noms, emails et photos des candidats — et peut publier une soirée,
-> ce qui envoie des emails. Renseigne-le.
+> voit les noms, les emails et les photos des candidats. Renseigne-le.
 
-### c bis. Si le déploiement échoue
-
-Les trois causes rencontrées, dans l'ordre :
+### d. Si le déploiement échoue
 
 | Ce que dit Hostinger | Ce qui se passe |
 | --- | --- |
-| `Module not found: Can't resolve '@/…'` | l'installation a sauté les devDependencies. TypeScript est désormais une dépendance normale : ce cas est réglé. |
+| `Module not found: Can't resolve '@/…'` | l'installation a sauté les devDependencies. TypeScript est une dépendance normale depuis le 20/09 : ce cas est réglé. |
 | `/api/health` liste des variables vides | l'import du `.env` ne s'est pas fait, ou le site n'a pas été redéployé depuis. |
-| build interrompu sans message | mémoire ou temps de construction dépassés. Relance le déploiement : la seconde tentative repart d'un cache chaud. |
-
-Vérifie aussi la **version de Node** : il en faut **20 ou 22**. Avec Node 18,
-l'installation échoue avant même le build.
+| build interrompu sans message | mémoire ou temps de construction dépassés. Relance : la seconde tentative repart d'un cache chaud. |
+| rien ne se déclenche | Hostinger n'est pas sur le dernier commit de `main`. |
 
 Un déploiement complet occupe environ **600 Mo** (400 Mo de dépendances,
 170 Mo de build) pour **11 000 fichiers**.
 
-### d. Le sous-domaine
+**Supprimer l'application ne perd aucune donnée** : les candidatures, les
+photos et les emails sont chez Supabase et Resend. Seuls le sous-domaine et
+les variables sont à refaire.
 
-Dans les réglages du site, section **Domaines**, indique `app.in-love.fr`.
-Le domaine étant chez Hostinger, le DNS et le certificat HTTPS se configurent
+### e. Le sous-domaine
+
+Dans les réglages du site, section **Domaines**, indique `app.in-love.fr`. Le
+domaine étant chez Hostinger, le DNS et le certificat HTTPS se configurent
 seuls. Compte quelques minutes à quelques heures.
 
-### e. Vérifier
+### f. Vérifier
 
-- `https://app.in-love.fr/api/health` → `"ok": true`, `"problemes": []`,
-  et `"expediteur"` affiche bien `Lille in Love <info@in-love.fr>`
-- `https://app.in-love.fr/` → redirige vers le back-office, qui demande le code
-- `https://app.in-love.fr/embed/court` → le formulaire s'affiche
-
-Si `/api/health` liste des variables vides, elles ne sont pas arrivées jusqu'à
-l'application : vérifie-les dans le tableau de bord, puis **redéploie**.
+- `https://app.in-love.fr/api/health` → `"ok": true`, `"problemes": []`, et
+  `"expediteur"` affiche bien `Lille in Love <info@in-love.fr>` ;
+- `https://app.in-love.fr/` → le back-office, qui demande le code ;
+- `https://app.in-love.fr/embed` → le formulaire s'affiche.
 
 Chaque `git push` sur `main` redéploie ensuite tout seul.
 
 ---
 
-## 3. Brancher la page WordPress
+## 4. Brancher la page WordPress
 
-1. Modifie `in-love.fr/inscription/` et supprime le bloc Tally.
-2. À sa place, un bloc **HTML personnalisé** avec le contenu de
-   [`widget-wordpress.html`](widget-wordpress.html) :
+### Aujourd'hui : le formulaire autonome
 
-   ```html
-   <div data-lil-form="court" data-lil-app="https://app.in-love.fr" data-min-height="560"></div>
-   <script src="https://app.in-love.fr/embed.js" async></script>
-   ```
+C'est ce qui est en ligne. Le navigateur écrit directement dans Supabase ; les
+candidatures et les photos arrivent bien, **mais aucun email ne part** — cela
+demande un serveur.
 
-3. Publie, puis **purge le cache** (LiteSpeed Cache → *Purger tout*).
-4. Ouvre la page en navigation privée.
+Pour le mettre à jour, recolle
+[`formulaire-autonome-complet.html`](formulaire-autonome-complet.html) (ou
+[`-court.html`](formulaire-autonome-court.html)) dans le bloc HTML de la page,
+puis **renseigne la ligne `SUPABASE_ANON_KEY`** (Supabase → Settings → API →
+clé *anon public*) et purge le cache LiteSpeed.
+
+> **Retire le titre « JE VEUX PARTICIPER » de la page WordPress** : le
+> formulaire porte le sien désormais, il apparaîtrait deux fois.
+
+### Une fois l'application déployée : l'iframe
+
+Remplace le contenu du bloc HTML par :
+
+```html
+<div data-lil-form="complet" data-lil-app="https://app.in-love.fr" data-min-height="560"></div>
+<script src="https://app.in-love.fr/embed.js" async></script>
+```
+
+Puis exécute `supabase/07_fermer_formulaire_autonome.sql`, qui referme
+l'écriture directe depuis le navigateur.
 
 **Garde `data-lil-app`.** LiteSpeed Cache peut regrouper les scripts de la
 page : sans cet attribut, le formulaire chercherait l'application sur
 in-love.fr et ne s'afficherait pas.
-
-Pour passer au questionnaire entier : `data-lil-form="complet"`.
 
 Si rien ne s'affiche :
 - message `frame-ancestors` en console → `ALLOWED_EMBED_ORIGINS` ne contient
@@ -201,155 +236,101 @@ Si rien ne s'affiche :
 
 ---
 
-## 4. Le back-office
+## 5. Le formulaire
+
+### Ce que le visiteur voit en arrivant
+
+« Je veux *participer* », puis la carte de la soirée : « La première soirée /
+Célibataires 27-35 ans », ses repères, et **le prix — 20 € par personne**.
+
+Tout ce bloc se modifie dans **un seul endroit** : `src/lib/brand.ts`,
+constante `SOIREE`. Après modification, regénère le formulaire autonome :
+
+```bash
+node tools/formulaire-autonome/build.mjs
+```
+
+### Deux détails à connaître
+
+**Le nom de famille se limite à trois lettres.** « Dupont » devient « DUP » :
+une liste ouverte à deux curateurs n'a pas besoin des noms complets. Les
+candidatures reçues avant ce changement gardent le leur.
+
+**Les photos d'iPhone (HEIC) sont converties dans le navigateur.** Safari sait
+lire ce format, ni Chrome ni Android : une photo déposée telle quelle
+deviendrait un carré blanc dans l'espace de curation. Les deux formulaires la
+convertissent en JPEG avant l'envoi, et le back-office décode à l'affichage
+les quelques HEIC déposés avant ce changement.
+
+---
+
+## 6. Le back-office
 
 `https://app.in-love.fr/admin`
 
-### Candidatures
+### Décider
 
 Une fiche par personne : photos en grand (clic pour agrandir, flèches pour
 passer de l'une à l'autre), réponses, et le journal des emails.
 
-**À chaque inscription, une alerte part sur `info@in-love.fr`** avec le nom,
-l'adresse et un lien direct vers la fiche. Répondre à ce message écrit
-directement à la personne. Elle n'est pas comptée dans les deux emails de la
-séquence : ceux-là vont au candidat, celle-ci vient à toi.
-
-**On ne refuse plus personne.** Une seule décision existe :
-
-| Bouton | Email envoyé | Quand |
-| --- | --- | --- |
-| Valider la candidature | 02 · Bienvenue dans le club | 6 h après le clic |
-
-C'est ensuite le **groupe** (A, B, C, G) qui dit à quelle soirée la personne
-correspond.
+Un seul bouton : **Valider la candidature**. Elle programme « Bienvenue dans
+le club » six heures plus tard.
 
 Le second bouton, **« Annuler la validation »**, n'est pas un refus : c'est le
-droit à l'erreur. Il ne s'affiche qu'après une validation, remet la
-candidature dans la file et arrête la bienvenue encore en attente. Si Resend
-refuse l'annulation — cela arrive dans les toutes premières secondes — la
-fiche l'affiche en rouge avec un bouton **Annuler cet envoi** ; un clic
-quelques secondes plus tard suffit toujours.
+droit à l'erreur. Il n'apparaît qu'après une validation, remet la candidature
+dans la file et arrête l'envoi en attente. Si Resend refuse l'annulation —
+cela arrive dans les toutes premières secondes — la fiche l'affiche en rouge
+avec un bouton **Annuler cet envoi** ; un clic quelques secondes plus tard
+suffit toujours.
 
 Une fiche marquée **« à vérifier »** signale un envoi inhabituel (formulaire
 rempli très vite). La candidature est conservée : c'est souvent quelqu'un de
 pressé.
 
-### Ce que le visiteur voit en arrivant
-
-Le formulaire s'ouvre sur la soirée annoncée : « Je veux *participer* », puis
-la carte « La première soirée / Célibataires 27-35 ans » avec ses repères et
-**le prix, 20 € par personne**. Tout ce bloc se modifie dans un seul fichier,
-`src/lib/brand.ts`, constante `SOIREE` — et il faut regénérer le formulaire
-autonome après coup (`node tools/formulaire-autonome/build.mjs`).
-
-> **La page WordPress affiche déjà un titre « JE VEUX PARTICIPER ».** Le
-> formulaire porte désormais le sien : retire celui de la page, sinon il
-> apparaîtra deux fois.
-
 ### Retrouver quelqu'un
 
-Un champ de recherche en haut de `/admin` : prénom, trois lettres de nom,
-adresse email ou ville. Il se combine avec les filtres — on peut chercher
-« Dupont » parmi les femmes du groupe C. Les accents comptent.
-
-> **Le formulaire ne demande que les trois premières lettres du nom.**
-> « Dupont » devient « DUP » : une liste ouverte à deux curateurs n'a pas
-> besoin des noms complets. Les candidatures reçues avant ce changement
-> gardent le leur.
+Le champ de recherche en haut cherche dans le prénom, le nom, l'email et la
+ville, et se combine avec les filtres. Les accents comptent.
 
 ### Trier, grouper, exporter
 
-Chaque fiche peut être rangée dans un **groupe de soirée : A, B, C ou G**
-(G pour les soirées gays). Les touches sont à droite de chaque ligne de la
-liste, et sur la fiche.
-C'est une étiquette de travail : **aucun email ne part, le statut ne change
-pas**, et on peut se tromper sans conséquence. La touche **—** retire du
+Chaque fiche se range dans un **groupe : A, B, C ou G**. Les touches sont à
+droite de chaque ligne, et sur la fiche. C'est une étiquette de travail :
+**aucun email ne part, le statut ne change pas**. La touche **—** retire du
 groupe.
 
-Au-dessus de la liste, trois filtres se combinent avec les pastilles de
-statut : le groupe, *femmes / hommes*, et une tranche d'âge. « Les femmes de
-27 à 35 ans du groupe C » se lit donc :
+L'icône **Filtres**, à droite, ouvre un panneau : groupe, femmes/hommes,
+orientation (gay ou autre), tranche d'âge. Le compteur se met à jour à la
+saisie, et l'icône porte le nombre de critères en cours.
 
-```
-/admin?groupe=C&genre=femme&ageMin=27&ageMax=35
-```
+> Une fiche du formulaire court n'a pas de date de naissance : dès qu'une
+> borne d'âge est posée, elle sort de la sélection. Le filtre « autre »
+> garde en revanche celles qui n'ont pas répondu sur l'orientation.
 
-Le compteur affiché à côté de chaque choix tient compte des autres : si
-« Groupe C (0) » s'affiche, c'est que personne n'y répond **avec les critères
-déjà posés**.
-
-> Une fiche du formulaire court n'a pas de date de naissance. Dès qu'une
-> borne d'âge est posée, elle sort de la sélection — mieux vaut l'absence
-> qu'un âge supposé. L'écran le rappelle sous les filtres.
-
-**« Exporter N fiches en CSV »** télécharge exactement la sélection affichée,
-dans le format des exports déjà utilisés par l'équipe : mêmes colonnes, même
-ordre, mêmes valeurs (`F`/`M`, `serieux`, `True`/`False`…). Le fichier porte
-le nom de la sélection, par exemple `candidatures_femmes_C_27-35.csv`. Il
-contient toute la sélection, même quand la liste n'en affiche que les 300
-premières.
-
-La colonne `children_preference` vient de l'ancien formulaire. Le
-questionnaire actuel ne pose pas la question : elle reste vide pour les
-nouvelles candidatures, et la fiche ne l'affiche que lorsqu'elle est
-renseignée.
-
-### Les photos d'iPhone
-
-Rien à faire : le HEIC, format par défaut de l'appareil photo d'un iPhone, est
-converti en JPEG par le navigateur au moment du dépôt. Les deux formulaires le
-font — celui de l'application comme le formulaire autonome.
-
-Les candidatures reçues **avant** cette conversion peuvent encore porter un
-HEIC. La fiche le décode alors à l'affichage : rien à réparer à la main, mais
-la photo met une seconde de plus à apparaître.
+**Exporter en CSV**, dans le même panneau, télécharge exactement la sélection
+affichée, au format des exports que l'équipe utilise déjà : mêmes colonnes,
+même ordre, mêmes valeurs (`F`/`M`, `serieux`, `True`/`False`…).
 
 ### Soirées
 
 `/admin/soirees` : nom, classe d'âge, date, heure, lieu. **Aucun email n'est
-envoyé** — ni à l'enregistrement, ni plus tard. La soirée est notée pour s'en
-souvenir ; les tables se composent à partir des groupes, et l'invitation reste
-à écrire.
+envoyé** — ni à l'enregistrement, ni plus tard.
 
 ---
 
-## 5. En attendant le déploiement : le formulaire autonome
+## 7. La recette avant d'ouvrir
 
-Si tu veux remplacer Tally **avant** d'avoir déployé, colle
-[`formulaire-autonome-court.html`](formulaire-autonome-court.html) ou
-[`formulaire-autonome-complet.html`](formulaire-autonome-complet.html) — un
-seul des deux — dans le bloc HTML de la page.
-
-Le navigateur écrit alors directement dans Supabase. Les candidatures et les
-photos sont conservées, et tu les retrouves dans ton back-office local.
-**Aucun email n'est envoyé** : cela demande un serveur.
-
-1. Exécute `supabase/06_formulaire_autonome.sql` — il autorise la clé publique
-   à écrire une candidature et ses photos, **et rien d'autre** : aucune
-   lecture, aucune modification, aucune suppression.
-2. Dans le fichier, renseigne la ligne `SUPABASE_ANON_KEY`
-   (Supabase → Settings → API → clé **anon public**). L'URL du projet est déjà
-   la bonne. Tant que la clé n'est pas mise, le formulaire le dit à l'écran.
-3. Colle, publie, purge le cache.
-
-Dès l'application déployée : remets le widget iframe (section 3) et exécute
-`supabase/07_fermer_formulaire_autonome.sql`, qui referme tout.
-
----
-
-## 6. La recette avant d'ouvrir
-
-- [ ] `supabase/08_groupes.sql` et `09_simplification.sql` exécutés
+- [ ] `supabase/09_simplification.sql` exécuté
 - [ ] `DELAI_REPONSE_MINUTES=360` en production
 - [ ] `ADMIN_CODE` renseigné
 - [ ] `IP_HASH_SALT` différent de celui du poste local
 - [ ] `/api/health` répond `ok: true` sur `app.in-love.fr`
-- [ ] Une inscription de bout en bout depuis la page WordPress, sur téléphone
-- [ ] L'email « Candidature reçue » arrive (regarde aussi les spams)
+- [ ] Une inscription de bout en bout **depuis un iPhone**, photo comprise
+- [ ] L'alerte arrive sur `info@in-love.fr`
+- [ ] L'email « Candidature reçue » arrive chez le candidat (regarde les spams)
 - [ ] La fiche apparaît dans `/admin` avec ses photos
-- [ ] `07_fermer_formulaire_autonome.sql` exécuté si tu avais posé le
-      formulaire autonome
+- [ ] Le titre en double retiré de la page WordPress
+- [ ] `07_fermer_formulaire_autonome.sql` exécuté si tu passes à l'iframe
 
 Pour relire les deux emails sans rien envoyer :
 `https://app.in-love.fr/api/emails/preview?token=<EMAIL_PREVIEW_TOKEN>`
@@ -358,8 +339,8 @@ Pour relire les deux emails sans rien envoyer :
 
 ## Ce qui reste à construire
 
-- **L'email d'invitation à une soirée**, envoyé aux membres du bon groupe.
-  Son texte n'a jamais été rédigé ; c'est la suite de la séquence, et la
-  seule raison qui reste d'enregistrer une soirée.
+- **L'email d'invitation à une soirée**, envoyé aux membres du bon groupe. Son
+  texte n'a jamais été rédigé ; c'est la suite de la séquence, et la seule
+  raison qui reste d'enregistrer une soirée.
 - **La date de naissance dans le formulaire court**, sans laquelle ces
   inscrits ne peuvent être ni classés par âge ni invités.
