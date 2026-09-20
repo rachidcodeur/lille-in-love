@@ -13,15 +13,22 @@ passer** et **le déploiement de l'application** sur `app.in-love.fr`.
 | --- | --- |
 | Projet Supabase | `sljvoplsedepnecgmjih`, bucket `lil-photos` privé |
 | Scripts SQL passés | `01` à `05`, et `08` |
-| **Script à passer** | **`09_simplification.sql`** — il ouvre le groupe G |
+| **À passer d'urgence** | **`10_accompagnant.sql`** — sans lui, toute candidature « je viens accompagné » est refusée |
+| **À passer aussi** | **`09_simplification.sql`** — il ouvre le groupe G |
 | Resend | domaine **`in-love.fr` vérifié**, clé en place |
 | Expéditeur / réponse | `Lille in Love <info@in-love.fr>` |
 | `.env.local` | rempli et valide — `/api/health` répond `ok: true` |
 | Sur WordPress | le **formulaire autonome** est en ligne sur `/inscription/` |
 | Application | **pas encore déployée** |
 
-`09_simplification.sql` est relançable sans risque : il n'envoie aucun email
-et ne modifie aucune candidature. Sans lui, attribuer le groupe G échoue.
+Les deux sont relançables sans risque : ils n'envoient aucun email et ne
+modifient aucune candidature.
+
+> **`10_accompagnant.sql` est urgent.** Le schéma d'origine exigeait l'email
+> de l'accompagnant dès qu'on cochait « je viens avec quelqu'un ». L'étape 12
+> ne demande plus cet email : la base rejette donc ces candidatures, et la
+> personne voit « On n'a pas réussi à enregistrer ta candidature ». Ces
+> inscriptions-là ne laissent aucune trace — elles sont perdues.
 
 Les pages légales vivent sur **lilleinlove.fr** (`/reglement`,
 `/confidentialite`) : les mêmes adresses sur in-love.fr renvoient 404, d'où
@@ -168,6 +175,7 @@ démarrage, et `ALLOWED_EMBED_ORIGINS` dès la construction.
 | --- | --- |
 | `Module not found: Can't resolve '@/…'` | l'installation a sauté les devDependencies. TypeScript est une dépendance normale depuis le 20/09 : ce cas est réglé. |
 | `/api/health` liste des variables vides | l'import du `.env` ne s'est pas fait, ou le site n'a pas été redéployé depuis. |
+| `"cleSupabase": "anon"` dans `/api/health` | c'est la clé publique qui a été collée à la place de `service_role` : l'application lit, mais n'écrit rien. |
 | build interrompu sans message | mémoire ou temps de construction dépassés. Relance : la seconde tentative repart d'un cache chaud. |
 | rien ne se déclenche | Hostinger n'est pas sur le dernier commit de `main`. |
 
@@ -320,7 +328,9 @@ envoyé** — ni à l'enregistrement, ni plus tard.
 
 ## 7. La recette avant d'ouvrir
 
+- [ ] `supabase/10_accompagnant.sql` exécuté (bloquant)
 - [ ] `supabase/09_simplification.sql` exécuté
+- [ ] Une inscription en répondant **« oui, je viens avec quelqu'un »**
 - [ ] `DELAI_REPONSE_MINUTES=360` en production
 - [ ] `ADMIN_CODE` renseigné
 - [ ] `IP_HASH_SALT` différent de celui du poste local

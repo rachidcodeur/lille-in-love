@@ -11,6 +11,26 @@ export const dynamic = 'force-dynamic';
  * « anon » à la place de « service_role ». Les deux passeraient un simple
  * test de présence et échoueraient à la première inscription.
  */
+/**
+ * Le rôle et le projet inscrits dans une clé Supabase.
+ *
+ * Une clé « anon » et une clé « service_role » se ressemblent trait pour
+ * trait : même longueur, même préfixe. Coller l'une pour l'autre laisse
+ * l'application démarrer, répondre, et échouer à la première écriture — avec
+ * un message qui ne dit rien de la cause. Le rôle est écrit dans le jeton :
+ * autant le lire.
+ */
+function lireCle(cle: string): { role?: string; projet?: string } {
+  try {
+    const charge = JSON.parse(
+      Buffer.from(cle.split('.')[1] ?? '', 'base64url').toString('utf8'),
+    ) as { role?: string; ref?: string };
+    return { role: charge.role, projet: charge.ref };
+  } catch {
+    return {};
+  }
+}
+
 export async function GET() {
   const supabaseUrl = process.env.SUPABASE_URL ?? '';
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -40,6 +60,26 @@ export async function GET() {
   } else if (!serviceKey.startsWith('eyJ')) {
     problemes.push(
       'SUPABASE_SERVICE_ROLE_KEY ne ressemble pas à une clé Supabase (elle devrait commencer par « eyJ »).',
+    );
+  }
+
+  // Le rôle porté par la clé, et le projet qu'elle ouvre.
+  const cle = estLocal || !serviceKey ? {} : lireCle(serviceKey);
+
+  if (cle.role && cle.role !== 'service_role') {
+    problemes.push(
+      `SUPABASE_SERVICE_ROLE_KEY porte le rôle « ${cle.role} », pas « service_role ». ` +
+        'L\'application lira peut-être, mais n\'écrira rien : chaque inscription échouera. ' +
+        'Reprends la clé service_role dans Supabase → Settings → API.',
+    );
+  }
+
+  // Deux projets Supabase se sont déjà succédé ici : une URL et une clé qui
+  // ne désignent pas le même projet donneraient « table introuvable ».
+  const projetUrl = supabaseUrl.match(/^https:\/\/([a-z0-9-]+)\.supabase\./)?.[1];
+  if (cle.projet && projetUrl && cle.projet !== projetUrl) {
+    problemes.push(
+      `SUPABASE_URL vise le projet « ${projetUrl} » mais la clé appartient à « ${cle.projet} ».`,
     );
   }
 
@@ -76,6 +116,8 @@ export async function GET() {
       ok: bloquants.length === 0,
       configured: {
         supabase: Boolean(supabaseUrl && serviceKey),
+        cleSupabase: cle.role ?? null,
+        projetSupabase: cle.projet ?? projetUrl ?? null,
         resend: Boolean(resendKey),
         expediteur: expediteur || null,
         ipSalt: Boolean(process.env.IP_HASH_SALT),

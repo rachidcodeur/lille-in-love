@@ -18,6 +18,8 @@ const RESEND = process.env.RESEND_API_KEY;
 const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' };
 
 const EMAIL = 'delivered@resend.dev';
+// Resend accepte les sous-adresses : deux inscriptions, une seule boîte morte.
+const EMAIL_ACCOMPAGNE = 'delivered+accompagne@resend.dev';
 const failures = [];
 const ok = (l) => console.log('  [32m✓[0m ' + l);
 const bad = (l, d) => { failures.push(l); console.log('  [31m✗[0m ' + l + (d ? ' — ' + d : '')); };
@@ -26,6 +28,7 @@ const section = (l) => console.log('\n[1m' + l + '[0m');
 const rest = async (path) => (await fetch(`${SB}/rest/v1/${path}`, { headers: H })).json();
 
 let memberId = null;
+let memberAccompagne = null;
 let soireeId = null;
 
 // Ce test crée sa propre candidature puis la supprime. Il ne touche jamais
@@ -85,6 +88,52 @@ try {
   memberId = body.id;
 
   body.emailSent ? ok('l’application déclare l’email 01 envoyé') : bad('email 01 non envoyé');
+
+  /* -------------------------------------------------------------- */
+  section('2 bis. « Je viens accompagné » — le cas qui a bloqué la prod');
+
+  // Le questionnaire ne demande plus l'email de l'accompagnant, mais le
+  // schéma l'exigeait encore : toute personne répondant « oui » était
+  // refusée. Ce cas ne se voit qu'ici, contre la vraie base — un faux
+  // Supabase n'a pas de contraintes.
+  const accRes = await fetch(`${APP}/api/inscription`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      formVersion: 'complet',
+      gender: 'homme',
+      birthDate: '1992-05-14',
+      city: 'Lille',
+      postalCode: '59000',
+      orientation: 'hetero',
+      hasChildren: 'non',
+      lookingFor: 'relation_serieuse',
+      heightCm: 180,
+      about: 'Essai technique, à effacer.',
+      motivation: 'Essai technique, à effacer.',
+      interests: ['culture'],
+      profession: 'Essai',
+      referral: 'instagram',
+      firstName: 'Essai',
+      lastName: 'ACC',
+      phone: '0600000000',
+      email: EMAIL_ACCOMPAGNE,
+      consent: true,
+      elapsedMs: 90_000,
+      comesWith: 'oui',
+      companionFirstName: 'Lucie',
+      photos: [{ path: upBody.path, mimeType: 'image/png', sizeBytes: bytes.length }],
+    }),
+  });
+  const accBody = await accRes.json();
+
+  accRes.status === 201 && accBody.id
+    ? ok('une candidature accompagnée est acceptée')
+    : bad(
+        'candidature accompagnée refusée — passe supabase/10_accompagnant.sql',
+        `${accRes.status} ${JSON.stringify(accBody)}`,
+      );
+  if (accBody.id) memberAccompagne = accBody.id;
 
   /* -------------------------------------------------------------- */
   section('3. Ce que Resend a réellement reçu');
@@ -272,6 +321,18 @@ if (memberId) {
   }
   // lil_photos part en cascade avec le membre.
   await fetch(`${SB}/rest/v1/lil_members?id=eq.${memberId}`, { method: 'DELETE', headers: H });
+}
+
+if (memberAccompagne) {
+  const photos = await rest(`lil_photos?member_id=eq.${memberAccompagne}&select=storage_path`);
+  for (const p of photos) {
+    await fetch(`${SB}/storage/v1/object/lil-photos/${p.storage_path}`, {
+      method: 'DELETE',
+      headers: { apikey: KEY, Authorization: `Bearer ${KEY}` },
+    });
+  }
+  await fetch(`${SB}/rest/v1/lil_emails?member_id=eq.${memberAccompagne}`, { method: 'DELETE', headers: H });
+  await fetch(`${SB}/rest/v1/lil_members?id=eq.${memberAccompagne}`, { method: 'DELETE', headers: H });
 }
 
 const restants = await rest('lil_members?select=id');
