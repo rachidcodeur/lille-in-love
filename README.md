@@ -40,12 +40,14 @@ Dans WordPress, un seul mot les sépare : `data-lil-form="court"` ou
 ## La curation
 
 `/admin` — la liste des candidatures, puis une fiche par personne : photos en
-grand, réponses, journal des emails. Valider programme « Bienvenue dans le
-club » 24 h plus tard ; refuser n'envoie rien sur le moment.
+grand, réponses, journal des emails. On ne refuse personne : valider programme
+« Bienvenue dans le club » six heures plus tard, et c'est le **groupe**
+(A, B, C, G) qui dit à quelle soirée la personne correspond. Le second bouton
+n'est pas un refus mais un droit à l'erreur : il remet la candidature dans la
+file et arrête la bienvenue en attente.
 
-`/admin/soirees` — publier une soirée envoie « On reviendra vers toi » aux
-profils non retenus et « Ta tranche d'âge ouvrira plus tard » aux validés hors
-de sa classe d'âge, après un aperçu obligatoire de qui recevra quoi.
+`/admin/soirees` — enregistrer une soirée : nom, classe d'âge, date, lieu.
+Aucun email n'en part ; l'invitation reste à écrire.
 
 L'accès est libre tant que `ADMIN_CODE` est vide — la page n'est indexée nulle
 part, mais elle reste visible de qui connaît l'adresse.
@@ -78,7 +80,7 @@ mettre à jour sans jamais retoucher à la page.
 | `src/lib/validation.ts`       | La validation serveur — la seule qui fasse autorité      |
 | `src/lib/security.ts`         | Hachage d'IP, limitation de débit, CORS                  |
 | `src/lib/mailer.ts`           | Envoi Resend, journalisation, anti-doublon               |
-| `src/emails/templates.ts`     | Les quatre emails de la séquence                         |
+| `src/emails/templates.ts`     | Les deux emails de la séquence                           |
 | `src/components/form/`        | Le formulaire multi-étapes                               |
 | `src/app/api/`                | `inscription`, `upload`, `health`, `emails/preview`      |
 | `src/lib/heic.ts`             | Conversion des photos d'iPhone (HEIC) dans le navigateur  |

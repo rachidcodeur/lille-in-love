@@ -6,26 +6,24 @@ import type { TemplateId } from '@/emails/templates';
 /**
  * Ce qui se passe quand les curateurs se prononcent.
  *
- * Deux décisions possibles après l'inscription :
- *   - profil retenu → « Bienvenue dans le club » (02), exactement 24 h après ;
- *   - profil non retenu → rien sur le moment. La réponse « On reviendra vers
- *     toi » (03) part à la publication de la prochaine soirée, parce que c'est
- *     la soirée qui décide qui a une place. Voir src/lib/soirees.ts.
+ * On ne refuse plus personne : une candidature est validée, et c'est son
+ * groupe (A, B, C, G) qui dit à quelle soirée elle correspond. Valider
+ * programme donc « Bienvenue dans le club » (02) au délai configuré, et
+ * c'est le seul envoi que la curation déclenche.
  *
- * La réponse « Ta tranche d'âge ouvrira plus tard » (04) n'est plus une
- * décision : elle est calculée à la publication d'une soirée, d'après l'âge
- * des validés et la classe d'âge de la soirée.
+ * Reste le droit à l'erreur : « nouveau » remet la candidature dans la file
+ * et rattrape la bienvenue encore en attente. Sans cela, un clic malheureux
+ * enverrait un message qu'on ne pourrait plus retenir.
  *
- * Le délai du 02 est confié à Resend, qui sait différer un envoi comme
- * l'annuler : changer d'avis avant l'envoi rattrape la bienvenue en attente.
+ * Le délai est confié à Resend, qui sait différer un envoi comme l'annuler.
  */
 
-export type Decision = 'valide' | 'non_retenu';
+export type Decision = 'valide' | 'nouveau';
 
-/** L'email que chaque décision programme — le refus n'en programme aucun. */
+/** L'email que chaque décision programme — revenir en arrière n'en programme aucun. */
 export const EMAIL_FOR_DECISION: Record<Decision, TemplateId | null> = {
   valide: '02_bienvenue',
-  non_retenu: null,
+  nouveau: null,
 };
 
 /** Les emails programmés par une décision, et qu'un changement d'avis doit rattraper. */
@@ -66,8 +64,8 @@ async function loadMember(memberId: string): Promise<MemberRow | null> {
 /**
  * Annule les réponses encore en attente, sauf celle qu'on veut garder.
  *
- * Sert quand on revient sur une décision avant les 24 heures : sans ça, la
- * personne recevrait par exemple « Bienvenue dans le club » après un refus.
+ * Sert quand on revient sur une validation avant l'échéance : sans ça, la
+ * personne recevrait « Bienvenue dans le club » alors qu'on a corrigé.
  */
 export async function cancelPendingDecisionEmails(
   memberId: string,
@@ -163,9 +161,8 @@ export async function castVote(options: {
 /**
  * Applique une décision.
  *
- * Validation : la bienvenue est programmée à +24 h. Refus : la bienvenue
- * éventuellement en attente est annulée, et rien d'autre ne part avant la
- * prochaine soirée.
+ * Valider programme la bienvenue au délai configuré. Revenir en arrière
+ * annule celle qui était encore en attente, et ne programme rien.
  */
 export async function applyDecision(
   memberId: string,
@@ -178,7 +175,7 @@ export async function applyDecision(
   const template = EMAIL_FOR_DECISION[decision];
 
   // Même décision cliquée deux fois : on ne touche à rien — surtout pas à
-  // l'heure d'envoi de la bienvenue, qui doit rester 24 h après la première.
+  // l'heure d'envoi de la bienvenue, calée sur la première validation.
   if (member.status === decision) {
     if (!template) {
       return { status: decision, emailTemplate: null, scheduledFor: null, emailOk: true, dejaPrise: true };
@@ -202,17 +199,22 @@ export async function applyDecision(
     }
   }
 
-  // Changement d'avis : la bienvenue en attente est rattrapée si on refuse.
+  // Changement d'avis : la bienvenue en attente est rattrapée.
   const annulation = await cancelPendingDecisionEmails(memberId, template);
 
   const { error: statusError } = await db
     .from('lil_members')
-    .update({ status: decision, decided_at: new Date().toISOString() })
+    .update({
+      status: decision,
+      // Revenir en arrière efface la date de décision : la candidature
+      // redevient vraiment une candidature en attente.
+      decided_at: decision === 'valide' ? new Date().toISOString() : null,
+    })
     .eq('id', memberId);
 
   if (statusError) throw new Error(`statut non enregistré : ${statusError.message}`);
 
-  // Refus : aucun email maintenant, la prochaine soirée s'en chargera.
+  // Retour dans la file : aucun email ne part.
   if (!template) {
     return {
       status: decision,

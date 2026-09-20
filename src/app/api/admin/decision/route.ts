@@ -11,13 +11,13 @@ export const maxDuration = 30;
 
 const schema = z.object({
   memberId: z.string().uuid(),
-  decision: z.enum(['valide', 'non_retenu']),
+  decision: z.enum(['valide', 'nouveau']),
 });
 
 /**
  * Applique une décision de curation.
- * « valide » programme la bienvenue à +24 h ; « non_retenu » n'envoie rien
- * avant la publication de la prochaine soirée.
+ * « valide » programme la bienvenue ; « nouveau » remet la candidature dans
+ * la file et annule la bienvenue encore en attente.
  */
 export async function POST(request: Request) {
   if (!(await isAdminAllowed())) {

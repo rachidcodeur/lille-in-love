@@ -15,11 +15,12 @@ il reste à déployer l'application et à brancher la page WordPress.
 | Adresse de réponse | `info@in-love.fr` |
 | `.env.local` | rempli et valide — `/api/health` répond `ok: true` |
 
-> **Un script reste à passer : `supabase/08_groupes.sql`.** Il ajoute les
-> groupes A/B/C et la colonne `children_preference`. Sans lui, la liste des
-> candidatures affiche une erreur — elle a besoin de ces colonnes. Il est
-> relançable sans risque, n'envoie aucun email et ne touche à aucune
-> candidature existante.
+> **Deux scripts restent à passer : `supabase/08_groupes.sql` puis
+> `supabase/09_simplification.sql`.** Le premier ajoute les groupes et la
+> colonne `children_preference` — sans lui, la liste des candidatures affiche
+> une erreur. Le second ouvre le **groupe G**. Tous deux sont relançables sans
+> risque, n'envoient aucun email et ne touchent à aucune candidature
+> existante.
 
 Les pages légales vivent sur **lilleinlove.fr** (`/reglement`,
 `/confidentialite`). Les mêmes adresses sur in-love.fr renvoient 404, c'est
@@ -97,7 +98,7 @@ Importer un dépôt Git**, puis :
 
 **Le plus simple : importer le fichier tout prêt.** `.env.hostinger.local`, à
 la racine du projet, contient déjà les 14 variables avec les valeurs de
-production (délai à 24 h, nouveau sel, code d'accès). Dans le tableau de bord
+production (délai à 6 h, nouveau sel, code d'accès). Dans le tableau de bord
 du site : **Variables d'environnement → Importer .env**.
 
 > Ce fichier contient tes clés. Il est exclu de git, ne le partage pas. Il
@@ -120,7 +121,7 @@ Quatre valeurs diffèrent de ton `.env.local` :
 
 | Variable | En production | Pourquoi |
 | --- | --- | --- |
-| `DELAI_REPONSE_MINUTES` | **`1440`** | 24 h. En local, c'est `2` pour les essais. |
+| `DELAI_REPONSE_MINUTES` | **`360`** | 6 h. En local, c'est `2` pour les essais. |
 | `ADMIN_CODE` | **un code long** | sans lui, `/admin` est public une fois en ligne |
 | `IP_HASH_SALT` | **une nouvelle valeur** | `openssl rand -hex 32` |
 | `VOTES_REQUIS` | `1` ou `2` | `2` pour la règle des deux curateurs |
@@ -193,16 +194,21 @@ Si rien ne s'affiche :
 Une fiche par personne : photos en grand (clic pour agrandir, flèches pour
 passer de l'une à l'autre), réponses, et le journal des emails.
 
+**On ne refuse plus personne.** Une seule décision existe :
+
 | Bouton | Email envoyé | Quand |
 | --- | --- | --- |
-| Valider — profil retenu | 02 · Bienvenue dans le club | 24 h après le clic |
-| Refuser — profil non retenu | *(rien sur le moment)* | à la publication d'une soirée |
+| Valider la candidature | 02 · Bienvenue dans le club | 6 h après le clic |
 
-Revenir sur une validation avant l'envoi annule la bienvenue en attente.
-Recliquer la même décision ne change rien. Si Resend refuse l'annulation
-— cela arrive dans les toutes premières secondes — la fiche l'affiche en
-rouge avec un bouton **Annuler cet envoi** ; un clic quelques secondes plus
-tard suffit toujours.
+C'est ensuite le **groupe** (A, B, C, G) qui dit à quelle soirée la personne
+correspond.
+
+Le second bouton, **« Annuler la validation »**, n'est pas un refus : c'est le
+droit à l'erreur. Il ne s'affiche qu'après une validation, remet la
+candidature dans la file et arrête la bienvenue encore en attente. Si Resend
+refuse l'annulation — cela arrive dans les toutes premières secondes — la
+fiche l'affiche en rouge avec un bouton **Annuler cet envoi** ; un clic
+quelques secondes plus tard suffit toujours.
 
 Une fiche marquée **« à vérifier »** signale un envoi inhabituel (formulaire
 rempli très vite). La candidature est conservée : c'est souvent quelqu'un de
@@ -210,8 +216,9 @@ pressé.
 
 ### Trier, grouper, exporter
 
-Chaque fiche peut être rangée dans un **groupe de soirée : A, B ou C**. Les
-quatre touches sont à droite de chaque ligne de la liste, et sur la fiche.
+Chaque fiche peut être rangée dans un **groupe de soirée : A, B, C ou G**
+(G pour les soirées gays). Les touches sont à droite de chaque ligne de la
+liste, et sur la fiche.
 C'est une étiquette de travail : **aucun email ne part, le statut ne change
 pas**, et on peut se tromper sans conséquence. La touche **—** retire du
 groupe.
@@ -256,21 +263,10 @@ la photo met une seconde de plus à apparaître.
 
 ### Soirées
 
-`/admin/soirees` : nom, classe d'âge, date, heure, lieu. Avant tout envoi,
-**« Voir qui sera prévenu »** montre exactement qui recevra quoi. Publier
-envoie alors, immédiatement et par lots :
-
-- **03 · On reviendra vers toi** à tous les profils non retenus ;
-- **04 · Ta tranche d'âge** aux validés dont l'âge, **le jour de la soirée**,
-  sort de sa classe d'âge.
-
-Ne reçoivent rien : les validés qui ont l'âge (ils attendent leur invitation),
-les candidatures pas encore examinées, et les personnes déjà prévenues lors
-d'une soirée précédente.
-
-> **Les validés du formulaire court n'ont pas de date de naissance** : on ne
-> peut pas savoir s'ils ont l'âge. L'aperçu les compte à part, en « âge
-> inconnu », et ils ne reçoivent rien.
+`/admin/soirees` : nom, classe d'âge, date, heure, lieu. **Aucun email n'est
+envoyé** — ni à l'enregistrement, ni plus tard. La soirée est notée pour s'en
+souvenir ; les tables se composent à partir des groupes, et l'invitation reste
+à écrire.
 
 ---
 
@@ -300,8 +296,8 @@ Dès l'application déployée : remets le widget iframe (section 3) et exécute
 
 ## 6. La recette avant d'ouvrir
 
-- [ ] `supabase/08_groupes.sql` exécuté (sinon `/admin` refuse de s'afficher)
-- [ ] `DELAI_REPONSE_MINUTES=1440` en production
+- [ ] `supabase/08_groupes.sql` et `09_simplification.sql` exécutés
+- [ ] `DELAI_REPONSE_MINUTES=360` en production
 - [ ] `ADMIN_CODE` renseigné
 - [ ] `IP_HASH_SALT` différent de celui du poste local
 - [ ] `/api/health` répond `ok: true` sur `app.in-love.fr`
@@ -311,14 +307,15 @@ Dès l'application déployée : remets le widget iframe (section 3) et exécute
 - [ ] `07_fermer_formulaire_autonome.sql` exécuté si tu avais posé le
       formulaire autonome
 
-Pour relire les quatre emails sans rien envoyer :
+Pour relire les deux emails sans rien envoyer :
 `https://app.in-love.fr/api/emails/preview?token=<EMAIL_PREVIEW_TOKEN>`
 
 ---
 
 ## Ce qui reste à construire
 
-- **L'email d'invitation à une soirée**, pour les validés qui ont l'âge. Son
-  texte n'a jamais été rédigé ; c'est la « deuxième partie » de la séquence.
+- **L'email d'invitation à une soirée**, envoyé aux membres du bon groupe.
+  Son texte n'a jamais été rédigé ; c'est la suite de la séquence, et la
+  seule raison qui reste d'enregistrer une soirée.
 - **La date de naissance dans le formulaire court**, sans laquelle ces
   inscrits ne peuvent être ni classés par âge ni invités.

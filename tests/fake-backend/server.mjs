@@ -67,6 +67,24 @@ function applyFilters(rows, params) {
   for (const [key, raw] of params.entries()) {
     if (['select', 'order', 'limit', 'offset', 'on_conflict', 'columns'].includes(key)) continue;
 
+    // « or=(a.neq.x,a.is.null) » : une ligne passe si l'une des conditions
+    // passe. On réutilise le même moteur, condition par condition.
+    if (key === 'or') {
+      const conditions = raw.replace(/^\(|\)$/g, '').split(',');
+      out = out.filter((row) =>
+        conditions.some((condition) => {
+          const [colonne, operateur, ...valeur] = condition.split('.');
+          const v = valeur.join('.');
+          const actuel = row[colonne];
+          if (operateur === 'is') return v === 'null' && (actuel === null || actuel === undefined);
+          if (operateur === 'neq') return actuel !== undefined && actuel !== null && String(actuel) !== v;
+          if (operateur === 'eq') return String(actuel) === v;
+          throw new Error(`opérateur non géré dans or : ${condition}`);
+        }),
+      );
+      continue;
+    }
+
     const [op, ...rest] = raw.split('.');
     const value = rest.join('.');
 

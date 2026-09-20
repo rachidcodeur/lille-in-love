@@ -65,18 +65,22 @@ export const env = {
 
   /**
    * Délai entre une décision de curation et l'envoi de la réponse, en minutes.
-   * Validation, refus ou tranche d'âge : la réponse part 24 h après (1440).
+   * Une validation programme la bienvenue 6 h plus tard (360 minutes).
    * Quelques minutes suffisent pour un test local.
    *
    * DELAI_BIENVENUE_MINUTES est l'ancien nom, du temps où seule la bienvenue
    * attendait : il reste lu pour ne pas casser un .env existant.
    */
   delaiReponseMinutes: () => {
-    const brut = process.env.DELAI_REPONSE_MINUTES ?? process.env.DELAI_BIENVENUE_MINUTES ?? '1440';
+    // 6 heures par défaut : assez pour que la validation ne paraisse pas
+    // automatique, assez court pour que la personne s'en souvienne encore.
+    const defaut = 360;
+    const brut =
+      process.env.DELAI_REPONSE_MINUTES ?? process.env.DELAI_BIENVENUE_MINUTES ?? String(defaut);
     const parsed = Number(brut);
     // Resend refuse de programmer au-delà de 30 jours.
     const max = 30 * 24 * 60;
-    return Number.isFinite(parsed) && parsed >= 0 ? Math.min(Math.floor(parsed), max) : 1440;
+    return Number.isFinite(parsed) && parsed >= 0 ? Math.min(Math.floor(parsed), max) : defaut;
   },
 
   /**

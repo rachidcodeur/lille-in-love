@@ -45,8 +45,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const trancheAge = url.searchParams.get('tranche') || undefined;
-  const { subject, html } = buildEmail(template, { firstName, trancheAge });
+  const { subject, html } = buildEmail(template, { firstName });
 
   // L'objet est rappelé en tête : c'est lui qu'on relit le plus souvent.
   const banner = `<div style="font-family:system-ui;background:#1C130F;color:#E4D6B4;padding:12px 18px;font-size:13px">

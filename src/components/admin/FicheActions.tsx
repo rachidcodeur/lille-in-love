@@ -12,11 +12,11 @@ type Props = {
   delaiMinutes: number;
 };
 
-type Decision = 'valide' | 'non_retenu';
+type Decision = 'valide' | 'nouveau';
 
 type Feedback = { kind: 'ok' | 'ko'; message: string };
 
-/** « dans 24 heures », « dans 2 minutes » — pour annoncer ce qui va se passer. */
+/** « dans 6 heures », « dans 2 minutes » — pour annoncer ce qui va se passer. */
 function delayInWords(minutes: number): string {
   if (minutes <= 0) return 'tout de suite';
   if (minutes < 60) return `dans ${minutes} minute${minutes > 1 ? 's' : ''}`;
@@ -34,12 +34,15 @@ const heure = new Intl.DateTimeFormat('fr-FR', {
 });
 
 /**
- * Les deux issues d'une candidature.
+ * Ce qu'on peut faire d'une candidature.
  *
- * Valider programme « Bienvenue dans le club » 24 h plus tard. Refuser
- * n'envoie rien sur le moment : « On reviendra vers toi » part à la
- * publication de la prochaine soirée. Revenir sur une validation avant
- * l'échéance annule la bienvenue en attente.
+ * Une seule décision : valider. On ne refuse plus personne — c'est le groupe
+ * qui dira à quelle soirée la personne correspond. Valider programme
+ * « Bienvenue dans le club » au délai configuré.
+ *
+ * Le second bouton n'est pas un refus, c'est un droit à l'erreur : il remet
+ * la candidature dans la file et rattrape la bienvenue encore en attente.
+ * Il ne s'affiche donc que tant qu'il y a quelque chose à rattraper.
  */
 export function FicheActions({ memberId, status, votesOui, votesRequis, delaiMinutes }: Props) {
   const router = useRouter();
@@ -73,7 +76,7 @@ export function FicheActions({ memberId, status, votesOui, votesRequis, delaiMin
         return;
       }
 
-      const fait = decision === 'valide' ? 'Profil retenu' : 'Profil non retenu';
+      const fait = decision === 'valide' ? 'Candidature validée' : 'Validation annulée';
 
       if (result.annulationEchouee) {
         // Le cas à ne surtout pas taire : la décision est enregistrée, mais
@@ -91,19 +94,19 @@ export function FicheActions({ memberId, status, votesOui, votesRequis, delaiMin
             result.emailError ?? 'erreur inconnue'
           }`,
         });
-      } else if (decision === 'non_retenu') {
+      } else if (decision === 'nouveau') {
         setFeedback({
           kind: 'ok',
           message: result.dejaPrise
-            ? 'Déjà non retenu. « On reviendra vers toi » partira à la publication de la prochaine soirée.'
-            : `${fait}. Aucun email pour l’instant : « On reviendra vers toi » partira à la publication de la prochaine soirée.`,
+            ? 'Cette candidature était déjà en attente.'
+            : `${fait}. La candidature repart dans la file, et la bienvenue en attente est arrêtée.`,
         });
       } else if (result.dejaPrise) {
         setFeedback({
           kind: 'ok',
           message: result.scheduledFor
-            ? `Déjà retenu. « Bienvenue dans le club » reste prévu ${heure.format(new Date(result.scheduledFor))}.`
-            : 'Déjà retenu, et « Bienvenue dans le club » est déjà parti.',
+            ? `Déjà validée. « Bienvenue dans le club » reste prévu ${heure.format(new Date(result.scheduledFor))}.`
+            : 'Déjà validée, et « Bienvenue dans le club » est déjà parti.',
         });
       } else if (result.alreadySent) {
         setFeedback({
@@ -132,20 +135,26 @@ export function FicheActions({ memberId, status, votesOui, votesRequis, delaiMin
       <button
         type="button"
         className="adm-btn adm-btn-yes"
-        disabled={busy !== null}
+        disabled={busy !== null || status === 'valide'}
         onClick={() => decide('valide')}
       >
-        {busy === 'valide' ? 'Enregistrement…' : 'Valider — profil retenu'}
+        {busy === 'valide'
+          ? 'Enregistrement…'
+          : status === 'valide'
+            ? 'Candidature validée'
+            : 'Valider la candidature'}
       </button>
 
-      <button
-        type="button"
-        className="adm-btn adm-btn-no"
-        disabled={busy !== null}
-        onClick={() => decide('non_retenu')}
-      >
-        {busy === 'non_retenu' ? 'Enregistrement…' : 'Refuser — profil non retenu'}
-      </button>
+      {status === 'valide' && (
+        <button
+          type="button"
+          className="adm-btn adm-btn-no"
+          disabled={busy !== null}
+          onClick={() => decide('nouveau')}
+        >
+          {busy === 'nouveau' ? 'Enregistrement…' : 'Annuler la validation'}
+        </button>
+      )}
 
       {feedback && (
         <div className="adm-feedback" data-kind={feedback.kind}>
@@ -154,9 +163,10 @@ export function FicheActions({ memberId, status, votesOui, votesRequis, delaiMin
       )}
 
       <p className="adm-hint">
-        Valider envoie « Bienvenue dans le club » {delayInWords(delaiMinutes)}. Refuser n’envoie
-        rien : « On reviendra vers toi » part à la publication de la prochaine soirée.
-        {status === 'valide' && ' Refuser avant l’envoi annule la bienvenue en attente.'}
+        Valider envoie « Bienvenue dans le club » {delayInWords(delaiMinutes)}. C’est le seul
+        email que la curation déclenche.
+        {status === 'valide' &&
+          ' Annuler avant l’échéance arrête cet envoi et remet la candidature dans la file.'}
         {votesRequis > 1 && (
           <>
             {' '}

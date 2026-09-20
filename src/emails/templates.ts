@@ -2,30 +2,26 @@ import { BRAND } from '@/lib/brand';
 import { divider, escapeHtml, lead, note, p, render, signature, toPlainText } from './layout';
 
 /**
- * La séquence email du club.
+ * La séquence email du club — deux messages, pas un de plus.
+ *
+ *   01 · Candidature reçue  → à l'inscription, tout de suite ;
+ *   02 · Bienvenue          → après validation, au délai configuré.
  *
  * Le principe : on adhère au club une seule fois, puis on reçoit une invitation
  * pour chaque soirée. Personne ne remplit deux fois le formulaire, et personne
- * n'est jamais définitivement écarté.
+ * n'est refusé : ce sont les groupes qui disent à quelle soirée une candidature
+ * correspond.
  *
  * Le ton : on écrit comme on parlerait à quelqu'un en face. Se lancer demande
  * un peu de courage — on enlève la pression, et on n'oublie pas que la personne
  * en face peut être fatiguée des applis, ou intimidée à l'idée de venir seule.
  */
 
-export type TemplateId =
-  | '01_candidature_recue'
-  | '02_bienvenue'
-  | '03_on_reviendra'
-  | '04_tranche_age';
+export type TemplateId = '01_candidature_recue' | '02_bienvenue';
 
 export type EmailPayload = { subject: string; html: string; text: string };
 
-type Vars = {
-  firstName: string;
-  /** Classe d'âge de la soirée qui déclenche l'envoi, ex. « 27-35 ». Sert au 04. */
-  trancheAge?: string;
-};
+type Vars = { firstName: string };
 
 const CONTACT = BRAND.contactEmail;
 
@@ -76,58 +72,9 @@ function bienvenue({ firstName }: Vars): EmailPayload {
   return { subject: 'Bienvenue dans le club', html, text: toPlainText(html) };
 }
 
-/** 03 · On reviendra vers toi — envoyé à la publication d'une soirée aux profils non retenus. */
-function onReviendra({ firstName }: Vars): EmailPayload {
-  const name = escapeHtml(firstName);
-  const html = render({
-    preheader: 'On garde ta candidature — et tu n’auras rien à refaire.',
-    body: [
-      lead(`Bonjour ${name},`),
-      p(
-        'Merci d’avoir pris le temps de nous écrire, et de nous avoir fait confiance avec tes réponses. Ce n’est pas rien.',
-      ),
-      p(
-        'Pour l’instant, on ne va pas pouvoir te proposer de place. Ce n’est pas un jugement sur toi : on compose des groupes restreints — tranches d’âge, attentes, centres d’intérêt, parité, distance géographique — et l’équilibre de l’ensemble compte autant que chaque personne prise séparément.',
-      ),
-      note(
-        'On garde ta candidature. Si elle correspond à une prochaine soirée, on revient vers toi — et tu n’auras rien à refaire.',
-      ),
-      p('En attendant, on te souhaite sincèrement de belles rencontres.'),
-      signature(),
-    ],
-    footer: REPLY_FOOTER,
-  });
-  return { subject: `Candidature, ${firstName}`, html, text: toPlainText(html) };
-}
-
-/** 04 · Tranche d'âge — envoyé à la publication d'une soirée aux validés hors de sa classe d'âge. */
-function trancheAge({ firstName, trancheAge: tranche }: Vars): EmailPayload {
-  const name = escapeHtml(firstName);
-  const classe = escapeHtml(tranche ?? '27-35');
-  const html = render({
-    preheader: 'Tu fais partie du club. Ta tranche d’âge ouvre juste après la prochaine soirée.',
-    body: [
-      lead(`Bonne nouvelle, ${name}`),
-      p('Ta candidature est retenue : tu fais partie du club.'),
-      p(
-        `Une seule chose : notre prochaine soirée est réservée aux ${classe} ans, et ta tranche d’âge ouvrira juste après. On prend notre temps pour que tu vives la meilleure expérience possible lors de nos événements.`,
-      ),
-      note(
-        'Tu seras dans les premiers prévenus à l’ouverture de la tienne. Pour l’instant, tu n’as rien à faire et rien à surveiller : on s’en occupe.',
-      ),
-      p('Merci de ta patience.'),
-      signature(),
-    ],
-    footer: REPLY_FOOTER,
-  });
-  return { subject: `Inscription, ${firstName}`, html, text: toPlainText(html) };
-}
-
 const BUILDERS: Record<TemplateId, (vars: Vars) => EmailPayload> = {
   '01_candidature_recue': candidatureRecue,
   '02_bienvenue': bienvenue,
-  '03_on_reviendra': onReviendra,
-  '04_tranche_age': trancheAge,
 };
 
 export function buildEmail(template: TemplateId, vars: Vars): EmailPayload {
@@ -137,6 +84,4 @@ export function buildEmail(template: TemplateId, vars: Vars): EmailPayload {
 export const TEMPLATE_LABELS: Record<TemplateId, string> = {
   '01_candidature_recue': '01 · Candidature reçue',
   '02_bienvenue': '02 · Bienvenue dans le club',
-  '03_on_reviendra': '03 · On reviendra vers toi',
-  '04_tranche_age': '04 · Ta tranche d’âge ouvrira plus tard',
 };

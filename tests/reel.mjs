@@ -155,12 +155,12 @@ try {
   log02?.status === 'programme' ? ok('email 02 en attente dans le journal') : bad('journal 02', log02?.status);
 
   /* -------------------------------------------------------------- */
-  section('6. Changement d’avis : l’envoi en attente est-il annulé ?');
+  section('6. Annuler la validation : l’envoi en attente est-il arrêté ?');
 
   const dec2 = await fetch(`${APP}/api/admin/decision`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ memberId, decision: 'non_retenu' }),
+    body: JSON.stringify({ memberId, decision: 'nouveau' }),
   });
   const dec2Body = await dec2.json();
   dec2.ok ? ok('nouvelle décision enregistrée') : bad('refusée', JSON.stringify(dec2Body));
@@ -198,18 +198,22 @@ try {
     ? ok('le journal confirme l’annulation')
     : bad('journal non mis à jour', log02b?.status);
 
-  const log03 = await rest(`lil_emails?member_id=eq.${memberId}&template=eq.03_on_reviendra&select=status`);
-  log03.length === 0
-    ? ok('aucun « On reviendra vers toi » au refus : il attend la prochaine soirée')
-    : bad('un 03 est parti au refus', JSON.stringify(log03));
+  const envoyes = await rest(
+    `lil_emails?member_id=eq.${memberId}&status=eq.envoye&select=template`,
+  );
+  envoyes.length === 1 && envoyes[0].template === '01_candidature_recue'
+    ? ok('un seul email est vraiment parti : la candidature reçue')
+    : bad('emails envoyés', JSON.stringify(envoyes.map((e) => e.template)));
 
   /* -------------------------------------------------------------- */
-  section('7. Publication d’une soirée : le 03 part pour de vrai, par lot');
+  section('7. Enregistrer une soirée n’envoie plus rien');
 
   const table = await fetch(`${SB}/rest/v1/lil_soirees?select=id&limit=1`, { headers: H });
   if (!table.ok) {
-    console.log('      supabase/05_soirees.sql n’est pas encore exécuté : publication non testée.');
+    console.log('      supabase/05_soirees.sql n’est pas encore exécuté : soirée non testée.');
   } else {
+    const avant = await rest(`lil_emails?member_id=eq.${memberId}&select=id`);
+
     const pub = await fetch(`${APP}/api/admin/soirees`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -224,27 +228,12 @@ try {
     const pubBody = await pub.json();
     soireeId = pubBody.soireeId ?? null;
 
-    pub.status === 201 ? ok('soirée publiée') : bad('publication refusée', JSON.stringify(pubBody));
-    pubBody.bilan?.['03'] === 1 && pubBody.bilan?.echecs === 0
-      ? ok('bilan : 1 « On reviendra vers toi », aucun échec')
-      : bad('bilan inattendu', JSON.stringify(pubBody.bilan));
+    pub.status === 201 ? ok('soirée enregistrée') : bad('enregistrement refusé', JSON.stringify(pubBody));
 
-    const [ligne] = await rest(
-      `lil_emails?member_id=eq.${memberId}&template=eq.03_on_reviendra&select=status,resend_id,soiree_id`,
-    );
-    ligne?.status === 'envoye' && ligne?.resend_id && ligne?.soiree_id === soireeId
-      ? ok('journalisé comme envoyé, avec son identifiant Resend et sa soirée')
-      : bad('journal du 03', JSON.stringify(ligne));
-
-    if (ligne?.resend_id) {
-      const r = await fetch(`https://api.resend.com/emails/${ligne.resend_id}`, {
-        headers: { Authorization: `Bearer ${RESEND}` },
-      });
-      const mail = r.ok ? await r.json() : null;
-      mail?.subject?.startsWith('Candidature')
-        ? ok(`Resend confirme l’envoi du lot — « ${mail.subject} »`)
-        : bad('Resend ne retrouve pas l’email du lot', String(r.status));
-    }
+    const apres = await rest(`lil_emails?member_id=eq.${memberId}&select=id`);
+    apres.length === avant.length
+      ? ok('aucun email déclenché par l’enregistrement')
+      : bad('des emails sont partis', String(apres.length - avant.length));
   }
 } catch (cause) {
   bad('interruption', cause instanceof Error ? cause.message : String(cause));

@@ -28,7 +28,13 @@ export async function GET(request: Request) {
     // Une fiche de trop dans un export ne se remarque que chez le destinataire.
     const retenus = membres.filter((m) =>
       correspond(
-        { status: m.status, soiree_group: m.soiree_group, gender: m.gender, age: m.age },
+        {
+          status: m.status,
+          soiree_group: m.soiree_group,
+          gender: m.gender,
+          orientation: m.orientation,
+          age: m.age,
+        },
         filtres,
       ),
     );

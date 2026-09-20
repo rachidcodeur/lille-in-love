@@ -110,6 +110,7 @@ export type EmailLogRow = {
 function filtrer<Q extends {
   eq(colonne: string, valeur: string): Q;
   is(colonne: string, valeur: null): Q;
+  or(conditions: string): Q;
   gte(colonne: string, valeur: number): Q;
   lte(colonne: string, valeur: number): Q;
 }>(query: Q, filtres: Filtres): Q {
@@ -120,6 +121,11 @@ function filtrer<Q extends {
   else if (filtres.groupe !== 'tous') q = q.eq('soiree_group', filtres.groupe);
 
   if (filtres.genre !== 'tous') q = q.eq('gender', filtres.genre);
+
+  // « autre » veut dire tout sauf gay, sans oublier celles et ceux à qui on
+  // n'a pas posé la question : en SQL, « différent de gay » écarte les vides.
+  if (filtres.orientation === 'gay') q = q.eq('orientation', 'gay');
+  else if (filtres.orientation === 'autre') q = q.or('orientation.neq.gay,orientation.is.null');
 
   // L'âge est calculé par la vue : une fiche sans date de naissance
   // (formulaire court) sort dès qu'une borne est posée. C'est voulu — mieux
@@ -175,7 +181,7 @@ export async function membersForExport(filtres: Filtres): Promise<MemberDetail[]
 export async function facettes(): Promise<FicheFiltrable[]> {
   const { data, error } = await supabaseAdmin()
     .from('lil_members_overview')
-    .select('status, soiree_group, gender, age')
+    .select('status, soiree_group, gender, orientation, age')
     .limit(5000);
   if (error) throw new Error(error.message);
   return (data ?? []) as FicheFiltrable[];

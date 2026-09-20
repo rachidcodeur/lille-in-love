@@ -7,6 +7,8 @@ import {
   GENRE_LABELS,
   GROUPE_CHOIX,
   GROUPE_LABELS,
+  ORIENTATION_CHOIX,
+  ORIENTATION_LABELS,
   compter,
   correspond,
   type FicheFiltrable,
@@ -52,6 +54,10 @@ export function PanneauFiltres({ filtres, fiches, criteres }: Props) {
   );
   const parGenre = useMemo(
     () => compter(fiches, brouillon, 'genre', GENRE_CHOIX),
+    [fiches, brouillon],
+  );
+  const parOrientation = useMemo(
+    () => compter(fiches, brouillon, 'orientation', ORIENTATION_CHOIX),
     [fiches, brouillon],
   );
   const selection = useMemo(
@@ -168,6 +174,21 @@ export function PanneauFiltres({ filtres, fiches, criteres }: Props) {
                   {GENRE_CHOIX.map((choix) => (
                     <option key={choix} value={choix}>
                       {GENRE_LABELS[choix]} ({parGenre[choix] ?? 0})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="adm-tri-champ">
+                <span>Orientation</span>
+                <select
+                  name="orientation"
+                  value={brouillon.orientation}
+                  onChange={(e) => setBrouillon({ ...brouillon, orientation: e.target.value })}
+                >
+                  {ORIENTATION_CHOIX.map((choix) => (
+                    <option key={choix} value={choix}>
+                      {ORIENTATION_LABELS[choix]} ({parOrientation[choix] ?? 0})
                     </option>
                   ))}
                 </select>

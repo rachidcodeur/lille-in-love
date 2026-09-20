@@ -215,31 +215,35 @@ const log02 = s.emails.find((e) => e.template === '02_bienvenue');
 log02?.status === 'programme' ? ok('journalisé comme « programmé »') : bad('statut du journal', log02?.status);
 
 /* ================================================================ */
-section('5. Refus après validation : la bienvenue est rattrapée, rien d’autre ne part');
+section('5. Annuler une validation : la bienvenue est rattrapée');
 
-const envoisAvantRefus = s.sent.length;
-await page.getByRole('button', { name: /Refuser/ }).click();
+// On ne refuse plus personne, mais un clic malheureux doit pouvoir être
+// repris : sans ça, la bienvenue partirait six heures plus tard sans recours.
+const envoisAvantAnnulation = s.sent.length;
+await page.getByRole('button', { name: /Annuler la validation/ }).click();
 await page.waitForTimeout(2000);
 
 s = await state();
 const after = s.members[0];
-after.status === 'non_retenu' ? ok('statut passé à « non retenue »') : bad('statut', after.status);
+after.status === 'nouveau' ? ok('la candidature repart dans la file') : bad('statut', after.status);
+after.decided_at === null
+  ? ok('la date de décision est effacée : elle redevient une candidature en attente')
+  : bad('decided_at subsiste', String(after.decided_at));
 
-s.cancelled.length === 1 ? ok('l’email de bienvenue a été annulé chez Resend') : bad('annulation manquante', JSON.stringify(s.cancelled));
+s.cancelled.length === 1
+  ? ok('l’email de bienvenue a été annulé chez Resend')
+  : bad('annulation manquante', JSON.stringify(s.cancelled));
 const log02b = s.emails.find((e) => e.template === '02_bienvenue');
 log02b?.status === 'annule' ? ok('journal mis à jour en « annulé »') : bad('journal non annulé', log02b?.status);
 
-s.sent.length === envoisAvantRefus
-  ? ok('aucun « On reviendra vers toi » envoyé au refus : il attend une soirée')
-  : bad('un email est parti au refus', s.sent.slice(envoisAvantRefus).map((m) => m.subject).join(', '));
-((await page.locator('.adm-feedback').innerText().catch(() => '')) || '').includes('prochaine soirée')
-  ? ok('le curateur sait que la réponse partira avec la prochaine soirée')
-  : bad('message sur la prochaine soirée absent');
+s.sent.length === envoisAvantAnnulation
+  ? ok('aucun email envoyé à l’annulation')
+  : bad('un email est parti', s.sent.slice(envoisAvantAnnulation).map((m) => m.subject).join(', '));
 
 /* ---------------------------------------------------------------- */
-section('5 bis. Refus puis validation : la bienvenue est reprogrammée');
+section('5 bis. Revalider : la bienvenue est reprogrammée');
 
-await page.getByRole('button', { name: /Valider/ }).click();
+await page.getByRole('button', { name: /Valider la candidature/ }).click();
 await page.waitForTimeout(2200);
 s = await state();
 
@@ -254,33 +258,44 @@ enAttente.length === 1
   : bad('plusieurs réponses en attente', JSON.stringify(enAttente.map((e) => e.template)));
 
 /* ---------------------------------------------------------------- */
-section('5 ter. Même décision cliquée deux fois : rien ne bouge');
+section('5 ter. Une candidature validée ne peut pas l’être deux fois');
 
 const avantDouble = s.emails.find((e) => e.template === '02_bienvenue' && e.status === 'programme');
 const envoisAvant = s.sent.length;
-await page.getByRole('button', { name: /Valider/ }).click();
-await page.waitForTimeout(1800);
+
+// Le bouton se désactive une fois la décision prise : rien à recliquer,
+// donc aucune chance de décaler l'heure d'envoi par inadvertance.
+(await page.locator('.adm-btn-yes').isDisabled())
+  ? ok('le bouton « Valider » est neutralisé une fois la candidature validée')
+  : bad('le bouton Valider reste actif après validation');
+
+// La route, elle, reste exposée : on vérifie qu'elle est idempotente.
+const rejoue = await (
+  await fetch(`${BASE}/api/admin/decision`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ memberId: s.members[0].id, decision: 'valide' }),
+  })
+).json();
+await page.waitForTimeout(400);
 s = await state();
 const apresDouble = s.emails.find((e) => e.template === '02_bienvenue' && e.status === 'programme');
 
+rejoue.dejaPrise ? ok('la route dit que la décision était déjà prise') : bad('dejaPrise absent', JSON.stringify(rejoue));
 s.sent.length === envoisAvant
   ? ok('aucun email supplémentaire confié à Resend')
   : bad('un doublon a été envoyé');
 apresDouble?.scheduled_at === avantDouble?.scheduled_at
-  ? ok('l’heure d’envoi reste 24 h après la première décision')
+  ? ok('l’heure d’envoi reste calée sur la première validation')
   : bad('heure d’envoi décalée', `${avantDouble?.scheduled_at} → ${apresDouble?.scheduled_at}`);
-((await page.locator('.adm-feedback').innerText().catch(() => '')) || '').includes('Déjà retenu')
-  ? ok('le curateur est prévenu que c’était déjà fait')
-  : bad('message « déjà retenu » absent');
 
 /* ================================================================ */
-section('5 quater. Publier une soirée : qui reçoit quoi');
+section('5 quater. Une soirée s’enregistre, et n’envoie rien');
 
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
-// On sème des membres directement dans le faux Supabase : il faut des dates
-// de naissance, que le formulaire court ne demande pas.
-const JOUR = '2026-10-17';
+// La séquence tient en deux emails. Enregistrer une soirée ne doit donc
+// écrire qu'une ligne : ni 03, ni 04, ni quoi que ce soit d'autre.
 const semer = async (m) => {
   const r = await fetch(`${FAKE}/rest/v1/lil_members`, {
     method: 'POST',
@@ -290,15 +305,9 @@ const semer = async (m) => {
   return (await r.json())[0].id;
 };
 
-const idRefusee = await semer({ first_name: 'Refusee', email: 'refusee@example.com', status: 'non_retenu', birth_date: '1990-01-01' });
-const idDedans = await semer({ first_name: 'Dedans', email: 'dedans@example.com', status: 'valide', birth_date: '1995-03-01' });
-const idTropJeune = await semer({ first_name: 'TropJeune', email: 'jeune@example.com', status: 'valide', birth_date: '2002-06-01' });
-// 27 ans le jour même de la soirée : dans la tranche, pas en dehors.
-const idAnniv = await semer({ first_name: 'Anniversaire', email: 'anniv@example.com', status: 'valide', birth_date: '1999-10-17' });
-// 26 ans la veille de ses 27 ans : encore hors tranche.
-const idVeille = await semer({ first_name: 'Veille', email: 'veille@example.com', status: 'valide', birth_date: '1999-10-18' });
-const idSansAge = await semer({ first_name: 'SansAge', email: 'sansage@example.com', status: 'valide', form_version: 'court' });
-const idNouveau = await semer({ first_name: 'PasEncoreVu', email: 'nouveau@example.com', status: 'nouveau', birth_date: '1980-01-01' });
+await semer({ first_name: 'Validee', email: 'validee@example.com', status: 'valide', birth_date: '1995-03-01' });
+await semer({ first_name: 'Ancienne', email: 'ancienne@example.com', status: 'non_retenu', birth_date: '1990-01-01' });
+await semer({ first_name: 'PasEncoreVue', email: 'pasencore@example.com', status: 'nouveau', birth_date: '1980-01-01' });
 
 await page.goto(`${BASE}/admin/soirees`, { waitUntil: 'networkidle' });
 const saisir = async (id, valeur) => {
@@ -307,7 +316,7 @@ const saisir = async (id, valeur) => {
 await saisir('nom', 'Soirée test');
 await saisir('ageMin', '27');
 await saisir('ageMax', '35');
-await saisir('date', JOUR);
+await saisir('date', '2026-10-17');
 await saisir('heure', '20:00');
 await saisir('lieu', 'Lille');
 
@@ -316,120 +325,24 @@ await saisir('lieu', 'Lille');
   ? ok('le formulaire se remplit normalement')
   : bad('saisie perdue', await page.inputValue('#soiree-nom'));
 
-await page.getByRole('button', { name: 'Voir qui sera prévenu' }).click();
-await page.waitForTimeout(1500);
+(await page.getByRole('button', { name: /prévenu/ }).count()) === 0
+  ? ok('plus d’aperçu d’audience : il n’y a plus personne à prévenir')
+  : bad('l’aperçu d’audience est toujours là');
 
-const groupes = await page.locator('.adm-groupe summary').allInnerTexts();
-const nombre = (motif) => {
-  const g = groupes.find((t) => t.includes(motif));
-  return g ? Number(g.trim().split(/\s+/)[0]) : null;
-};
-nombre('(03)') === 1 ? ok('aperçu : 1 personne recevra le 03') : bad('aperçu 03', String(nombre('(03)')));
-nombre('(04)') === 2 ? ok('aperçu : 2 recevront le 04 (trop jeune, et la veille de ses 27 ans)') : bad('aperçu 04', String(nombre('(04)')));
-nombre('ont l’âge') === 2 ? ok('aperçu : 2 dans la tranche, dont celle qui a 27 ans le jour même') : bad('aperçu dans la tranche', String(nombre('ont l’âge')));
-nombre('âge inconnu') === 1 ? ok('aperçu : 1 validé sans date de naissance, signalé') : bad('aperçu âge inconnu', String(nombre('âge inconnu')));
+await page.getByRole('button', { name: 'Enregistrer la soirée' }).click();
+await page.waitForTimeout(2000);
 
 s = await state();
-s.sent.length === 0 && s.soirees.length === 0
-  ? ok('l’aperçu n’a rien envoyé ni enregistré')
-  : bad('l’aperçu a eu des effets', `${s.sent.length} email(s), ${s.soirees.length} soirée(s)`);
-
-// Modifier un champ doit invalider l'aperçu.
-await saisir('ageMax', '40');
-(await page.getByRole('button', { name: /Publier/ }).count()) === 0
-  ? ok('changer la classe d’âge efface l’aperçu : on ne confirme jamais sur des chiffres périmés')
-  : bad('le bouton Publier reste disponible après modification');
-await saisir('ageMax', '35');
-await page.getByRole('button', { name: 'Voir qui sera prévenu' }).click();
-await page.waitForTimeout(1500);
-
-await page.getByRole('button', { name: /Publier et envoyer 3 emails/ }).click();
-await page.waitForTimeout(2500);
-
-s = await state();
-const recu = (email) => s.sent.filter((m) => m.to === email).map((m) => m.subject);
-
 s.soirees.length === 1 ? ok('la soirée est enregistrée') : bad('soirées en base', String(s.soirees.length));
-recu('refusee@example.com').some((x) => x.startsWith('Candidature'))
-  ? ok('la personne non retenue reçoit le 03')
-  : bad('03 manquant', JSON.stringify(recu('refusee@example.com')));
-recu('jeune@example.com').some((x) => x.startsWith('Inscription,'))
-  ? ok('la personne trop jeune reçoit le 04')
-  : bad('04 manquant', JSON.stringify(recu('jeune@example.com')));
-const mail04 = s.sent.find((m) => m.to === 'jeune@example.com');
-mail04?.html?.includes('27-35')
-  ? ok('le 04 cite la classe d’âge de la soirée (27-35)')
-  : bad('classe d’âge absente du 04');
-recu('dedans@example.com').length === 0 && recu('anniv@example.com').length === 0
-  ? ok('les validés dans la tranche ne reçoivent rien')
-  : bad('un validé dans la tranche a reçu un email');
-recu('sansage@example.com').length === 0
-  ? ok('le validé sans date de naissance ne reçoit rien')
-  : bad('email envoyé sans connaître l’âge');
-recu('nouveau@example.com').length === 0
-  ? ok('une candidature pas encore examinée ne reçoit rien')
-  : bad('un profil non examiné a reçu un refus');
-s.sent.every((m) => m.lot)
-  ? ok('envoyés par lot, pas un appel par email')
-  : bad('envois individuels détectés');
+s.sent.length === 0
+  ? ok('aucun email envoyé, quel que soit le statut des candidatures')
+  : bad('des emails sont partis', s.sent.map((m) => `${m.to} · ${m.subject}`).join(', '));
+s.emails.length === 0 ? ok('aucune ligne ajoutée au journal') : bad('journal non vide', String(s.emails.length));
 
-const liens = s.emails.filter((e) => e.soiree_id === s.soirees[0].id);
-liens.length === 3 && liens.every((e) => e.status === 'envoye' && e.resend_id)
-  ? ok('chaque envoi est journalisé avec sa soirée et son identifiant Resend')
-  : bad('journal incomplet', JSON.stringify(liens.map((e) => [e.template, e.status, Boolean(e.resend_id)])));
+((await page.locator('.adm-feedback').innerText().catch(() => '')) || '').includes('est enregistrée')
+  ? ok('le curateur voit la confirmation')
+  : bad('pas de confirmation', await page.locator('.adm-feedback').innerText().catch(() => ''));
 
-const bilan = s.soirees[0].bilan;
-bilan && bilan['03'] === 1 && bilan['04'] === 2 && bilan.dans_la_tranche === 2 && bilan.age_inconnu === 1
-  ? ok('le bilan de la soirée est enregistré')
-  : bad('bilan', JSON.stringify(bilan));
-((await page.locator('.adm-feedback').innerText().catch(() => '')) || '').includes('Soirée publiée')
-  ? ok('le curateur voit le résultat de la publication')
-  : bad('pas de confirmation de publication');
-
-/* ---------------------------------------------------------------- */
-section('5 quinquies. Seconde soirée : personne n’est prévenu deux fois');
-
-const envoisAvantSeconde = s.sent.length;
-const pub2 = await (
-  await fetch(`${BASE}/api/admin/soirees`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nom: 'Seconde', ageMin: 27, ageMax: 35, date: JOUR, lieu: 'Lille' }),
-  })
-).json();
-
-s = await state();
-s.sent.length === envoisAvantSeconde
-  ? ok('aucun nouvel email : 03 et 04 déjà reçus')
-  : bad('doublons envoyés', s.sent.slice(envoisAvantSeconde).map((m) => m.to).join(', '));
-pub2.bilan?.deja_prevenus === 3
-  ? ok('le bilan compte 3 personnes déjà prévenues')
-  : bad('déjà prévenus', JSON.stringify(pub2.bilan));
-
-/* ---------------------------------------------------------------- */
-section('5 sexies. Si Resend refuse le lot, rien n’est perdu en silence');
-
-await semer({ first_name: 'Nouvelle', email: 'nouvelle-refusee@example.com', status: 'non_retenu', birth_date: '1990-01-01' });
-await fetch(`${FAKE}/__refuse-batch?on=1`, { method: 'POST' });
-const pub3 = await (
-  await fetch(`${BASE}/api/admin/soirees`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ nom: 'Troisième', ageMin: 27, ageMax: 35, date: JOUR, lieu: 'Lille' }),
-  })
-).json();
-await fetch(`${FAKE}/__refuse-batch?on=0`, { method: 'POST' });
-
-pub3.bilan?.echecs === 1
-  ? ok('l’échec est compté dans le bilan')
-  : bad('échec non compté', JSON.stringify(pub3.bilan));
-s = await state();
-const ligneEchec = s.emails.find((e) => e.to_email === 'nouvelle-refusee@example.com');
-ligneEchec?.status === 'echec' && ligneEchec?.error
-  ? ok('la ligne est marquée « échec » avec sa raison, visible sur la fiche')
-  : bad('trace de l’échec', JSON.stringify(ligneEchec));
-
-void idRefusee; void idDedans; void idTropJeune; void idAnniv; void idVeille; void idSansAge; void idNouveau;
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
 /* ================================================================ */
@@ -468,7 +381,7 @@ const tardif = await creer('Tardif', 'tardif@example.com');
 await decider(tardif, 'valide');
 await fetch(`${FAKE}/__cancel-pas-encore?fois=2`, { method: 'POST' });
 
-const reprise = await decider(tardif, 'non_retenu');
+const reprise = await decider(tardif, 'nouveau');
 !reprise.annulationEchouee
   ? ok('l’annulation finit par aboutir malgré les premiers refus')
   : bad('abandon au premier refus', reprise.annulationEchouee);
@@ -482,10 +395,10 @@ logTardif?.status === 'annule'
 /* ================================================================ */
 section('7. Si Resend refuse définitivement, le curateur doit le savoir');
 
-const cible = await creer('Refus', 'refus@example.com');
+const cible = await creer('Annulation', 'annulation@example.com');
 await decider(cible, 'valide');
 await fetch(`${FAKE}/__refuse-cancel?on=1`, { method: 'POST' });
-const refus = await decider(cible, 'non_retenu');
+const refus = await decider(cible, 'nouveau');
 
 refus.annulationEchouee
   ? ok(`l’échec est remonté : « ${refus.annulationEchouee} »`)
@@ -847,6 +760,42 @@ s = await state();
 s.members.find((m) => m.id === idAmande)?.soiree_group == null
   ? ok('la touche « — » retire la candidature de tout groupe')
   : bad('groupe non retiré', String(s.members.find((m) => m.id === idAmande)?.soiree_group));
+
+/* ---------------------------------------------------------------- */
+section('11 bis. Le groupe G et le filtre sur l’orientation');
+
+const idGael = await ranger({
+  first_name: 'Gael', email: 'gael@example.com', gender: 'homme',
+  birth_date: '1996-05-05', orientation: 'gay',
+});
+
+await page.goto(`${BASE}/admin/${idGael}`, { waitUntil: 'networkidle' });
+await page.locator('.adm-groupes[data-compact="false"] [title="Groupe G"]').click();
+await page.waitForTimeout(900);
+s = await state();
+s.members.find((m) => m.id === idGael)?.soiree_group === 'G'
+  ? ok('le groupe G s’attribue comme les trois autres')
+  : bad('groupe G non enregistré', String(s.members.find((m) => m.id === idGael)?.soiree_group));
+
+await page.goto(`${BASE}/admin?orientation=gay`, { waitUntil: 'networkidle' });
+const gays = (await page.locator('.adm-row-name').allInnerTexts()).map((t) => t.trim());
+gays.length === 1 && gays[0].includes('Gael')
+  ? ok('le filtre « gay » ne garde que les fiches concernées')
+  : bad('sélection « gay »', gays.join(', ') || '(vide)');
+
+// « autre » doit ramasser aussi celles et ceux à qui on n'a jamais posé la
+// question : le formulaire court ne la pose pas, et les oublier serait pire
+// que de les ranger un peu vite.
+await page.goto(`${BASE}/admin?orientation=autre`, { waitUntil: 'networkidle' });
+const autres = (await page.locator('.adm-row-name').allInnerTexts()).map((t) => t.trim());
+!autres.some((n) => n.includes('Gael')) && autres.some((n) => n.includes('Flore'))
+  ? ok('« autre » écarte les gays et garde les fiches sans réponse')
+  : bad('sélection « autre »', autres.join(', ') || '(vide)');
+
+const csvGay = lignesCsv(await (await fetch(`${BASE}/api/admin/export?orientation=gay`)).text());
+csvGay.length === 2 && csvGay[1].startsWith('G,Gael,M,') && csvGay[1].includes(',gay,')
+  ? ok('l’export suit le même filtre, groupe G compris')
+  : bad('export par orientation', csvGay.slice(1).join(' | ').slice(0, 140) || '(vide)');
 
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 

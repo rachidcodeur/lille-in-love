@@ -22,8 +22,6 @@ export const STATUS_ORDER = ['tous', 'nouveau', 'en_examen', 'valide', 'non_rete
 export const TEMPLATE_LABELS: Record<string, string> = {
   '01_candidature_recue': 'Candidature reçue',
   '02_bienvenue': 'Bienvenue dans le club',
-  '03_on_reviendra': 'On reviendra vers toi',
-  '04_tranche_age': 'Tranche d’âge à venir',
 };
 
 export const EMAIL_STATUS_LABELS: Record<string, string> = {

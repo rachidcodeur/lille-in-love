@@ -8,12 +8,7 @@ export const dynamic = 'force-dynamic';
 
 const schema = z.object({
   memberId: z.string().uuid(),
-  template: z.enum([
-    '01_candidature_recue',
-    '02_bienvenue',
-    '03_on_reviendra',
-    '04_tranche_age',
-  ]),
+  template: z.enum(['01_candidature_recue', '02_bienvenue']),
 });
 
 /** Relance un email après un échec d'envoi. */

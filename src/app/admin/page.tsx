@@ -47,6 +47,15 @@ export default async function AdminListPage({ searchParams }: Props) {
   }
 
   const parStatut = compter(fiches, filtres, 'statut', STATUS_ORDER);
+
+  // On ne refuse plus, on ne met plus « en examen » : ces pastilles ne
+  // s'affichent que s'il reste des candidatures qui les portent.
+  const statutsVisibles = STATUS_ORDER.filter(
+    (status) =>
+      ['tous', 'nouveau', 'valide'].includes(status) ||
+      (parStatut[status] ?? 0) > 0 ||
+      filtres.statut === status,
+  );
   const selection = fiches.filter((fiche) => correspond(fiche, filtres)).length;
   const aDesFiltres = filtresActifs(filtres);
   const detail = resume(filtres);
@@ -56,6 +65,7 @@ export default async function AdminListPage({ searchParams }: Props) {
   const criteres = [
     filtres.groupe !== 'tous',
     filtres.genre !== 'tous',
+    filtres.orientation !== 'tous',
     filtres.ageMin !== null || filtres.ageMax !== null,
   ].filter(Boolean).length;
 
@@ -84,7 +94,7 @@ export default async function AdminListPage({ searchParams }: Props) {
 
       <div className="adm-barre-filtres">
         <nav className="adm-filters" aria-label="Statut">
-          {STATUS_ORDER.map((status) => (
+          {statutsVisibles.map((status) => (
             <Link
               key={status}
               href={lien('/admin', filtres, { statut: status })}
