@@ -10,6 +10,7 @@ import {
   resume,
 } from '@/lib/groupes';
 import { GroupePicker } from '@/components/admin/GroupePicker';
+import { Icone } from '@/components/admin/Icones';
 import { PanneauFiltres } from '@/components/admin/PanneauFiltres';
 import { Vignette } from '@/components/admin/Vignette';
 
@@ -92,6 +93,42 @@ export default async function AdminListPage({ searchParams }: Props) {
 
       </div>
 
+      <form className="adm-recherche" method="get" action="/admin" role="search">
+        {/* Les critères en cours survivent à une recherche : on cherche
+            « Dupont » parmi les femmes du groupe C, pas dans toute la base. */}
+        {filtres.statut !== 'tous' && <input type="hidden" name="statut" value={filtres.statut} />}
+        {filtres.groupe !== 'tous' && <input type="hidden" name="groupe" value={filtres.groupe} />}
+        {filtres.genre !== 'tous' && <input type="hidden" name="genre" value={filtres.genre} />}
+        {filtres.orientation !== 'tous' && (
+          <input type="hidden" name="orientation" value={filtres.orientation} />
+        )}
+        {filtres.ageMin !== null && <input type="hidden" name="ageMin" value={filtres.ageMin} />}
+        {filtres.ageMax !== null && <input type="hidden" name="ageMax" value={filtres.ageMax} />}
+
+        <span className="adm-recherche-loupe" aria-hidden="true">
+          <Icone nom="loupe" taille={18} />
+        </span>
+        <input
+          type="search"
+          name="q"
+          defaultValue={filtres.recherche}
+          placeholder="Chercher un prénom, un nom, un email, une ville…"
+          aria-label="Chercher une candidature"
+        />
+        {filtres.recherche && (
+          <Link
+            className="adm-recherche-vider"
+            href={lien('/admin', filtres, { recherche: '' })}
+            aria-label="Effacer la recherche"
+          >
+            <Icone nom="croix" taille={16} />
+          </Link>
+        )}
+        <button type="submit" className="adm-btn adm-btn-filtrer">
+          Chercher
+        </button>
+      </form>
+
       <div className="adm-barre-filtres">
         <nav className="adm-filters" aria-label="Statut">
           {statutsVisibles.map((status) => (
@@ -113,9 +150,11 @@ export default async function AdminListPage({ searchParams }: Props) {
         <div className="adm-empty">
           <p>Aucune candidature ici.</p>
           <p className="adm-hint">
-            {aDesFiltres
-              ? 'Aucune fiche ne réunit ces critères. Élargis, ou remets tout à zéro.'
-              : 'Personne ne s’est encore inscrit.'}
+            {filtres.recherche
+              ? `Rien ne correspond à « ${filtres.recherche} ». Essaie un prénom, un bout de nom, ou une adresse.`
+              : aDesFiltres
+                ? 'Aucune fiche ne réunit ces critères. Élargis, ou remets tout à zéro.'
+                : 'Personne ne s’est encore inscrit.'}
           </p>
         </div>
       ) : (

@@ -1819,3 +1819,93 @@
 .adm-btn-exporter:hover:not(:disabled) {
   background: var(--sand);
 }
+
+/* --- Recherche ------------------------------------------------------ */
+
+.adm-recherche {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 6px 6px 18px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-card);
+  transition: border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.adm-recherche:focus-within {
+  border-color: var(--gold);
+  box-shadow: var(--shadow-card), var(--shadow-focus);
+}
+
+.adm-recherche-loupe {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: var(--ink-muted);
+}
+
+.adm-recherche input[type='search'] {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font);
+  font-size: 15.5px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  padding: 10px 0;
+  /* La croix native de Safari doublerait la nôtre. */
+  appearance: none;
+}
+
+.adm-recherche input[type='search']::-webkit-search-cancel-button {
+  display: none;
+}
+
+.adm-recherche input[type='search']:focus {
+  outline: none;
+}
+
+.adm-recherche input[type='search']::placeholder {
+  color: var(--ink-muted);
+}
+
+.adm-recherche-vider {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--ink-muted);
+  text-decoration: none;
+  transition: background 140ms ease, color 140ms ease;
+}
+
+.adm-recherche-vider:hover {
+  background: var(--sand);
+  color: var(--ink);
+}
+
+.adm-recherche .adm-btn-filtrer {
+  flex: 0 0 auto;
+  height: 40px;
+  padding: 0 22px;
+}
+
+@media (max-width: 620px) {
+  .adm-recherche {
+    flex-wrap: wrap;
+    border-radius: var(--radius-lg);
+    padding: 12px 14px;
+  }
+  .adm-recherche input[type='search'] {
+    flex: 1 1 100%;
+    order: -1;
+  }
+  .adm-recherche .adm-btn-filtrer {
+    margin-left: auto;
+  }
+}

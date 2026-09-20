@@ -214,6 +214,17 @@ Une fiche marquée **« à vérifier »** signale un envoi inhabituel (formulair
 rempli très vite). La candidature est conservée : c'est souvent quelqu'un de
 pressé.
 
+### Retrouver quelqu'un
+
+Un champ de recherche en haut de `/admin` : prénom, trois lettres de nom,
+adresse email ou ville. Il se combine avec les filtres — on peut chercher
+« Dupont » parmi les femmes du groupe C. Les accents comptent.
+
+> **Le formulaire ne demande que les trois premières lettres du nom.**
+> « Dupont » devient « DUP » : une liste ouverte à deux curateurs n'a pas
+> besoin des noms complets. Les candidatures reçues avant ce changement
+> gardent le leur.
+
 ### Trier, grouper, exporter
 
 Chaque fiche peut être rangée dans un **groupe de soirée : A, B, C ou G**

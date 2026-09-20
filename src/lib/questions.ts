@@ -31,6 +31,8 @@ export type Field = {
   label?: string;
   placeholder?: string;
   help?: string;
+  /** Affiche « (facultatif) » à côté du libellé — visible, pas enfoui dans l'aide. */
+  facultatif?: boolean;
   required?: boolean;
   options?: Option[];
   min?: number;
@@ -51,6 +53,8 @@ export type Step = {
   number?: string;
   section?: string;
   title: string;
+  /** Une étape entière facultative : « (facultatif) » suit la question. */
+  facultatif?: boolean;
   help?: string;
   /** Précision en petits caractères, sous l'aide. */
   note?: string;
@@ -266,7 +270,8 @@ export const STEPS_COMPLET: Step[] = [
     number: '09',
     section: 'Toi, en quelques mots',
     title: 'Quel est ton signe astrologique ?',
-    help: 'Optionnel — pour ceux que ça amuse.',
+    facultatif: true,
+    help: 'Pour ceux que ça amuse.',
     fields: [
       {
         name: 'zodiac',
@@ -296,7 +301,8 @@ export const STEPS_COMPLET: Step[] = [
     number: '11',
     section: 'Toi, en quelques mots',
     title: 'Ton Instagram ?',
-    help: 'Optionnel. On ne le partage jamais.',
+    facultatif: true,
+    help: 'On ne le partage jamais.',
     fields: [
       {
         name: 'instagram',
@@ -326,7 +332,7 @@ export const STEPS_COMPLET: Step[] = [
         name: 'companionFirstName',
         type: 'text',
         label: 'Son prénom',
-        help: 'Optionnel.',
+        facultatif: true,
         maxLength: 60,
         placeholder: 'Pour lui envoyer une invitation',
         showIf: { field: 'comesWith', equals: 'oui' },
@@ -374,10 +380,11 @@ export const STEPS_COMPLET: Step[] = [
       {
         name: 'lastName',
         type: 'text',
-        label: 'Nom',
+        label: 'Les trois premières lettres de ton nom',
+        help: 'Pour rester anonyme jusqu’au soir venu. Exemple : Dupont → DUP.',
         required: true,
-        maxLength: 60,
-        autoComplete: 'family-name',
+        maxLength: 3,
+        placeholder: 'DUP',
       },
       {
         name: 'phone',
@@ -469,10 +476,11 @@ export const STEPS_COURT: Step[] = [
       {
         name: 'lastName',
         type: 'text',
-        label: 'Nom',
+        label: 'Les trois premières lettres de ton nom',
+        help: 'Pour rester anonyme jusqu’au soir venu. Exemple : Dupont → DUP.',
         required: true,
-        maxLength: 60,
-        autoComplete: 'family-name',
+        maxLength: 3,
+        placeholder: 'DUP',
       },
       {
         name: 'email',

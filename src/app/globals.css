@@ -578,42 +578,6 @@ body {
   text-underline-offset: 2px;
 }
 
-.lil-hint {
-  font-size: 12.5px;
-  color: var(--ink-muted);
-  text-align: center;
-  margin: 14px 0 0;
-}
-
-.lil-hint kbd {
-  font-family: var(--font);
-  font-size: 11.5px;
-  font-weight: 600;
-  background: var(--sand-deep);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 2px 6px;
-}
-
-@media (max-width: 400px) {
-  .lil-mention {
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: var(--ink-muted);
-  text-align: center;
-  margin: 14px 0 0;
-}
-
-.lil-mention a {
-  color: var(--ink-soft);
-  text-underline-offset: 2px;
-}
-
-.lil-hint {
-    display: none;
-  }
-}
-
 /* ------------------------------------------------------------------ */
 /* Messages globaux                                                    */
 /* ------------------------------------------------------------------ */
@@ -733,4 +697,25 @@ body {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* --- « (facultatif) » ------------------------------------------------ */
+
+/* Visible, sans prendre plus de place : même corps que son voisin, en gras,
+   dans le doré de la charte. L'information « on peut passer » vaut mieux
+   dite à côté de la question qu'enfouie dans l'aide. */
+.lil-facultatif {
+  font-weight: 700;
+  color: var(--gold-deep);
+  margin-left: 8px;
+  white-space: nowrap;
+}
+
+.lil-question .lil-facultatif {
+  font-size: 15px;
+  vertical-align: middle;
+}
+
+.lil-field-label .lil-facultatif {
+  font-size: 14px;
 }

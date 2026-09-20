@@ -52,8 +52,17 @@ function readTable(name) {
 }
 
 /* ---------------------------------------------------------------- */
-/* Filtres PostgREST : eq, in, is, gte, lte, order, limit           */
+/* Filtres PostgREST : eq, in, is, ilike, gte, lte, or, order, limit */
 /* ---------------------------------------------------------------- */
+function ilike(valeur, motif) {
+  if (valeur === null || valeur === undefined) return false;
+  const regex = new RegExp(
+    '^' + motif.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/[*%]/g, '.*') + '$',
+    'i',
+  );
+  return regex.test(String(valeur));
+}
+
 function compare(a, b) {
   if (a === null || a === undefined) return b === null || b === undefined ? 0 : 1;
   if (b === null || b === undefined) return -1;
@@ -79,6 +88,7 @@ function applyFilters(rows, params) {
           if (operateur === 'is') return v === 'null' && (actuel === null || actuel === undefined);
           if (operateur === 'neq') return actuel !== undefined && actuel !== null && String(actuel) !== v;
           if (operateur === 'eq') return String(actuel) === v;
+          if (operateur === 'ilike') return ilike(actuel, v);
           throw new Error(`opérateur non géré dans or : ${condition}`);
         }),
       );
@@ -104,6 +114,8 @@ function applyFilters(rows, params) {
       // « is.null » : une colonne absente de l'objet vaut null, comme en base.
       if (value !== 'null') throw new Error(`is.${value} non géré`);
       out = out.filter((row) => row[key] === null || row[key] === undefined);
+    } else if (op === 'ilike') {
+      out = out.filter((row) => ilike(row[key], value));
     } else if (op === 'gte' || op === 'lte') {
       const seuil = Number(value);
       out = out.filter((row) => {

@@ -75,6 +75,10 @@
 #lilx-racine .lilx-champs{ display:flex; flex-direction:column; gap:20px; margin-top:24px; }
 #lilx-racine .lilx-label{ display:block; font-size:14px; font-weight:600; color:var(--lilx-ink2); margin-bottom:8px; }
 #lilx-racine .lilx-sous{ font-size:13px; color:var(--lilx-muted); margin:6px 0 0; }
+/* « (facultatif) » : même corps que son voisin, en gras, dans le doré. */
+#lilx-racine .lilx-facultatif{ font-weight:700; color:var(--lilx-gold-deep); margin-left:8px; white-space:nowrap; }
+#lilx-racine .lilx-question .lilx-facultatif{ font-size:15px; vertical-align:middle; }
+#lilx-racine .lilx-label .lilx-facultatif{ font-size:14px; }
 #lilx-racine input.lilx-saisie, #lilx-racine textarea.lilx-saisie, #lilx-racine select.lilx-saisie{
   width:100%; font-family:var(--lilx-font); font-size:16px; line-height:1.5; color:var(--lilx-ink);
   background:var(--lilx-cream); border:1.5px solid var(--lilx-border); border-radius:12px; padding:13px 15px;
@@ -613,6 +617,7 @@
     if (champ.label && champ.type !== 'consent') {
       var lab = el('label', 'lilx-label', champ.label);
       lab.htmlFor = 'lilx-' + champ.name;
+      if (champ.facultatif) lab.appendChild(el('span', 'lilx-facultatif', '(facultatif)'));
       bloc.appendChild(lab);
     }
 
@@ -828,7 +833,9 @@
 
     var bloc = el('div', 'lilx-etape');
     if (etape.section) bloc.appendChild(el('p', 'lilx-section', etape.section));
-    bloc.appendChild(el('h2', 'lilx-question', (etape.number ? etape.number + '. ' : '') + etape.title));
+    var titre = el('h2', 'lilx-question', (etape.number ? etape.number + '. ' : '') + etape.title);
+    if (etape.facultatif) titre.appendChild(el('span', 'lilx-facultatif', '(facultatif)'));
+    bloc.appendChild(titre);
     if (etape.help) bloc.appendChild(el('p', 'lilx-aide', etape.help));
     if (etape.note) bloc.appendChild(el('p', 'lilx-note', etape.note));
 

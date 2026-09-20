@@ -41,6 +41,8 @@ export const ORIENTATION_LABELS: Record<string, string> = {
 };
 
 export type Filtres = {
+  /** Ce qu'on cherche : un prénom, un bout de nom, un email, une ville. */
+  recherche: string;
   statut: string;
   groupe: string;
   genre: string;
@@ -50,6 +52,7 @@ export type Filtres = {
 };
 
 export const FILTRES_PAR_DEFAUT: Filtres = {
+  recherche: '',
   statut: 'tous',
   groupe: 'tous',
   genre: 'tous',
@@ -85,6 +88,9 @@ export function parseFiltres(params: ParamsBruts, statutsConnus: readonly string
   if (ageMin !== null && ageMax !== null && ageMin > ageMax) [ageMin, ageMax] = [ageMax, ageMin];
 
   return {
+    // Les caractères qui ont un sens pour PostgREST sont écartés dès l'entrée :
+    // une virgule ou une parenthèse casserait le filtre construit plus loin.
+    recherche: (premier(params.q) ?? '').replace(/[(),*"'\\%]/g, ' ').trim().slice(0, 60),
     statut: parmi(params.statut, statutsConnus, 'tous'),
     groupe: parmi(params.groupe, GROUPE_CHOIX, 'tous'),
     genre: parmi(params.genre, GENRE_CHOIX, 'tous'),
@@ -98,6 +104,7 @@ export function parseFiltres(params: ParamsBruts, statutsConnus: readonly string
 export function versParams(filtres: Filtres, remplace: Partial<Filtres> = {}): URLSearchParams {
   const f = { ...filtres, ...remplace };
   const params = new URLSearchParams();
+  if (f.recherche) params.set('q', f.recherche);
   if (f.statut !== 'tous') params.set('statut', f.statut);
   if (f.groupe !== 'tous') params.set('groupe', f.groupe);
   if (f.genre !== 'tous') params.set('genre', f.genre);
@@ -120,6 +127,7 @@ export function filtresActifs(filtres: Filtres): boolean {
 /** « Femmes · groupe C · 27–35 ans » — le résumé qui titre l'export. */
 export function resume(filtres: Filtres): string[] {
   const morceaux: string[] = [];
+  if (filtres.recherche) morceaux.push(`« ${filtres.recherche} »`);
   if (filtres.genre !== 'tous') morceaux.push(GENRE_LABELS[filtres.genre]);
   if (filtres.orientation !== 'tous') {
     morceaux.push(filtres.orientation === 'gay' ? 'gays' : 'hors gays');
@@ -155,6 +163,10 @@ export function nomFichier(filtres: Filtres): string {
 
 export type FicheFiltrable = {
   status: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  city: string | null;
   soiree_group: string | null;
   gender: string | null;
   orientation: string | null;
@@ -169,6 +181,7 @@ export type FicheFiltrable = {
  * dès qu'une borne d'âge est posée, ils sortent de la sélection.
  */
 export function correspond(fiche: FicheFiltrable, filtres: Filtres): boolean {
+  if (filtres.recherche && !trouve(fiche, filtres.recherche)) return false;
   if (filtres.statut !== 'tous' && fiche.status !== filtres.statut) return false;
 
   if (filtres.groupe === 'aucun') {
@@ -188,6 +201,20 @@ export function correspond(fiche: FicheFiltrable, filtres: Filtres): boolean {
   if (filtres.ageMax !== null && (fiche.age === null || fiche.age > filtres.ageMax)) return false;
 
   return true;
+}
+
+/**
+ * La fiche répond-elle à la recherche ?
+ *
+ * Prénom, nom, email et ville, sans distinction de casse. Les accents, eux,
+ * comptent : la base fait la même lecture, et il vaut mieux deux endroits qui
+ * disent la même chose qu'un compteur en désaccord avec la liste.
+ */
+function trouve(fiche: FicheFiltrable, terme: string): boolean {
+  const aiguille = terme.toLowerCase();
+  return [fiche.first_name, fiche.last_name, fiche.email, fiche.city].some((champ) =>
+    (champ ?? '').toLowerCase().includes(aiguille),
+  );
 }
 
 /** Combien de fiches pour chaque valeur possible d'un filtre, les autres tenus. */

@@ -181,6 +181,16 @@ section('Parcours complet et envoi');
   await page.getByRole('button', { name: 'Culture & spectacles' }).click();
   await page.getByRole('button', { name: 'Voyages & découvertes' }).click();
   await next();
+  // « (facultatif) » se lit à côté de la question, pas au fond de l'aide :
+  // c'est ce qui évite d'abandonner devant un champ qu'on pourrait sauter.
+  ((await page.locator('.lil-question').innerText().catch(() => '')) || '').includes('(facultatif)')
+    ? ok('la question facultative le dit à côté de son titre')
+    : bad('mention « (facultatif) » absente', await page.locator('.lil-question').innerText().catch(() => ''));
+  (await page.locator('.lil-facultatif').evaluate((el) => getComputedStyle(el).fontWeight))
+    >= '700'
+    ? ok('elle est en gras, sans être plus grande')
+    : bad('mention pas assez visible');
+
   await page.selectOption('#zodiac', 'belier');
   await next();
   await page.fill('#profession', 'Architecte');
@@ -215,7 +225,10 @@ section('Parcours complet et envoi');
 
   await next();
   await page.fill('#firstName', 'Camille');
-  await page.fill('#lastName', 'Dupont');
+  await page.fill('#lastName', 'DUP');
+  (await page.locator('#lastName').getAttribute('maxlength')) === '3'
+    ? ok('le nom se limite à trois lettres — l’anonymat tient jusqu’au soir')
+    : bad('le champ accepte un nom entier', await page.locator('#lastName').getAttribute('maxlength'));
   await page.fill('#phone', '06 12 34 56 78');
   await next();
   await page.fill('#email', 'camille.dupont@example.com');

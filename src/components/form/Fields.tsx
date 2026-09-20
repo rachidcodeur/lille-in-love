@@ -40,6 +40,7 @@ export function FieldControl({ field, value, error, onChange, onAdvance }: Field
   const label = field.label ? (
     <label className="lil-field-label" htmlFor={field.name}>
       {field.label}
+      {field.facultatif && <span className="lil-facultatif">(facultatif)</span>}
     </label>
   ) : null;
 

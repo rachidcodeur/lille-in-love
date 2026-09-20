@@ -46,7 +46,7 @@ await page.getByRole('radio', { name: 'Une femme' }).click();
 await page.waitForTimeout(600);
 
 await page.fill('#firstName', 'Camille');
-await page.fill('#lastName', 'Dupont');
+await page.fill('#lastName', 'DUP');
 await page.fill('#email', 'Camille.Dupont@Example.com');
 await page.getByRole('button', { name: 'Suivant' }).click();
 await page.waitForTimeout(400);
@@ -108,7 +108,12 @@ const rows = await page.locator('.adm-row').count();
 rows === 1 ? ok('la candidature apparaît dans la liste') : bad('lignes affichées', String(rows));
 
 const rowText = await page.locator('.adm-row').first().innerText();
-rowText.includes('Camille Dupont') ? ok('nom affiché') : bad('nom absent', rowText);
+rowText.includes('Camille DUP') ? ok('nom affiché') : bad('nom absent', rowText);
+// Le formulaire ne demande plus que trois lettres : personne ne se retrouve
+// en clair dans une liste ouverte à deux curateurs.
+(await page.locator('.adm-row-name').first().innerText()).trim() === 'Camille DUP'
+  ? ok('le nom de famille se limite à trois lettres')
+  : bad('nom complet affiché', await page.locator('.adm-row-name').first().innerText());
 !rowText.toLowerCase().includes('court')
   ? ok('pas d’étiquette « court » : la ligne reste lisible')
   : bad('l’étiquette « court » est revenue sur la ligne');
@@ -762,7 +767,49 @@ s.members.find((m) => m.id === idAmande)?.soiree_group == null
   : bad('groupe non retiré', String(s.members.find((m) => m.id === idAmande)?.soiree_group));
 
 /* ---------------------------------------------------------------- */
-section('11 bis. Le groupe G et le filtre sur l’orientation');
+section('11 bis. Chercher quelqu’un');
+
+// Deux curateurs qui parcourent deux cents fiches ont besoin de retrouver
+// une personne dont ils n'ont que le prénom, ou trois lettres de nom.
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+await page.fill('.adm-recherche input[name="q"]', 'bea');
+await page.locator('.adm-recherche button[type="submit"]').click();
+await page.waitForTimeout(1200);
+
+const trouvees = (await page.locator('.adm-row-name').allInnerTexts()).map((t) => t.trim());
+trouvees.length === 1 && trouvees[0].includes('Bea')
+  ? ok('la recherche retrouve une personne par son prénom')
+  : bad('recherche par prénom', trouvees.join(', ') || '(vide)');
+
+// L'email aussi : c'est souvent tout ce qu'on a sous la main.
+await page.goto(`${BASE}/admin?q=carmen%40example`, { waitUntil: 'networkidle' });
+((await page.locator('.adm-row-name').first().innerText().catch(() => '')) || '').includes('Carmen')
+  ? ok('la recherche fonctionne aussi sur l’adresse email')
+  : bad('recherche par email');
+
+// Une recherche se combine avec les critères, et le compteur suit.
+await page.goto(`${BASE}/admin?q=example&genre=homme`, { waitUntil: 'networkidle' });
+const hommes = (await page.locator('.adm-row-name').allInnerTexts()).map((t) => t.trim());
+hommes.length === 1 && hommes[0].includes('David')
+  ? ok('recherche et filtres se combinent')
+  : bad('combinaison recherche + filtre', hommes.join(', ') || '(vide)');
+((await page.locator('.adm-sub').innerText().catch(() => '')) || '').includes('« example »')
+  ? ok('le sous-titre rappelle ce qu’on cherche')
+  : bad('recherche absente du sous-titre', await page.locator('.adm-sub').innerText().catch(() => ''));
+
+// Une virgule casserait le filtre envoyé à Supabase : elle doit être écartée.
+const piege = await fetch(`${BASE}/admin?q=${encodeURIComponent('bea,x)')}`);
+piege.ok
+  ? ok('un terme contenant virgule et parenthèse ne casse pas la requête')
+  : bad('la recherche a fait tomber la page', String(piege.status));
+
+await page.goto(`${BASE}/admin?q=personnequinexistepas`, { waitUntil: 'networkidle' });
+((await page.locator('.adm-empty').innerText().catch(() => '')) || '').includes('Rien ne correspond')
+  ? ok('une recherche vide le dit clairement')
+  : bad('message de recherche vide absent');
+
+/* ---------------------------------------------------------------- */
+section('11 ter. Le groupe G et le filtre sur l’orientation');
 
 const idGael = await ranger({
   first_name: 'Gael', email: 'gael@example.com', gender: 'homme',
@@ -815,7 +862,7 @@ await page.reload({ waitUntil: 'networkidle' });
 await page.getByRole('radio', { name: 'Un homme' }).click();
 await page.waitForTimeout(600);
 await page.fill('#firstName', 'Gaspard');
-await page.fill('#lastName', 'Iphone');
+await page.fill('#lastName', 'IPH');
 await page.fill('#email', 'gaspard@example.com');
 await page.getByRole('button', { name: 'Suivant' }).click();
 await page.waitForTimeout(400);

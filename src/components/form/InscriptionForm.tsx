@@ -329,12 +329,6 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
     }
   }
 
-  // Dans une zone de texte, Entrée sert à aller à la ligne : inutile de
-  // promettre autre chose sur ces étapes-là.
-  const canSubmitWithEnter = !step.fields.some(
-    (field) => field.type === 'textarea' || field.type === 'photos',
-  );
-
   const progress = useMemo(
     () => Math.round(((done ? STEPS.length : index) / STEPS.length) * 100),
     [index, done],
@@ -430,6 +424,7 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
           <h2 className="lil-question">
             {step.number && <span aria-hidden="true">{step.number}. </span>}
             {step.title}
+            {step.facultatif && <span className="lil-facultatif">(facultatif)</span>}
           </h2>
           {step.help && <p className="lil-help">{step.help}</p>}
           {step.note && <p className="lil-note">{step.note}</p>}
@@ -493,11 +488,6 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
           />
         )}
 
-        {!isLast && canSubmitWithEnter && (
-          <p className="lil-hint">
-            Appuie sur <kbd>Entrée</kbd> pour passer à la suite
-          </p>
-        )}
       </form>
     </div>
   );

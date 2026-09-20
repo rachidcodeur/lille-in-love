@@ -66,7 +66,7 @@ export const inscriptionSchema = z
     referral: z.enum(values(REFERRALS)),
 
     firstName: trimmed.min(1, 'Indique ton prénom').max(60),
-    lastName: trimmed.min(1, 'Indique ton nom').max(60),
+    lastName: trimmed.min(1, 'Indique les trois premières lettres de ton nom').max(60),
     phone: trimmed
       // 10 chiffres français, ou format international — on reste tolérant sur la ponctuation
       .regex(/^(?:\+?\d[\d\s.\-()]{7,20})$/, 'Numéro de téléphone invalide'),
@@ -144,7 +144,7 @@ export const inscriptionCourteSchema = z.object({
 
   gender: z.enum(['femme', 'homme']),
   firstName: trimmed.min(1, 'Indique ton prénom').max(60),
-  lastName: trimmed.min(1, 'Indique ton nom').max(60),
+  lastName: trimmed.min(1, 'Indique les trois premières lettres de ton nom').max(60),
   email: z.string().trim().toLowerCase().email('Email invalide').max(180),
 
   consent: z.literal(true, {

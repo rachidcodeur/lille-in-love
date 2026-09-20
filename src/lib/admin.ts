@@ -115,6 +115,16 @@ function filtrer<Q extends {
   lte(colonne: string, valeur: number): Q;
 }>(query: Q, filtres: Filtres): Q {
   let q = query;
+
+  // Prénom, nom, email, ville. Le terme a déjà été débarrassé des caractères
+  // qui ont un sens pour PostgREST : il ne peut plus élargir le filtre.
+  if (filtres.recherche) {
+    const motif = `*${filtres.recherche}*`;
+    q = q.or(
+      `first_name.ilike.${motif},last_name.ilike.${motif},email.ilike.${motif},city.ilike.${motif}`,
+    );
+  }
+
   if (filtres.statut !== 'tous') q = q.eq('status', filtres.statut);
 
   if (filtres.groupe === 'aucun') q = q.is('soiree_group', null);
@@ -181,7 +191,7 @@ export async function membersForExport(filtres: Filtres): Promise<MemberDetail[]
 export async function facettes(): Promise<FicheFiltrable[]> {
   const { data, error } = await supabaseAdmin()
     .from('lil_members_overview')
-    .select('status, soiree_group, gender, orientation, age')
+    .select('id, status, soiree_group, gender, orientation, age, first_name, last_name, email, city')
     .limit(5000);
   if (error) throw new Error(error.message);
   return (data ?? []) as FicheFiltrable[];
