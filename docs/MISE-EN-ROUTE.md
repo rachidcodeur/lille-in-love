@@ -137,6 +137,22 @@ et `ALLOWED_EMBED_ORIGINS` dès la construction.
 > voit les noms, emails et photos des candidats — et peut publier une soirée,
 > ce qui envoie des emails. Renseigne-le.
 
+### c bis. Si le déploiement échoue
+
+Les trois causes rencontrées, dans l'ordre :
+
+| Ce que dit Hostinger | Ce qui se passe |
+| --- | --- |
+| `Module not found: Can't resolve '@/…'` | l'installation a sauté les devDependencies. TypeScript est désormais une dépendance normale : ce cas est réglé. |
+| `/api/health` liste des variables vides | l'import du `.env` ne s'est pas fait, ou le site n'a pas été redéployé depuis. |
+| build interrompu sans message | mémoire ou temps de construction dépassés. Relance le déploiement : la seconde tentative repart d'un cache chaud. |
+
+Vérifie aussi la **version de Node** : il en faut **20 ou 22**. Avec Node 18,
+l'installation échoue avant même le build.
+
+Un déploiement complet occupe environ **600 Mo** (400 Mo de dépendances,
+170 Mo de build) pour **11 000 fichiers**.
+
 ### d. Le sous-domaine
 
 Dans les réglages du site, section **Domaines**, indique `app.in-love.fr`.
