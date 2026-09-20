@@ -20,3 +20,19 @@ export const BRAND = {
   /** Page qui accueille le formulaire. */
   inscriptionUrl: 'https://in-love.fr/inscription/',
 } as const;
+
+/**
+ * La soirée annoncée en tête du formulaire.
+ *
+ * Ces lignes changeront à chaque nouvelle soirée : elles sont ici pour
+ * n'avoir qu'un fichier à ouvrir, et le formulaire autonome les reprend au
+ * moment où on le regénère.
+ */
+export const SOIREE = {
+  chapeau: 'La première soirée',
+  titre: 'Célibataires 27-35 ans',
+  precision: 'À Lille · la date et le lieu sont communiqués aux inscrit·es.',
+  reperes: ['27-35 ans', 'Profils sélectionnés', 'Lieu privatisé'],
+  prix: '20 €',
+  prixDetail: 'par personne',
+} as const;

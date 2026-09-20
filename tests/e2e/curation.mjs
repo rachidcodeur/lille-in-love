@@ -94,6 +94,19 @@ s.storage.filter((k) => k.startsWith(`candidatures/${member.id}/`)).length === 2
   : bad('photos mal rangées', JSON.stringify(s.storage));
 s.storage.some((k) => k.startsWith('pending/')) ? bad('des photos traînent encore dans pending/') : ok('plus rien dans pending/');
 
+// L'équipe doit être prévenue, sinon les candidatures se découvrent à la main.
+const alerte = s.sent.find((m) => m.subject?.startsWith('Nouvelle candidature'));
+alerte ? ok(`alerte interne envoyée — « ${alerte.subject} »`) : bad('aucune alerte à l’équipe');
+alerte?.to === 'info@in-love.fr'
+  ? ok('adressée à info@in-love.fr')
+  : bad('destinataire de l’alerte', String(alerte?.to));
+alerte?.reply_to === 'camille.dupont@example.com'
+  ? ok('répondre à l’alerte écrit directement à la personne')
+  : bad('reply-to de l’alerte', String(alerte?.reply_to));
+s.emails.some((e) => e.template === '00_alerte_interne' && e.status === 'envoye')
+  ? ok('journalisée sur la fiche, comme les autres')
+  : bad('alerte absente du journal');
+
 const mail01 = s.sent.find((m) => m.subject?.startsWith('Inscription'));
 mail01 ? ok(`email 01 envoyé — objet « ${mail01.subject} »`) : bad('email 01 non envoyé');
 mail01?.to === 'camille.dupont@example.com' ? ok('adressé à la bonne personne') : bad('destinataire', mail01?.to);
@@ -140,8 +153,13 @@ bigPhotos === 2 && bigLoaded
 const vides = await page.locator('.adm-answer dd.vide').count();
 vides > 0 ? ok(`${vides} réponses marquées « non renseigné » (formulaire court)`) : bad('champs vides non signalés');
 
+// Deux lignes : l'alerte partie à l'équipe, et la candidature reçue partie
+// au candidat. Le journal de la fiche montre les deux.
 const mailsShown = await page.locator('.adm-mail').count();
-mailsShown === 1 ? ok('le journal des emails montre l’envoi 01') : bad('journal des emails', String(mailsShown));
+const mailsTextes = (await page.locator('.adm-mail-name').allInnerTexts()).map((t) => t.trim());
+mailsShown === 2 && mailsTextes.includes('Alerte à l’équipe') && mailsTextes.includes('Candidature reçue')
+  ? ok('le journal montre l’alerte interne et la candidature reçue')
+  : bad('journal des emails', `${mailsShown} · ${mailsTextes.join(', ')}`);
 
 /* ---------------------------------------------------------------- */
 section('3 bis. La visionneuse de photos');

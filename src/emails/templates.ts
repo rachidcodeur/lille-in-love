@@ -85,3 +85,52 @@ export const TEMPLATE_LABELS: Record<TemplateId, string> = {
   '01_candidature_recue': '01 · Candidature reçue',
   '02_bienvenue': '02 · Bienvenue dans le club',
 };
+
+/* ====================================================================
+   L'alerte interne — celle qu'on s'envoie à soi-même
+   ==================================================================== */
+
+/** Le modèle sous lequel l'alerte est journalisée, à côté de la séquence. */
+export const ALERTE_INTERNE = '00_alerte_interne';
+
+export type AlerteVars = {
+  prenom: string;
+  nom: string;
+  email: string;
+  parcours: 'court' | 'complet';
+  ville?: string | null;
+  age?: number | null;
+  ficheUrl?: string | null;
+};
+
+/**
+ * Prévient l'équipe qu'une candidature vient d'arriver.
+ *
+ * Ce message ne part pas au candidat mais à nous : on répond directement à
+ * la personne en cliquant « Répondre », et le lien mène droit à sa fiche.
+ */
+export function buildAlerteInterne(vars: AlerteVars): EmailPayload {
+  const qui = escapeHtml(`${vars.prenom} ${vars.nom}`.trim());
+  const reperes = [
+    vars.age ? `${vars.age} ans` : null,
+    vars.ville,
+    vars.parcours === 'court' ? 'formulaire court' : 'questionnaire complet',
+  ]
+    .filter(Boolean)
+    .map((bout) => escapeHtml(String(bout)))
+    .join(' · ');
+
+  const html = render({
+    preheader: `${qui} vient de s’inscrire.`,
+    body: [
+      lead(`Nouvelle candidature — ${qui}`),
+      p(`<strong>${escapeHtml(vars.email)}</strong><br>${reperes}`),
+      ...(vars.ficheUrl
+        ? [note(`<a href="${escapeHtml(vars.ficheUrl)}">Ouvrir la fiche dans l’espace curation</a>`)]
+        : []),
+      p('Réponds à ce message pour écrire directement à la personne.'),
+    ],
+  });
+
+  return { subject: `Nouvelle candidature — ${vars.prenom} ${vars.nom}`.trim(), html, text: toPlainText(html) };
+}

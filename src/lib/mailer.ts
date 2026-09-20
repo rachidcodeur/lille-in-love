@@ -1,6 +1,13 @@
 import { Resend } from 'resend';
 import { env } from './env';
-import { buildEmail, type TemplateId } from '@/emails/templates';
+import {
+  ALERTE_INTERNE,
+  buildAlerteInterne,
+  buildEmail,
+  type AlerteVars,
+  type TemplateId,
+} from '@/emails/templates';
+import { BRAND } from './brand';
 import { supabaseAdmin } from './supabase';
 
 let resend: Resend | null = null;
@@ -90,6 +97,73 @@ export async function sendSequenceEmail(options: SendOptions): Promise<SendResul
       .eq('id', logRow.id);
 
     return { ok: true, resendId: data?.id ?? null, scheduled: Boolean(scheduledAt) };
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : String(cause);
+    await db
+      .from('lil_emails')
+      .update({ status: 'echec', error: message.slice(0, 500) })
+      .eq('id', logRow.id);
+    return { ok: false, error: message };
+  }
+}
+
+/**
+ * Prévient l'équipe qu'une candidature vient d'arriver.
+ *
+ * Ce message-là ne part pas au candidat : il part à info@in-love.fr, et on
+ * répond directement à la personne en cliquant « Répondre ». Il est
+ * journalisé comme les autres, donc soumis au même index unique : deux envois
+ * du même formulaire ne donnent pas deux alertes.
+ *
+ * Un échec ici ne doit jamais remonter au visiteur : sa candidature est
+ * enregistrée, c'est tout ce qui compte pour lui.
+ */
+export async function previenirEquipe(
+  vars: AlerteVars & { memberId: string },
+): Promise<SendResult> {
+  const db = supabaseAdmin();
+  const { subject, html, text } = buildAlerteInterne(vars);
+  const destinataire = BRAND.contactEmail;
+
+  const { data: logRow, error: logError } = await db
+    .from('lil_emails')
+    .insert({
+      member_id: vars.memberId,
+      template: ALERTE_INTERNE,
+      to_email: destinataire,
+      subject,
+      status: 'programme',
+    })
+    .select('id')
+    .single();
+
+  if (logError) {
+    if (logError.code === '23505') return { ok: true, resendId: null, scheduled: false };
+    return { ok: false, error: `journal alerte : ${logError.message}` };
+  }
+
+  try {
+    const { data, error } = await client().emails.send({
+      from: env.emailFrom(),
+      to: destinataire,
+      // Répondre à l'alerte, c'est écrire à la personne : c'est le geste
+      // qu'on fera neuf fois sur dix.
+      replyTo: vars.email,
+      subject,
+      html,
+      text,
+      headers: { 'X-Entity-Ref-ID': `${vars.memberId}:${ALERTE_INTERNE}` },
+      tags: [{ name: 'template', value: 'alerte-interne' }],
+    });
+
+    if (error) throw new Error(error.message);
+
+    await db
+      .from('lil_emails')
+      .update({ resend_id: data?.id ?? null, status: 'envoye', sent_at: new Date().toISOString() })
+      .eq('id', logRow.id);
+
+    return { ok: true, resendId: data?.id ?? null, scheduled: false };
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : String(cause);
     await db

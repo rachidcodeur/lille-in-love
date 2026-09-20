@@ -4,6 +4,7 @@ import { env } from '@/lib/env';
 import { supabaseAdmin } from '@/lib/supabase';
 import { clientIp, corsHeaders, hashIp, rateLimit } from '@/lib/security';
 import {
+  ageFromBirthDate,
   inscriptionCourteSchema,
   inscriptionSchema,
   normalizeInstagram,
@@ -12,7 +13,7 @@ import {
   type InscriptionInput,
 } from '@/lib/validation';
 import { HONEYPOT_FIELDS, MIN_FILL_SECONDS } from '@/lib/questions';
-import { sendSequenceEmail } from '@/lib/mailer';
+import { previenirEquipe, sendSequenceEmail } from '@/lib/mailer';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -189,7 +190,7 @@ export async function POST(request: Request) {
   };
 
   const inserer = (row: Record<string, unknown>) =>
-    db.from('lil_members').insert(row).select('id, first_name, email').single();
+    db.from('lil_members').insert(row).select('id, first_name, last_name, email, city, birth_date, form_version').single();
 
   let { data: member, error: insertError } = await inserer({ ...commun, ...signalement });
 
@@ -269,6 +270,23 @@ export async function POST(request: Request) {
     // journalisé dans lil_emails et renvoyable depuis le back-office.
     console.error('[inscription] email 01 non envoyé', mail.error);
   }
+
+  // --- Alerte interne · pour ne pas découvrir les inscriptions à la main ---
+  // Elle part après la réponse au candidat et n'a aucune influence sur elle :
+  // si l'alerte échoue, la candidature reste enregistrée et l'échec est
+  // visible dans le journal de la fiche.
+  const alerte = await previenirEquipe({
+    memberId: member.id,
+    prenom: member.first_name,
+    nom: member.last_name ?? '',
+    email: member.email,
+    parcours: member.form_version === 'court' ? 'court' : 'complet',
+    ville: member.city ?? null,
+    age: member.birth_date ? ageFromBirthDate(member.birth_date) : null,
+    ficheUrl: `${env.siteUrl().replace(/\/+$/, '')}/admin/${member.id}`,
+  });
+
+  if (!alerte.ok) console.error('[inscription] alerte interne non envoyée', alerte.error);
 
   return NextResponse.json(
     { ok: true, id: member.id, firstName: member.first_name, emailSent: mail.ok },

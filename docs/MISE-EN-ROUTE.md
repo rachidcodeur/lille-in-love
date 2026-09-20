@@ -210,6 +210,11 @@ Si rien ne s'affiche :
 Une fiche par personne : photos en grand (clic pour agrandir, flèches pour
 passer de l'une à l'autre), réponses, et le journal des emails.
 
+**À chaque inscription, une alerte part sur `info@in-love.fr`** avec le nom,
+l'adresse et un lien direct vers la fiche. Répondre à ce message écrit
+directement à la personne. Elle n'est pas comptée dans les deux emails de la
+séquence : ceux-là vont au candidat, celle-ci vient à toi.
+
 **On ne refuse plus personne.** Une seule décision existe :
 
 | Bouton | Email envoyé | Quand |
@@ -229,6 +234,18 @@ quelques secondes plus tard suffit toujours.
 Une fiche marquée **« à vérifier »** signale un envoi inhabituel (formulaire
 rempli très vite). La candidature est conservée : c'est souvent quelqu'un de
 pressé.
+
+### Ce que le visiteur voit en arrivant
+
+Le formulaire s'ouvre sur la soirée annoncée : « Je veux *participer* », puis
+la carte « La première soirée / Célibataires 27-35 ans » avec ses repères et
+**le prix, 20 € par personne**. Tout ce bloc se modifie dans un seul fichier,
+`src/lib/brand.ts`, constante `SOIREE` — et il faut regénérer le formulaire
+autonome après coup (`node tools/formulaire-autonome/build.mjs`).
+
+> **La page WordPress affiche déjà un titre « JE VEUX PARTICIPER ».** Le
+> formulaire porte désormais le sien : retire celui de la page, sinon il
+> apparaîtra deux fois.
 
 ### Retrouver quelqu'un
 

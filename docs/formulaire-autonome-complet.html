@@ -25,6 +25,10 @@
      supabase/07_fermer_formulaire_autonome.sql.
      ===================================================================== -->
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap">
+
 <div id="lilx-racine"></div>
 
 <style>
@@ -46,6 +50,7 @@
   --lilx-ink:#1c130f; --lilx-ink2:#2d1e16; --lilx-soft:#77664c; --lilx-muted:#9c9186;
   --lilx-border:#e7dcc5; --lilx-error:#b3261e; --lilx-error-bg:#fdf0ef;
   --lilx-font:'Bricolage Grotesque',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --lilx-titre:'Cormorant Garamond','Iowan Old Style',Georgia,'Times New Roman',serif;
   font-family: var(--lilx-font);
   color: var(--lilx-ink);
   max-width: 620px; margin: 0 auto; padding: 8px 0 32px;
@@ -66,11 +71,45 @@
 
 #lilx-racine .lilx-section{ font-size:11px; font-weight:700; letter-spacing:.2em; text-transform:uppercase;
   color:var(--lilx-gold-deep); margin:0 0 10px; }
-#lilx-racine .lilx-question{ font-size:26px; line-height:1.25; font-weight:600; letter-spacing:-.015em;
+#lilx-racine .lilx-question{ font-family:var(--lilx-titre); font-size:34px; line-height:1.15; font-weight:500; letter-spacing:0;
   margin:0 0 8px; color:var(--lilx-ink); }
 #lilx-racine .lilx-aide{ font-size:15px; line-height:1.55; color:var(--lilx-soft); margin:0 0 6px; }
 #lilx-racine .lilx-note{ font-size:13.5px; line-height:1.55; font-style:italic; color:var(--lilx-muted); margin:0 0 6px; }
-@media (max-width:520px){ #lilx-racine .lilx-question{ font-size:22px; } }
+@media (max-width:520px){ #lilx-racine .lilx-question{ font-size:28px; } }
+
+/* Le numéro d'étape reste en sans : en serif, les chiffres anciens du « 01 »
+   se lisent « oi ». Il sert de repère, pas de titre. */
+#lilx-racine .lilx-numero{ font-family:var(--lilx-font); font-size:13px; font-weight:600; letter-spacing:.14em;
+  color:var(--lilx-gold-deep); margin-right:12px; vertical-align:.22em; }
+
+/* --- En-tête : la soirée, avant les questions --- */
+#lilx-racine .lilx-entete{ margin-bottom:26px; }
+#lilx-racine .lilx-entete-ligne{ display:flex; align-items:baseline; justify-content:space-between; gap:16px;
+  flex-wrap:wrap; font-size:11.5px; font-weight:600; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--lilx-gold-deep); margin:0 0 14px; }
+#lilx-racine .lilx-titre{ font-family:var(--lilx-titre); font-size:clamp(38px,9vw,54px); line-height:1;
+  font-weight:500; letter-spacing:.01em; text-transform:uppercase; color:var(--lilx-ink); margin:0 0 22px; }
+#lilx-racine .lilx-titre em{ font-style:italic; text-transform:none; color:var(--lilx-soft); letter-spacing:0; }
+#lilx-racine .lilx-soiree{ background:var(--lilx-sand); border:1px solid var(--lilx-gold-soft);
+  border-radius:16px; padding:22px 24px 20px; }
+#lilx-racine .lilx-soiree-chapeau{ font-size:11.5px; font-weight:600; letter-spacing:.22em; text-transform:uppercase;
+  color:var(--lilx-gold-deep); margin:0 0 10px; }
+#lilx-racine .lilx-soiree-titre{ font-family:var(--lilx-titre); font-size:clamp(26px,6vw,34px); line-height:1.1;
+  font-weight:500; letter-spacing:.01em; text-transform:uppercase; color:var(--lilx-ink); margin:0 0 8px; }
+#lilx-racine .lilx-soiree-precision{ font-size:15px; line-height:1.55; color:var(--lilx-soft); margin:0 0 18px; }
+#lilx-racine .lilx-reperes{ display:flex; flex-wrap:wrap; gap:10px; list-style:none; margin:0; padding:0; }
+#lilx-racine .lilx-reperes li{ display:inline-flex; align-items:center; font-size:12px; font-weight:600;
+  letter-spacing:.12em; text-transform:uppercase; color:var(--lilx-ink2); background:#fff;
+  border:1px solid var(--lilx-gold-soft); border-radius:4px; padding:11px 16px; }
+/* Le prix, un cran au-dessus des autres repères. */
+#lilx-racine .lilx-prix{ gap:7px; font-size:13.5px; letter-spacing:.1em; padding:12px 18px;
+  color:var(--lilx-ink); border-color:var(--lilx-gold); border-width:1.5px; }
+#lilx-racine .lilx-prix b{ font-family:var(--lilx-titre); font-size:22px; font-weight:600; letter-spacing:0;
+  line-height:1; font-variant-numeric:lining-nums; font-feature-settings:'lnum' 1; }
+@media (max-width:520px){
+  #lilx-racine .lilx-soiree{ padding:18px 18px 16px; }
+  #lilx-racine .lilx-entete-ligne{ letter-spacing:.16em; font-size:10.5px; }
+}
 
 #lilx-racine .lilx-champs{ display:flex; flex-direction:column; gap:20px; margin-top:24px; }
 #lilx-racine .lilx-label{ display:block; font-size:14px; font-weight:600; color:var(--lilx-ink2); margin-bottom:8px; }
@@ -612,6 +651,45 @@
     return p;
   }
 
+  var SOIREE = {"chapeau":"La première soirée","titre":"Célibataires 27-35 ans","precision":"À Lille · la date et le lieu sont communiqués aux inscrit·es.","reperes":["27-35 ans","Profils sélectionnés","Lieu privatisé"],"prix":"20 €","prixDetail":"par personne"};
+
+  /* Le haut du formulaire : ce qu'on propose, avant de demander quoi que ce
+     soit. Le prix surtout, qu'il vaut mieux annoncer soi-même que laisser
+     découvrir à la fin. */
+  function dessinerEntete() {
+    var entete = el('header', 'lilx-entete');
+
+    var ligne = el('p', 'lilx-entete-ligne');
+    ligne.appendChild(el('span', '', 'Lille in Love · Inscription'));
+    ligne.appendChild(el('span', '', 'Un court instant'));
+    entete.appendChild(ligne);
+
+    var titre = el('h1', 'lilx-titre', 'Je veux ');
+    var mot = el('em', '', 'participer');
+    titre.appendChild(mot);
+    titre.appendChild(document.createTextNode('.'));
+    entete.appendChild(titre);
+
+    var carte = el('section', 'lilx-soiree');
+    carte.setAttribute('aria-label', 'La soirée');
+    carte.appendChild(el('p', 'lilx-soiree-chapeau', SOIREE.chapeau));
+    carte.appendChild(el('p', 'lilx-soiree-titre', SOIREE.titre));
+    carte.appendChild(el('p', 'lilx-soiree-precision', SOIREE.precision));
+
+    var reperes = el('ul', 'lilx-reperes');
+    SOIREE.reperes.forEach(function (repere) {
+      reperes.appendChild(el('li', '', repere));
+    });
+    var prix = el('li', 'lilx-prix');
+    prix.appendChild(el('b', '', SOIREE.prix));
+    prix.appendChild(document.createTextNode(' ' + SOIREE.prixDetail));
+    reperes.appendChild(prix);
+    carte.appendChild(reperes);
+
+    entete.appendChild(carte);
+    return entete;
+  }
+
   function dessinerChamp(champ, surSuite) {
     var bloc = el('div');
     if (champ.label && champ.type !== 'consent') {
@@ -812,6 +890,8 @@
 
   function rendre() {
     racine.innerHTML = '';
+    // L'en-tête coiffe les deux écrans : le questionnaire et celui de fin.
+    racine.appendChild(dessinerEntete());
     if (termine) { racine.appendChild(ecranFin()); return; }
 
     var etape = etapes[index];
@@ -833,7 +913,9 @@
 
     var bloc = el('div', 'lilx-etape');
     if (etape.section) bloc.appendChild(el('p', 'lilx-section', etape.section));
-    var titre = el('h2', 'lilx-question', (etape.number ? etape.number + '. ' : '') + etape.title);
+    var titre = el('h2', 'lilx-question');
+    if (etape.number) titre.appendChild(el('span', 'lilx-numero', etape.number));
+    titre.appendChild(document.createTextNode(etape.title));
     if (etape.facultatif) titre.appendChild(el('span', 'lilx-facultatif', '(facultatif)'));
     bloc.appendChild(titre);
     if (etape.help) bloc.appendChild(el('p', 'lilx-aide', etape.help));

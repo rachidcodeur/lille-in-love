@@ -11,6 +11,7 @@ import {
 } from '@/lib/questions';
 import { FieldControl, type Errors, type Values } from './Fields';
 import { PhotoUpload, type UploadedPhoto } from './PhotoUpload';
+import { Entete } from './Entete';
 
 /** Un brouillon par parcours : le court et le complet ne se mélangent pas. */
 const draftKey = (version: FormVersion) => `lil-inscription-draft-v1-${version}`;
@@ -338,6 +339,7 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
   if (done) {
     return (
       <div className="lil-shell" ref={rootRef}>
+        <Entete />
         <div className="lil-card">
           <div className="lil-done lil-step">
             <div className="lil-done-seal" aria-hidden="true">
@@ -387,6 +389,7 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
   /* --- Formulaire --------------------------------------------------- */
   return (
     <div className="lil-shell" ref={rootRef}>
+      <Entete />
       <form
         className="lil-card"
         noValidate
@@ -422,7 +425,11 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
         <div className="lil-step" key={step.id}>
           {step.section && <p className="lil-eyebrow">{step.section}</p>}
           <h2 className="lil-question">
-            {step.number && <span aria-hidden="true">{step.number}. </span>}
+            {step.number && (
+              <span className="lil-question-numero" aria-hidden="true">
+                {step.number}
+              </span>
+            )}
             {step.title}
             {step.facultatif && <span className="lil-facultatif">(facultatif)</span>}
           </h2>

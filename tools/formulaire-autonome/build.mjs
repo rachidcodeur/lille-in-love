@@ -18,7 +18,8 @@ const brut = execFileSync(
   'npx',
   ['--yes', 'tsx', '-e',
    "import {STEPS_COURT, STEPS_COMPLET, HONEYPOT_FIELDS} from './src/lib/questions';" +
-   "console.log(JSON.stringify({court:STEPS_COURT, complet:STEPS_COMPLET, pieges:HONEYPOT_FIELDS}));"],
+   "import {SOIREE} from './src/lib/brand';" +
+   "console.log(JSON.stringify({court:STEPS_COURT, complet:STEPS_COMPLET, pieges:HONEYPOT_FIELDS, soiree:SOIREE}));"],
   { cwd: RACINE, encoding: 'utf8' },
 );
 const q = JSON.parse(brut.slice(brut.indexOf('{'), brut.lastIndexOf('}') + 1));
@@ -47,7 +48,8 @@ for (const [parcours, v] of Object.entries(VARIANTES)) {
     .replaceAll('__AUTRE_NOM__', autre)
     .replaceAll('__ETAPES__', JSON.stringify(q[parcours]))
     .replaceAll('__PIEGES__', JSON.stringify(q.pieges))
-    .replaceAll('__PARCOURS__', parcours);
+    .replaceAll('__PARCOURS__', parcours)
+    .replaceAll('__SOIREE__', JSON.stringify(q.soiree));
 
   const restes = html.match(/__[A-Z_]+__/g);
   if (restes) throw new Error(`marqueurs non remplacés : ${[...new Set(restes)].join(', ')}`);
