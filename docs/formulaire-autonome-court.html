@@ -106,6 +106,10 @@
   color:var(--lilx-ink); border-color:var(--lilx-gold); border-width:1.5px; }
 #lilx-racine .lilx-prix b{ font-family:var(--lilx-titre); font-size:22px; font-weight:600; letter-spacing:0;
   line-height:1; font-variant-numeric:lining-nums; font-feature-settings:'lnum' 1; }
+#lilx-racine .lilx-chiffres{ font-family:var(--lilx-font); font-size:.86em; font-weight:500; letter-spacing:.01em;
+  font-variant-numeric:lining-nums; }
+#lilx-racine .lilx-soiree-titre .lilx-chiffres{ font-weight:300; font-size:.84em; letter-spacing:.02em; }
+#lilx-racine .lilx-prix-mention{ font-size:13.5px; font-weight:600; line-height:1.5; color:var(--lilx-gold-deep); margin:12px 0 0; }
 @media (max-width:520px){
   #lilx-racine .lilx-soiree{ padding:18px 18px 16px; }
   #lilx-racine .lilx-entete-ligne{ letter-spacing:.16em; font-size:10.5px; }
@@ -226,7 +230,7 @@
   var PARCOURS = 'court';   // fixé par ce fichier, ne pas modifier
   var CONTACT = 'info@in-love.fr';
 
-  var ETAPES = [{"id":"gender","number":"01","section":"Profil","title":"Je suis","fields":[{"name":"gender","type":"radio","required":true,"advanceOnSelect":true,"options":[{"value":"femme","label":"Une femme"},{"value":"homme","label":"Un homme"}]}]},{"id":"contact","number":"02","section":"Coordonnées","title":"Qui es-tu ?","fields":[{"name":"firstName","type":"text","label":"Prénom","required":true,"maxLength":60,"autoComplete":"given-name"},{"name":"lastName","type":"text","label":"Les trois premières lettres de ton nom","help":"Pour rester anonyme jusqu’au soir venu. Exemple : Dupont → DUP.","required":true,"maxLength":3,"placeholder":"DUP"},{"name":"email","type":"email","label":"Email","required":true,"placeholder":"ton@email.fr","autoComplete":"email","help":"C’est là qu’on t’écrira. Vérifie bien l’orthographe."}]},{"id":"photos","number":"03","section":"Photos","title":"Ajoute tes photos","help":"1 à 3 photos de toi, visage visible. Elles servent à te reconnaître le soir et restent privées.","note":"Ta photo pourra éventuellement être utilisée pour t’identifier lors d’un jeu pendant la soirée.","mention":"En envoyant ta candidature, tu acceptes le <a href=\"https://lilleinlove.fr/reglement\" target=\"_blank\" rel=\"noopener\">règlement</a> et la politique de confidentialité.","fields":[{"name":"photos","type":"photos","required":true,"min":1,"max":3}]}];
+  var ETAPES = [{"id":"gender","number":"01","section":"Profil","title":"Je suis","fields":[{"name":"gender","type":"radio","required":true,"advanceOnSelect":true,"options":[{"value":"femme","label":"Une femme"},{"value":"homme","label":"Un homme"}]}]},{"id":"contact","number":"02","section":"Coordonnées","title":"Qui es-tu ?","fields":[{"name":"firstName","type":"text","label":"Prénom","required":true,"maxLength":60,"autoComplete":"given-name"},{"name":"lastName","type":"text","label":"Nom","help":"Au minimum les trois premières lettres, si tu préfères rester discret·e.","required":true,"maxLength":60,"autoComplete":"family-name"},{"name":"email","type":"email","label":"Email","required":true,"placeholder":"ton@email.fr","autoComplete":"email","help":"C’est là qu’on t’écrira. Vérifie bien l’orthographe."}]},{"id":"photos","number":"03","section":"Photos","title":"Ajoute tes photos","help":"1 à 3 photos de toi, visage visible. Elles servent à te reconnaître le soir et restent privées.","note":"Ta photo pourra éventuellement être utilisée pour t’identifier lors d’un jeu pendant la soirée.","mention":"En envoyant ta candidature, tu acceptes le <a href=\"https://lilleinlove.fr/reglement\" target=\"_blank\" rel=\"noopener\">règlement</a> et la politique de confidentialité.","fields":[{"name":"photos","type":"photos","required":true,"min":1,"max":3}]}];
   var PIEGES = ["lil_ref_url","lil_extra_1","lil_extra_2"];
   var BUCKET = 'lil-photos';
   var CLE_BROUILLON = 'lilx-brouillon-' + PARCOURS;
@@ -651,11 +655,22 @@
     return p;
   }
 
-  var SOIREE = {"chapeau":"La première soirée","titre":"Célibataires 27-35 ans","precision":"À Lille · la date et le lieu sont communiqués aux inscrit·es.","reperes":["27-35 ans","Profils sélectionnés","Lieu privatisé"],"prix":"20 €","prixDetail":"par personne"};
+  var SOIREE = {"chapeau":"La première soirée","titre":"Célibataires 27-35 ans","precision":"À Lille · la date et le lieu sont communiqués aux inscrit·es.","reperes":["27-35 ans","Profils sélectionnés","Lieu privatisé"],"prix":"20 €","prixDetail":"par personne","prixMention":"Tarif exceptionnel pour cette première soirée — il augmentera pour les suivantes."};
 
   /* Le haut du formulaire : ce qu'on propose, avant de demander quoi que ce
      soit. Le prix surtout, qu'il vaut mieux annoncer soi-même que laisser
      découvrir à la fin. */
+  /* Les chiffres et l'euro, dans la police du texte courant : ceux de la
+     serif descendent sous la ligne et font paraître « 27-35 » tombé. */
+  function avecChiffres(parent, texte) {
+    texte.split(/(\d+(?:[-–]\d+)?|€)/).forEach(function (morceau) {
+      if (!morceau) return;
+      if (/^(\d|€)/.test(morceau)) parent.appendChild(el('span', 'lilx-chiffres', morceau));
+      else parent.appendChild(document.createTextNode(morceau));
+    });
+    return parent;
+  }
+
   function dessinerEntete() {
     var entete = el('header', 'lilx-entete');
 
@@ -673,7 +688,7 @@
     var carte = el('section', 'lilx-soiree');
     carte.setAttribute('aria-label', 'La soirée');
     carte.appendChild(el('p', 'lilx-soiree-chapeau', SOIREE.chapeau));
-    carte.appendChild(el('p', 'lilx-soiree-titre', SOIREE.titre));
+    carte.appendChild(avecChiffres(el('p', 'lilx-soiree-titre'), SOIREE.titre));
     carte.appendChild(el('p', 'lilx-soiree-precision', SOIREE.precision));
 
     var reperes = el('ul', 'lilx-reperes');
@@ -681,10 +696,11 @@
       reperes.appendChild(el('li', '', repere));
     });
     var prix = el('li', 'lilx-prix');
-    prix.appendChild(el('b', '', SOIREE.prix));
+    prix.appendChild(avecChiffres(el('b'), SOIREE.prix));
     prix.appendChild(document.createTextNode(' ' + SOIREE.prixDetail));
     reperes.appendChild(prix);
     carte.appendChild(reperes);
+    carte.appendChild(el('p', 'lilx-prix-mention', SOIREE.prixMention));
 
     entete.appendChild(carte);
     return entete;

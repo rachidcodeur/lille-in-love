@@ -35,4 +35,6 @@ export const SOIREE = {
   reperes: ['27-35 ans', 'Profils sélectionnés', 'Lieu privatisé'],
   prix: '20 €',
   prixDetail: 'par personne',
+  /** Sous le prix, en une ligne : pourquoi s'inscrire maintenant. */
+  prixMention: 'Tarif exceptionnel pour cette première soirée — il augmentera pour les suivantes.',
 } as const;

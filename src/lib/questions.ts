@@ -380,11 +380,11 @@ export const STEPS_COMPLET: Step[] = [
       {
         name: 'lastName',
         type: 'text',
-        label: 'Les trois premières lettres de ton nom',
-        help: 'Pour rester anonyme jusqu’au soir venu. Exemple : Dupont → DUP.',
+        label: 'Nom',
+        help: 'Au minimum les trois premières lettres, si tu préfères rester discret·e.',
         required: true,
-        maxLength: 3,
-        placeholder: 'DUP',
+        maxLength: 60,
+        autoComplete: 'family-name',
       },
       {
         name: 'phone',
@@ -423,7 +423,9 @@ export const STEPS_COMPLET: Step[] = [
         name: 'consent',
         type: 'consent',
         required: true,
-        label: `J’accepte le <a href="${BRAND.reglementUrl}" target="_blank" rel="noopener">règlement</a> et la <a href="${BRAND.confidentialiteUrl}" target="_blank" rel="noopener">politique de confidentialité</a>.`,
+        // Texte seul, sans lien : à la dernière étape, un lien détourne plus
+        // qu'il n'informe. La case reste obligatoire pour envoyer.
+        label: 'J’accepte le règlement et la politique de confidentialité.',
       },
     ],
   },
@@ -476,11 +478,11 @@ export const STEPS_COURT: Step[] = [
       {
         name: 'lastName',
         type: 'text',
-        label: 'Les trois premières lettres de ton nom',
-        help: 'Pour rester anonyme jusqu’au soir venu. Exemple : Dupont → DUP.',
+        label: 'Nom',
+        help: 'Au minimum les trois premières lettres, si tu préfères rester discret·e.',
         required: true,
-        maxLength: 3,
-        placeholder: 'DUP',
+        maxLength: 60,
+        autoComplete: 'family-name',
       },
       {
         name: 'email',

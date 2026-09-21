@@ -1,6 +1,26 @@
 import { SOIREE } from '@/lib/brand';
 
 /**
+ * Les chiffres et l'euro, dans la police du texte courant.
+ *
+ * La serif de titrage dessine des chiffres « anciens » (le 3 et le 5
+ * descendent sous la ligne) et un euro trop maigre : à côté des capitales,
+ * « 27-35 » et « 20 € » paraissent tombés. On ne change donc que ces
+ * caractères-là, le reste du titre garde sa serif.
+ */
+function avecChiffres(texte: string) {
+  return texte.split(/(\d+(?:[-–]\d+)?|€)/).map((morceau, i) =>
+    /^(\d|€)/.test(morceau) ? (
+      <span key={i} className="lil-chiffres">
+        {morceau}
+      </span>
+    ) : (
+      morceau
+    ),
+  );
+}
+
+/**
  * Le haut du formulaire : ce qu'on propose, avant de demander quoi que ce soit.
  *
  * Quelqu'un qui arrive sur la page doit savoir en trois lignes de quelle
@@ -21,7 +41,7 @@ export function Entete() {
 
       <section className="lil-soiree" aria-label="La soirée">
         <p className="lil-soiree-chapeau">{SOIREE.chapeau}</p>
-        <p className="lil-soiree-titre">{SOIREE.titre}</p>
+        <p className="lil-soiree-titre">{avecChiffres(SOIREE.titre)}</p>
         <p className="lil-soiree-precision">{SOIREE.precision}</p>
 
         <ul className="lil-reperes">
@@ -31,9 +51,11 @@ export function Entete() {
           {/* Le prix se détache des autres repères : c'est la seule
               information que personne ne veut découvrir trop tard. */}
           <li className="lil-repere-prix">
-            <b>{SOIREE.prix}</b> {SOIREE.prixDetail}
+            <b>{avecChiffres(SOIREE.prix)}</b> {SOIREE.prixDetail}
           </li>
         </ul>
+
+        <p className="lil-prix-mention">{SOIREE.prixMention}</p>
       </section>
     </header>
   );

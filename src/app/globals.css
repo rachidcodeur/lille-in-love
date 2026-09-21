@@ -870,3 +870,28 @@ body {
     letter-spacing: 0.16em;
   }
 }
+
+/* Les chiffres et l'euro des titres, en Bricolage : droits, alignés sur la
+   ligne, à la hauteur des capitales de la serif. */
+.lil-chiffres {
+  font-family: var(--font);
+  font-size: 0.86em;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  font-variant-numeric: lining-nums;
+}
+
+.lil-prix-mention {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--gold-deep);
+  margin: 12px 0 0;
+}
+
+/* Dans le titre, les capitales de la serif sont fines : les chiffres suivent. */
+.lil-soiree-titre .lil-chiffres {
+  font-weight: 300;
+  font-size: 0.84em;
+  letter-spacing: 0.02em;
+}

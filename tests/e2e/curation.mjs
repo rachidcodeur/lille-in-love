@@ -46,7 +46,7 @@ await page.getByRole('radio', { name: 'Une femme' }).click();
 await page.waitForTimeout(600);
 
 await page.fill('#firstName', 'Camille');
-await page.fill('#lastName', 'DUP');
+await page.fill('#lastName', 'Dupont');
 await page.fill('#email', 'Camille.Dupont@Example.com');
 await page.getByRole('button', { name: 'Suivant' }).click();
 await page.waitForTimeout(400);
@@ -121,12 +121,7 @@ const rows = await page.locator('.adm-row').count();
 rows === 1 ? ok('la candidature apparaît dans la liste') : bad('lignes affichées', String(rows));
 
 const rowText = await page.locator('.adm-row').first().innerText();
-rowText.includes('Camille DUP') ? ok('nom affiché') : bad('nom absent', rowText);
-// Le formulaire ne demande plus que trois lettres : personne ne se retrouve
-// en clair dans une liste ouverte à deux curateurs.
-(await page.locator('.adm-row-name').first().innerText()).trim() === 'Camille DUP'
-  ? ok('le nom de famille se limite à trois lettres')
-  : bad('nom complet affiché', await page.locator('.adm-row-name').first().innerText());
+rowText.includes('Camille Dupont') ? ok('nom affiché, complet') : bad('nom absent', rowText);
 !rowText.toLowerCase().includes('court')
   ? ok('pas d’étiquette « court » : la ligne reste lisible')
   : bad('l’étiquette « court » est revenue sur la ligne');
@@ -157,7 +152,7 @@ vides > 0 ? ok(`${vides} réponses marquées « non renseigné » (formulaire co
 // au candidat. Le journal de la fiche montre les deux.
 const mailsShown = await page.locator('.adm-mail').count();
 const mailsTextes = (await page.locator('.adm-mail-name').allInnerTexts()).map((t) => t.trim());
-mailsShown === 2 && mailsTextes.includes('Alerte à l’équipe') && mailsTextes.includes('Candidature reçue')
+mailsShown === 2 && mailsTextes.includes('Nouvelle inscription signalée à info@in-love.fr') && mailsTextes.includes('Candidature reçue')
   ? ok('le journal montre l’alerte interne et la candidature reçue')
   : bad('journal des emails', `${mailsShown} · ${mailsTextes.join(', ')}`);
 
@@ -212,10 +207,14 @@ const before = Date.now();
 await page.getByRole('button', { name: /Valider/ }).click();
 await page.waitForTimeout(2000);
 
-const feedback = await page.locator('.adm-feedback').innerText().catch(() => '');
-/partira .+ à \d{2}:\d{2}/.test(feedback) && feedback.includes('Bienvenue')
-  ? ok(`retour à l’écran : « ${feedback} »`)
-  : bad('pas de confirmation lisible', feedback);
+// Une validation réussie ne s'annonce plus en vert : le bouton change, et
+// c'est suffisant. Seul un échec doit laisser un message.
+(await page.locator('.adm-feedback').count()) === 0
+  ? ok('aucun message de confirmation après une validation réussie')
+  : bad('un message reste affiché', await page.locator('.adm-feedback').innerText().catch(() => ''));
+((await page.locator('.adm-btn-yes').innerText().catch(() => '')) || '').includes('Candidature validée')
+  ? ok('le bouton dit que c’est fait')
+  : bad('bouton inchangé', await page.locator('.adm-btn-yes').innerText().catch(() => ''));
 
 s = await state();
 const updated = s.members[0];

@@ -25,14 +25,6 @@ function delayInWords(minutes: number): string {
   return `dans ${Math.round(hours / 24)} jours`;
 }
 
-const heure = new Intl.DateTimeFormat('fr-FR', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  hour: '2-digit',
-  minute: '2-digit',
-});
-
 /**
  * Ce qu'on peut faire d'une candidature.
  *
@@ -101,26 +93,10 @@ export function FicheActions({ memberId, status, votesOui, votesRequis, delaiMin
             ? 'Cette candidature était déjà en attente.'
             : `${fait}. La candidature repart dans la file, et la bienvenue en attente est arrêtée.`,
         });
-      } else if (result.dejaPrise) {
-        setFeedback({
-          kind: 'ok',
-          message: result.scheduledFor
-            ? `Déjà validée. « Bienvenue dans le club » reste prévu ${heure.format(new Date(result.scheduledFor))}.`
-            : 'Déjà validée, et « Bienvenue dans le club » est déjà parti.',
-        });
-      } else if (result.alreadySent) {
-        setFeedback({
-          kind: 'ok',
-          message: `${fait}. « Bienvenue dans le club » avait déjà été envoyé à cette personne : il n’est pas renvoyé.`,
-        });
-      } else {
-        setFeedback({
-          kind: 'ok',
-          message: result.scheduledFor
-            ? `${fait}. « Bienvenue dans le club » partira ${heure.format(new Date(result.scheduledFor))}.`
-            : `${fait}. « Bienvenue dans le club » vient de partir.`,
-        });
       }
+      // Une validation réussie ne dit rien : le bouton passe à « Candidature
+      // validée » et le journal montre la bienvenue programmée. Seuls les
+      // échecs, en rouge, méritent un message.
 
       router.refresh();
     } catch {

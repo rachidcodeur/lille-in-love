@@ -225,14 +225,18 @@ section('Parcours complet et envoi');
 
   await next();
   await page.fill('#firstName', 'Camille');
-  await page.fill('#lastName', 'DUP');
-  (await page.locator('#lastName').getAttribute('maxlength')) === '3'
-    ? ok('le nom se limite à trois lettres — l’anonymat tient jusqu’au soir')
-    : bad('le champ accepte un nom entier', await page.locator('#lastName').getAttribute('maxlength'));
+  await page.fill('#lastName', 'Dupont');
+  (await page.inputValue('#lastName')) === 'Dupont'
+    ? ok('le nom complet est accepté, sans coupure à trois lettres')
+    : bad('nom tronqué', await page.inputValue('#lastName'));
   await page.fill('#phone', '06 12 34 56 78');
   await next();
   await page.fill('#email', 'camille.dupont@example.com');
   await page.fill('#birthDate', '1993-04-17');
+  // La case finale ne porte plus de lien : texte seul, et on coche pour passer.
+  (await page.locator('.lil-consent a').count()) === 0
+    ? ok('la case d’acceptation ne contient plus aucun lien')
+    : bad('un lien subsiste dans la case d’acceptation');
   await page.locator('.lil-consent input').check();
   await next();
   await page.waitForTimeout(900);

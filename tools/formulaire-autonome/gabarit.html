@@ -106,6 +106,10 @@
   color:var(--lilx-ink); border-color:var(--lilx-gold); border-width:1.5px; }
 #lilx-racine .lilx-prix b{ font-family:var(--lilx-titre); font-size:22px; font-weight:600; letter-spacing:0;
   line-height:1; font-variant-numeric:lining-nums; font-feature-settings:'lnum' 1; }
+#lilx-racine .lilx-chiffres{ font-family:var(--lilx-font); font-size:.86em; font-weight:500; letter-spacing:.01em;
+  font-variant-numeric:lining-nums; }
+#lilx-racine .lilx-soiree-titre .lilx-chiffres{ font-weight:300; font-size:.84em; letter-spacing:.02em; }
+#lilx-racine .lilx-prix-mention{ font-size:13.5px; font-weight:600; line-height:1.5; color:var(--lilx-gold-deep); margin:12px 0 0; }
 @media (max-width:520px){
   #lilx-racine .lilx-soiree{ padding:18px 18px 16px; }
   #lilx-racine .lilx-entete-ligne{ letter-spacing:.16em; font-size:10.5px; }
@@ -656,6 +660,17 @@
   /* Le haut du formulaire : ce qu'on propose, avant de demander quoi que ce
      soit. Le prix surtout, qu'il vaut mieux annoncer soi-même que laisser
      découvrir à la fin. */
+  /* Les chiffres et l'euro, dans la police du texte courant : ceux de la
+     serif descendent sous la ligne et font paraître « 27-35 » tombé. */
+  function avecChiffres(parent, texte) {
+    texte.split(/(\d+(?:[-–]\d+)?|€)/).forEach(function (morceau) {
+      if (!morceau) return;
+      if (/^(\d|€)/.test(morceau)) parent.appendChild(el('span', 'lilx-chiffres', morceau));
+      else parent.appendChild(document.createTextNode(morceau));
+    });
+    return parent;
+  }
+
   function dessinerEntete() {
     var entete = el('header', 'lilx-entete');
 
@@ -673,7 +688,7 @@
     var carte = el('section', 'lilx-soiree');
     carte.setAttribute('aria-label', 'La soirée');
     carte.appendChild(el('p', 'lilx-soiree-chapeau', SOIREE.chapeau));
-    carte.appendChild(el('p', 'lilx-soiree-titre', SOIREE.titre));
+    carte.appendChild(avecChiffres(el('p', 'lilx-soiree-titre'), SOIREE.titre));
     carte.appendChild(el('p', 'lilx-soiree-precision', SOIREE.precision));
 
     var reperes = el('ul', 'lilx-reperes');
@@ -681,10 +696,11 @@
       reperes.appendChild(el('li', '', repere));
     });
     var prix = el('li', 'lilx-prix');
-    prix.appendChild(el('b', '', SOIREE.prix));
+    prix.appendChild(avecChiffres(el('b'), SOIREE.prix));
     prix.appendChild(document.createTextNode(' ' + SOIREE.prixDetail));
     reperes.appendChild(prix);
     carte.appendChild(reperes);
+    carte.appendChild(el('p', 'lilx-prix-mention', SOIREE.prixMention));
 
     entete.appendChild(carte);
     return entete;

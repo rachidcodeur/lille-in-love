@@ -20,7 +20,7 @@ export const STATUS_LABELS: Record<string, string> = {
 export const STATUS_ORDER = ['tous', 'nouveau', 'en_examen', 'valide', 'non_retenu'] as const;
 
 export const TEMPLATE_LABELS: Record<string, string> = {
-  '00_alerte_interne': 'Alerte à l’équipe',
+  '00_alerte_interne': 'Nouvelle inscription signalée à info@in-love.fr',
   '01_candidature_recue': 'Candidature reçue',
   '02_bienvenue': 'Bienvenue dans le club',
 };

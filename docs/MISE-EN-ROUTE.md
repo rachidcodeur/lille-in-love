@@ -249,7 +249,9 @@ Si rien ne s'affiche :
 ### Ce que le visiteur voit en arrivant
 
 « Je veux *participer* », puis la carte de la soirée : « La première soirée /
-Célibataires 27-35 ans », ses repères, et **le prix — 20 € par personne**.
+Célibataires 27-35 ans », ses repères, **le prix — 20 € par personne** — et,
+dessous, une ligne qui dit que ce tarif exceptionnel augmentera pour les
+soirées suivantes.
 
 Tout ce bloc se modifie dans **un seul endroit** : `src/lib/brand.ts`,
 constante `SOIREE`. Après modification, regénère le formulaire autonome :
@@ -260,9 +262,9 @@ node tools/formulaire-autonome/build.mjs
 
 ### Deux détails à connaître
 
-**Le nom de famille se limite à trois lettres.** « Dupont » devient « DUP » :
-une liste ouverte à deux curateurs n'a pas besoin des noms complets. Les
-candidatures reçues avant ce changement gardent le leur.
+**Le nom de famille est demandé en entier**, avec une indication : « au
+minimum les trois premières lettres, si tu préfères rester discret·e ». Rien
+n'est coupé : qui écrit son nom complet le garde.
 
 **Les photos d'iPhone (HEIC) sont converties dans le navigateur.** Safari sait
 lire ce format, ni Chrome ni Android : une photo déposée telle quelle
