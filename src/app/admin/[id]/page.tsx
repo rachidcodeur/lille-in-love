@@ -13,6 +13,7 @@ import { FicheActions } from '@/components/admin/FicheActions';
 import { PhotoGallery } from '@/components/admin/PhotoGallery';
 import { AnnulerEnvoi } from '@/components/admin/AnnulerEnvoi';
 import { GroupePicker } from '@/components/admin/GroupePicker';
+import { ActionsCorbeille } from '@/components/admin/ActionsCorbeille';
 import { Icone, type NomIcone } from '@/components/admin/Icones';
 import { Vignette } from '@/components/admin/Vignette';
 import { DECISION_TEMPLATES, templateAttendu } from '@/lib/decision';
@@ -190,6 +191,13 @@ export default async function FichePage({ params }: Props) {
               votesRequis={env.votesRequis()}
               delaiMinutes={env.delaiReponseMinutes()}
             />
+          </div>
+
+          <div className="adm-card">
+            <div className="adm-card-head">
+              <p className="adm-card-title">Retirer</p>
+            </div>
+            <ActionsCorbeille memberId={member.id} nom={member.first_name} place="fiche" />
           </div>
         </div>
 

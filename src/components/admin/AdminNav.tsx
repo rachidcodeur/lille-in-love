@@ -14,11 +14,16 @@ import { Icone } from './Icones';
 export function AdminNav() {
   const chemin = usePathname();
   const surSoirees = chemin.startsWith('/admin/soirees');
+  const surCorbeille = chemin.startsWith('/admin/corbeille');
 
   return (
     <nav className="adm-nav">
-      <Link href="/admin" data-on={!surSoirees}>
+      <Link href="/admin" data-on={!surSoirees && !surCorbeille}>
         Candidatures
+      </Link>
+      <Link href="/admin/corbeille" data-on={surCorbeille}>
+        <Icone nom="corbeille" taille={16} />
+        <span className="adm-nav-mot">Corbeille</span>
       </Link>
       <Link href="/admin/soirees" className="adm-nav-soirees" data-on={surSoirees}>
         <Icone nom="calendrier" taille={16} />

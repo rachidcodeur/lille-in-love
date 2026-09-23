@@ -12,6 +12,7 @@ import {
 import { FieldControl, type Errors, type Values } from './Fields';
 import { PhotoUpload, type UploadedPhoto } from './PhotoUpload';
 import { Entete } from './Entete';
+import { Remerciement } from './Remerciement';
 
 /** Un brouillon par parcours : le court et le complet ne se mélangent pas. */
 const draftKey = (version: FormVersion) => `lil-inscription-draft-v1-${version}`;
@@ -341,46 +342,7 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
       <div className="lil-shell" ref={rootRef}>
         <Entete />
         <div className="lil-card">
-          <div className="lil-done lil-step">
-            <div className="lil-done-seal" aria-hidden="true">
-              <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
-                <path
-                  d="M4 12.5l5 5L20 6.5"
-                  stroke="#A8946E"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </div>
-
-            {done.already ? (
-              <>
-                <h2 className="lil-done-title">On t’a déjà, {done.firstName}</h2>
-                <p className="lil-done-text">
-                  Tu as déjà rempli le questionnaire avec cet email — pas besoin de
-                  recommencer. Ta candidature est bien dans nos mains.
-                </p>
-              </>
-            ) : (
-              <>
-                <h2 className="lil-done-title">C’est envoyé, {done.firstName}</h2>
-                <p className="lil-done-text">
-                  On vient de t’écrire pour confirmer. Chez nous, pas d’algorithme : on lit
-                  chaque profil à la main. C’est plus lent, mais c’est exactement ce qui fait
-                  que les soirées se passent bien.
-                </p>
-                <p className="lil-done-text">
-                  On revient vers toi très vite. D’ici là, tu n’as rien à faire.
-                </p>
-              </>
-            )}
-
-            <p className="lil-done-note">
-              Rien reçu&nbsp;? Regarde dans tes spams, ou écris-nous à{' '}
-              <a href={`mailto:${BRAND.contactEmail}`}>{BRAND.contactEmail}</a>.
-            </p>
-          </div>
+          <Remerciement firstName={done.firstName} deja={done.already} />
         </div>
       </div>
     );

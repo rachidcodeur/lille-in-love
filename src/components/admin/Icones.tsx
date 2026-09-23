@@ -23,7 +23,8 @@ export type NomIcone =
   | 'image'
   | 'filtre'
   | 'croix'
-  | 'telecharger';
+  | 'telecharger'
+  | 'corbeille';
 
 const TRACES: Record<NomIcone, React.ReactNode> = {
   personne: (
@@ -88,6 +89,12 @@ const TRACES: Record<NomIcone, React.ReactNode> = {
   ),
   filtre: <path d="M4 7h16M7 12h10M10 17h4" />,
   croix: <path d="M6 6l12 12M18 6L6 18" />,
+  corbeille: (
+    <>
+      <path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+      <path d="M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13" />
+    </>
+  ),
   telecharger: (
     <>
       <path d="M12 3v12M8 11l4 4 4-4" />

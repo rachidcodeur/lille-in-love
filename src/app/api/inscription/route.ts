@@ -283,7 +283,8 @@ export async function POST(request: Request) {
     parcours: member.form_version === 'court' ? 'court' : 'complet',
     ville: member.city ?? null,
     age: member.birth_date ? ageFromBirthDate(member.birth_date) : null,
-    ficheUrl: `${env.siteUrl().replace(/\/+$/, '')}/admin/${member.id}`,
+    // Le back-office vit sur app.in-love.fr, pas sur le site public.
+    ficheUrl: `${BRAND.adminUrl.replace(/\/+$/, '')}/admin/${member.id}`,
   });
 
   if (!alerte.ok) console.error('[inscription] alerte interne non envoyée', alerte.error);

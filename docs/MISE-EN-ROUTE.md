@@ -14,7 +14,7 @@ passer** et **le déploiement de l'application** sur `app.in-love.fr`.
 | Projet Supabase | `sljvoplsedepnecgmjih`, bucket `lil-photos` privé |
 | Scripts SQL passés | `01` à `05`, et `08` |
 | **À passer d'urgence** | **`10_accompagnant.sql`** — sans lui, toute candidature « je viens accompagné » est refusée |
-| **À passer aussi** | **`09_simplification.sql`** — il ouvre le groupe G |
+| **À passer aussi** | **`09_simplification.sql`** (groupe G) puis **`11_corbeille.sql`** (corbeille) |
 | Resend | domaine **`in-love.fr` vérifié**, clé en place |
 | Expéditeur / réponse | `Lille in Love <info@in-love.fr>` |
 | `.env.local` | rempli et valide — `/api/health` répond `ok: true` |
@@ -249,9 +249,12 @@ Si rien ne s'affiche :
 ### Ce que le visiteur voit en arrivant
 
 « Je veux *participer* », puis la carte de la soirée : « La première soirée /
-Célibataires 27-35 ans », ses repères, **le prix — 20 € par personne** — et,
-dessous, une ligne qui dit que ce tarif exceptionnel augmentera pour les
-soirées suivantes.
+Soirée célibataires », ses repères, **le prix — 20 € par personne** — et,
+dessous, une ligne sur le tarif exceptionnel. Le texte est volontairement
+neutre : ni tranche d'âge, ni ville.
+
+**La page de remerciement** vit à `/merci` : le même message que celui affiché
+après l'envoi, sur une page qu'on peut partager ou vers laquelle rediriger.
 
 Tout ce bloc se modifie dans **un seul endroit** : `src/lib/brand.ts`,
 constante `SOIREE`. Après modification, regénère le formulaire autonome :
@@ -321,6 +324,18 @@ saisie, et l'icône porte le nombre de critères en cours.
 affichée, au format des exports que l'équipe utilise déjà : mêmes colonnes,
 même ordre, mêmes valeurs (`F`/`M`, `serieux`, `True`/`False`…).
 
+### Retirer une candidature
+
+Sur une fiche, **« Mettre à la corbeille »** la sort de la liste, des
+compteurs et de l'export — sans rien effacer, et en arrêtant au passage la
+bienvenue encore en attente.
+
+`/admin/corbeille` garde ces fiches. **Restaurer** les remet parmi les
+autres. **Effacer définitivement** demande une seconde confirmation qui nomme
+la personne, emporte ses photos du bucket, et ne se rattrape pas. Une fiche
+active ne peut pas être effacée directement : elle doit passer par la
+corbeille.
+
 ### Soirées
 
 `/admin/soirees` : nom, classe d'âge, date, heure, lieu. **Aucun email n'est
@@ -331,7 +346,7 @@ envoyé** — ni à l'enregistrement, ni plus tard.
 ## 7. La recette avant d'ouvrir
 
 - [ ] `supabase/10_accompagnant.sql` exécuté (bloquant)
-- [ ] `supabase/09_simplification.sql` exécuté
+- [ ] `supabase/09_simplification.sql` et `11_corbeille.sql` exécutés
 - [ ] Une inscription en répondant **« oui, je viens avec quelqu'un »**
 - [ ] `DELAI_REPONSE_MINUTES=360` en production
 - [ ] `ADMIN_CODE` renseigné

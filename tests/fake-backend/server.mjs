@@ -110,6 +110,11 @@ function applyFilters(rows, params) {
     } else if (op === 'in') {
       const list = value.replace(/^\(|\)$/g, '').split(',').map((v) => v.replace(/^"|"$/g, ''));
       out = out.filter((row) => list.includes(String(row[key])));
+    } else if (op === 'not') {
+      // « not.is.null » : la négation d'un opérateur, telle que PostgREST
+      // l'écrit. Seul ce cas-là nous sert — la corbeille.
+      if (value !== 'is.null') throw new Error(`not.${value} non géré`);
+      out = out.filter((row) => row[key] !== null && row[key] !== undefined);
     } else if (op === 'is') {
       // « is.null » : une colonne absente de l'objet vaut null, comme en base.
       if (value !== 'null') throw new Error(`is.${value} non géré`);

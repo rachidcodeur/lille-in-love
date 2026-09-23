@@ -19,6 +19,9 @@ export const BRAND = {
 
   /** Page qui accueille le formulaire. */
   inscriptionUrl: 'https://in-love.fr/inscription/',
+
+  /** L'espace de curation. Il vit sur le sous-domaine, pas sur le site. */
+  adminUrl: 'https://app.in-love.fr',
 } as const;
 
 /**
@@ -30,11 +33,13 @@ export const BRAND = {
  */
 export const SOIREE = {
   chapeau: 'La première soirée',
-  titre: 'Célibataires 27-35 ans',
-  precision: 'À Lille · la date et le lieu sont communiqués aux inscrit·es.',
-  reperes: ['27-35 ans', 'Profils sélectionnés', 'Lieu privatisé'],
+  // Neutre : ni tranche d'âge, ni ville. Chaque personne est orientée vers la
+  // soirée qui lui correspond une fois sa candidature lue.
+  titre: 'Soirée célibataires',
+  precision: 'La date et le lieu seront communiqués aux membres inscrits.',
+  reperes: ['Profils sélectionnés', 'Lieu privatisé'],
   prix: '20 €',
   prixDetail: 'par personne',
   /** Sous le prix, en une ligne : pourquoi s'inscrire maintenant. */
-  prixMention: 'Tarif exceptionnel pour cette première soirée — il augmentera pour les suivantes.',
+  prixMention: 'Tarif exceptionnel pour cette soirée — il est susceptible de changer pour les suivantes.',
 } as const;

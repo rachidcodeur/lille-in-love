@@ -58,6 +58,7 @@ export type MemberSummary = {
   age: number | null;
   status: string;
   form_version: 'court' | 'complet';
+  deleted_at?: string | null;
   /** Groupe de composition d'une soirée : A, B ou C. Vide tant qu'on n'a pas trié. */
   soiree_group: Groupe | null;
   suspect: boolean;
@@ -67,6 +68,8 @@ export type MemberSummary = {
 };
 
 export type MemberDetail = MemberSummary & {
+  /** Date de mise à la corbeille, ou null si la candidature est active. */
+  deleted_at: string | null;
   suspect_raison: string | null;
   postal_code: string | null;
   children_preference: string | null;
@@ -114,7 +117,9 @@ function filtrer<Q extends {
   gte(colonne: string, valeur: number): Q;
   lte(colonne: string, valeur: number): Q;
 }>(query: Q, filtres: Filtres): Q {
-  let q = query;
+  // La corbeille ne se mêle jamais aux listes : ni dans les fiches, ni dans
+  // les compteurs, ni dans l'export.
+  let q = query.is('deleted_at', null);
 
   // Prénom, nom, email, ville. Le terme a déjà été débarrassé des caractères
   // qui ont un sens pour PostgREST : il ne peut plus élargir le filtre.
@@ -192,6 +197,7 @@ export async function facettes(): Promise<FicheFiltrable[]> {
   const { data, error } = await supabaseAdmin()
     .from('lil_members_overview')
     .select('id, status, soiree_group, gender, orientation, age, first_name, last_name, email, city')
+    .is('deleted_at', null)
     .limit(5000);
   if (error) throw new Error(error.message);
   return (data ?? []) as FicheFiltrable[];

@@ -106,6 +106,9 @@ alerte?.reply_to === 'camille.dupont@example.com'
 s.emails.some((e) => e.template === '00_alerte_interne' && e.status === 'envoye')
   ? ok('journalisée sur la fiche, comme les autres')
   : bad('alerte absente du journal');
+(alerte?.html ?? '').includes('https://app.in-love.fr/admin/')
+  ? ok('le lien mène à la fiche sur app.in-love.fr')
+  : bad('lien de l’alerte', (alerte?.html ?? '').match(/https?:\/\/[^"']+\/admin\/[^"']*/)?.[0] ?? 'aucun');
 
 const mail01 = s.sent.find((m) => m.subject?.startsWith('Inscription'));
 mail01 ? ok(`email 01 envoyé — objet « ${mail01.subject} »`) : bad('email 01 non envoyé');
@@ -960,6 +963,105 @@ const heicAffiche = await page
 heicAffiche
   ? ok('le HEIC déjà stocké est décodé et affiché sur la fiche')
   : bad('photo HEIC invisible dans le back-office');
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
+/* ================================================================ */
+section('13. La corbeille');
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
+const semerCorbeille = async (m) => {
+  const r = await fetch(`${FAKE}/rest/v1/lil_members`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({
+      gender: 'femme', last_name: 'Essai', status: 'nouveau', form_version: 'complet',
+      consent_at: new Date().toISOString(), ...m,
+    }),
+  });
+  return (await r.json())[0].id;
+};
+
+const idJetee = await semerCorbeille({ first_name: 'Jetee', email: 'jetee@example.com' });
+await semerCorbeille({ first_name: 'Gardee', email: 'gardee@example.com' });
+
+// Une bienvenue programmée doit être arrêtée au passage : une personne
+// retirée ne peut pas recevoir un message six heures plus tard.
+await fetch(`${BASE}/api/admin/decision`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ memberId: idJetee, decision: 'valide' }),
+});
+await page.waitForTimeout(800);
+
+await page.goto(`${BASE}/admin/${idJetee}`, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Mettre à la corbeille' }).click();
+await page.waitForTimeout(2000);
+
+s = await state();
+s.members.find((m) => m.id === idJetee)?.deleted_at
+  ? ok('la fiche est datée de sa mise à la corbeille')
+  : bad('deleted_at absent');
+s.members.find((m) => m.id === idJetee)
+  ? ok('la candidature reste en base : rien n’est effacé')
+  : bad('la fiche a disparu de la base');
+s.emails.find((e) => e.member_id === idJetee && e.template === '02_bienvenue')?.status === 'annule'
+  ? ok('la bienvenue en attente est arrêtée')
+  : bad('bienvenue non annulée', s.emails.find((e) => e.member_id === idJetee)?.status);
+
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+const restantes = (await page.locator('.adm-row-name').allInnerTexts()).map((t) => t.trim());
+restantes.length === 1 && restantes[0].includes('Gardee')
+  ? ok('elle a quitté la liste des candidatures')
+  : bad('liste après mise à la corbeille', restantes.join(', ') || '(vide)');
+
+const csvApres = (await (await fetch(`${BASE}/api/admin/export`)).text()).trim().split('\n');
+csvApres.length === 2 && !csvApres[1].includes('Jetee')
+  ? ok('et l’export ne l’emporte plus')
+  : bad('export', csvApres.slice(1).map((l) => l.split(',')[1]).join(', '));
+
+await page.goto(`${BASE}/admin/corbeille`, { waitUntil: 'networkidle' });
+((await page.locator('.adm-row-name').first().innerText().catch(() => '')) || '').includes('Jetee')
+  ? ok('on la retrouve dans la corbeille')
+  : bad('corbeille vide');
+
+await page.getByRole('button', { name: 'Restaurer' }).click();
+await page.waitForTimeout(1500);
+s = await state();
+s.members.find((m) => m.id === idJetee)?.deleted_at == null
+  ? ok('restaurer la remet parmi les autres')
+  : bad('restauration sans effet');
+
+// Effacer pour de bon : deux gestes, et la ligne disparaît vraiment.
+await fetch(`${BASE}/api/admin/corbeille`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ memberId: idJetee, action: 'corbeille' }),
+});
+await page.goto(`${BASE}/admin/corbeille`, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Effacer définitivement' }).click();
+await page.waitForTimeout(300);
+await page.getByRole('button', { name: /Effacer Jetee/ }).click();
+await page.waitForTimeout(1800);
+
+s = await state();
+!s.members.some((m) => m.id === idJetee)
+  ? ok('l’effacement définitif retire bien la ligne')
+  : bad('la fiche est toujours là');
+
+// Une fiche active ne peut pas être effacée d'un seul geste.
+const active = s.members.find((m) => m.email === 'gardee@example.com');
+const refusEffacement = await (
+  await fetch(`${BASE}/api/admin/corbeille`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ memberId: active.id, action: 'effacer' }),
+  })
+).json();
+refusEffacement.error?.includes('corbeille')
+  ? ok('effacer une fiche active est refusé : il faut passer par la corbeille')
+  : bad('une fiche active a pu être effacée', JSON.stringify(refusEffacement));
 
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 

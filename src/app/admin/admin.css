@@ -1909,3 +1909,71 @@
     margin-left: auto;
   }
 }
+
+/* --- Corbeille ------------------------------------------------------ */
+
+.adm-btn-corbeille {
+  background: var(--white);
+  color: var(--ink-soft);
+  border-color: var(--border);
+}
+
+.adm-btn-corbeille:hover:not(:disabled) {
+  border-color: var(--error);
+  color: var(--error);
+}
+
+/* Une ligne mise de côté : présente, mais visiblement hors course. */
+.adm-row-corbeille {
+  background: var(--cream);
+  box-shadow: var(--shadow-sm);
+}
+
+.adm-row-corbeille .adm-row-name {
+  color: var(--ink-soft);
+}
+
+.adm-corbeille-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.adm-corbeille-actions .adm-btn {
+  font-size: 13.5px;
+  padding: 9px 16px;
+}
+
+.adm-btn-effacer {
+  background: var(--error);
+  color: #fff;
+  border-color: var(--error);
+}
+
+.adm-btn-effacer:hover:not(:disabled) {
+  background: #8f1e18;
+}
+
+.adm-btn-ghost.adm-btn-danger {
+  color: var(--error);
+  border-color: rgba(179, 38, 30, 0.35);
+}
+
+.adm-btn-ghost.adm-btn-danger:hover:not(:disabled) {
+  border-color: var(--error);
+  background: var(--error-bg);
+}
+
+@media (max-width: 620px) {
+  .adm-nav-mot {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}
