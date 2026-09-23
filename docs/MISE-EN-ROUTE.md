@@ -177,6 +177,7 @@ démarrage, et `ALLOWED_EMBED_ORIGINS` dès la construction.
 | `/api/health` liste des variables vides | l'import du `.env` ne s'est pas fait, ou le site n'a pas été redéployé depuis. |
 | `"cleSupabase": "anon"` dans `/api/health` | c'est la clé publique qui a été collée à la place de `service_role` : l'application lit, mais n'écrit rien. |
 | build interrompu sans message | mémoire ou temps de construction dépassés. Relance : la seconde tentative repart d'un cache chaud. |
+| une page répond 404 alors qu'elle existe | le cache d'Hostinger garde l'ancienne réponse. Ajoute `?v=1` à l'adresse pour t'en assurer, puis purge le cache du site. |
 | rien ne se déclenche | Hostinger n'est pas sur le dernier commit de `main`. |
 
 Un déploiement complet occupe environ **600 Mo** (400 Mo de dépendances,
