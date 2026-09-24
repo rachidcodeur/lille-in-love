@@ -76,6 +76,23 @@ await page.waitForTimeout(1500);
 const done = await page.locator('.lil-done-title').innerText().catch(() => '');
 done.includes('Camille') ? ok(`écran de fin : « ${done} »`) : bad('pas d’écran de fin', done);
 
+// La confirmation a maintenant sa propre adresse : on y arrive vraiment, et
+// le prénom fait le voyage.
+await page.waitForTimeout(1200);
+page.url().includes('/merci')
+  ? ok(`redirigé vers la page de remerciement (${new URL(page.url()).pathname})`)
+  : bad('pas de redirection vers /merci', page.url());
+((await page.locator('.lil-done-title').innerText().catch(() => '')) || '').includes('Camille')
+  ? ok('la page de remerciement reprend le prénom')
+  : bad('prénom perdu à la redirection');
+
+// Le pixel publicitaire n'a rien à faire dans l'espace de curation : il y
+// verrait des noms, des emails et des visages.
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+(await page.evaluate(() => typeof window.fbq)) === 'undefined'
+  ? ok('aucun pixel publicitaire sur le back-office')
+  : bad('le pixel est chargé dans l’espace de curation');
+
 /* ================================================================ */
 section('2. Ce qui est arrivé en base');
 

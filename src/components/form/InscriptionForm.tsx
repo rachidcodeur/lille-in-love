@@ -12,6 +12,8 @@ import {
 import { FieldControl, type Errors, type Values } from './Fields';
 import { PhotoUpload, type UploadedPhoto } from './PhotoUpload';
 import { Entete } from './Entete';
+import { useRouter } from 'next/navigation';
+import { suivreCandidature } from '@/lib/pixel';
 import { Remerciement } from './Remerciement';
 
 /** Un brouillon par parcours : le court et le complet ne se mélangent pas. */
@@ -140,6 +142,7 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  const router = useRouter();
   const [done, setDone] = useState<{ firstName: string; already: boolean } | null>(null);
 
   const startedAt = useRef(Date.now());
@@ -294,6 +297,8 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
         ok?: boolean;
         error?: string;
         fieldErrors?: Errors;
+        /** Sert de clé de déduplication au pixel, rien d'autre. */
+        id?: string;
         firstName?: string;
         alreadyRegistered?: boolean;
       };
@@ -319,10 +324,30 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
         /* ignoré */
       }
 
-      setDone({
-        firstName: result.firstName ?? (values.firstName as string) ?? '',
-        already: Boolean(result.alreadyRegistered),
-      });
+      const prenom = result.firstName ?? (values.firstName as string) ?? '';
+      const deja = Boolean(result.alreadyRegistered);
+
+      // Le message s'affiche tout de suite : si la redirection tarde ou
+      // échoue, la personne a quand même sa confirmation sous les yeux.
+      setDone({ firstName: prenom, already: deja });
+
+      // La conversion, pour les campagnes. Une candidature déjà reçue n'en
+      // est pas une : on ne la compte pas deux fois.
+      if (!deja) suivreCandidature(result.id);
+
+      // La page WordPress peut vouloir réagir de son côté — son propre
+      // pixel, sa propre redirection.
+      if (window.parent !== window) {
+        window.parent.postMessage({ type: 'lil:done', already: deja, id: result.id }, '*');
+      }
+
+      // Puis la page de remerciement, qui a sa propre adresse. Le court
+      // délai laisse à l'événement le temps de partir avant la navigation.
+      const destination = `/merci?${new URLSearchParams({
+        ...(prenom ? { p: prenom } : {}),
+        ...(deja ? { deja: '1' } : {}),
+      }).toString()}`;
+      window.setTimeout(() => router.replace(destination), 400);
     } catch {
       setGlobalError(
         'On n’arrive pas à joindre le serveur. Vérifie ta connexion et réessaie.',

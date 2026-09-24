@@ -22,6 +22,15 @@ export const BRAND = {
 
   /** L'espace de curation. Il vit sur le sous-domaine, pas sur le site. */
   adminUrl: 'https://app.in-love.fr',
+
+  /**
+   * Le pixel Meta des campagnes publicitaires.
+   *
+   * Ce n'est pas un secret — il est lisible dans la page de n'importe quel
+   * site qui l'utilise. Il reste réglable par variable d'environnement pour
+   * pouvoir couper le suivi sans toucher au code.
+   */
+  pixelId: process.env.NEXT_PUBLIC_FB_PIXEL_ID ?? '2145139243054242',
 } as const;
 
 /**

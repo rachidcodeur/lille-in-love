@@ -244,6 +244,7 @@
   var index = 0;
   var envoiEnCours = false;
   var termine = null;
+  var idMembre = null;   // sert de clé de déduplication au pixel
   var alerte = null;
 
   /* ---------------- Brouillon ---------------- */
@@ -581,7 +582,7 @@
 
     envoiEnCours = true; alerte = null; rendre();
 
-    var id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+    idMembre = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
       : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
           var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
         });
@@ -590,14 +591,22 @@
     fetch(SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/lil_members', {
       method: 'POST',
       headers: entetes({ 'Content-Type': 'application/json', Prefer: 'return=minimal' }),
-      body: JSON.stringify(versLigne(id))
+      body: JSON.stringify(versLigne(idMembre))
     }).then(function (r) {
       if (r.status === 409) { termine = { prenom: valeurs.firstName || '', deja: true }; rendre(); return null; }
       if (!r.ok) return r.text().then(function (t) { throw new Error('enregistrement refusé (' + r.status + ') ' + t.slice(0, 160)); });
-      return deposerPhotos(id);
+      return deposerPhotos(idMembre);
     }).then(function (suite) {
       if (suite === null) return;
       try { localStorage.removeItem(CLE_BROUILLON); } catch (e) {}
+      /* La conversion, pour les campagnes. Le pixel est posé sur la page
+         WordPress qui accueille ce formulaire : on s'en sert s'il est là. */
+      if (typeof window.fbq === 'function') {
+        try {
+          window.fbq('track', 'Lead', { content_name: 'Candidature Lille in Love' },
+                     idMembre ? { eventID: idMembre } : undefined);
+        } catch (e) {}
+      }
       termine = { prenom: valeurs.firstName || '', deja: false };
       rendre();
     }).catch(function (err) {

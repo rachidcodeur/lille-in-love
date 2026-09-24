@@ -1,4 +1,5 @@
 import InscriptionForm from '@/components/form/InscriptionForm';
+import { Pixel } from '@/components/form/Pixel';
 
 /**
  * Rendu à chaque requête, jamais figé.
@@ -20,5 +21,10 @@ export const metadata = { title: 'Inscription — Lille in Love' };
  * Le parcours complet reste disponible sur /embed, intact.
  */
 export default function EmbedCourtPage() {
-  return <InscriptionForm version="court" />;
+  return (
+    <>
+      <Pixel />
+      <InscriptionForm version="court" />
+    </>
+  );
 }

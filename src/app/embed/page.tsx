@@ -1,4 +1,5 @@
 import InscriptionForm from '@/components/form/InscriptionForm';
+import { Pixel } from '@/components/form/Pixel';
 
 /**
  * Rendu à chaque requête, jamais figé.
@@ -18,5 +19,10 @@ export const metadata = { title: 'Inscription — Lille in Love' };
  * in-love.fr/inscription/. Voir public/embed.js pour le côté WordPress.
  */
 export default function EmbedPage() {
-  return <InscriptionForm />;
+  return (
+    <>
+      <Pixel />
+      <InscriptionForm />
+    </>
+  );
 }

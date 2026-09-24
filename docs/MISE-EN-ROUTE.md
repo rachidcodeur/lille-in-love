@@ -254,8 +254,29 @@ Soirée célibataires », ses repères, **le prix — 20 € par personne** — 
 dessous, une ligne sur le tarif exceptionnel. Le texte est volontairement
 neutre : ni tranche d'âge, ni ville.
 
-**La page de remerciement** vit à `/merci` : le même message que celui affiché
-après l'envoi, sur une page qu'on peut partager ou vers laquelle rediriger.
+**La page de remerciement** vit à `/merci`. Après un envoi réussi, le
+formulaire y conduit automatiquement — le prénom voyage dans l'adresse
+(`/merci?p=Camille`), rien d'autre.
+
+### Les campagnes publicitaires
+
+Le **pixel Meta** (`2145139243054242`) est chargé sur le formulaire et sur la
+page de remerciement, **jamais sur `/admin`** : l'espace de curation montre
+des noms, des emails et des visages, qui n'ont rien à faire chez un
+annonceur. Un test le vérifie.
+
+Une candidature envoyée déclenche un événement **`Lead`**. Il part deux fois
+— depuis l'iframe et depuis la page WordPress, dont le pixel est celui que
+Meta rattache au clic publicitaire — avec le **même identifiant
+d'événement**, ce qui permet à Meta de n'en compter qu'un. Une candidature
+déjà reçue ne compte pas.
+
+Pour couper le suivi sans toucher au code, mets la variable
+`NEXT_PUBLIC_FB_PIXEL_ID` à vide et redéploie.
+
+> **Le pixel doit aussi rester sur la page WordPress.** C'est lui qui voit
+> l'arrivée depuis la publicité ; celui de l'iframe ne voit que le
+> formulaire.
 
 Tout ce bloc se modifie dans **un seul endroit** : `src/lib/brand.ts`,
 constante `SOIREE`. Après modification, regénère le formulaire autonome :

@@ -60,6 +60,23 @@
         iframe.style.height = Math.max(data.height + 8, 320) + 'px';
       }
 
+      // Candidature envoyée : le pixel de CETTE page est celui que Meta
+      // rattache au clic publicitaire, pas celui de l'iframe. On lui passe
+      // le même identifiant d'événement, pour que les deux envois soient
+      // reconnus comme un seul.
+      if (data.type === 'lil:done' && !data.already && typeof window.fbq === 'function') {
+        try {
+          window.fbq(
+            'track',
+            'Lead',
+            { content_name: 'Candidature Lille in Love' },
+            data.id ? { eventID: data.id } : undefined
+          );
+        } catch (e) {
+          /* le suivi ne doit jamais gêner la page */
+        }
+      }
+
       if (data.type === 'lil:step') {
         // On ne fait remonter la page que si le haut du formulaire est sorti
         // de l'écran : sinon, on laisse la personne où elle est.
