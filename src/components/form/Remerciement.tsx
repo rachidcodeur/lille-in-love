@@ -13,6 +13,9 @@ type Props = {
  * Écrit une seule fois : le formulaire l'affiche sur place, et /merci le
  * reprend mot pour mot — une page qu'on peut partager, mettre en favori, ou
  * vers laquelle rediriger depuis ailleurs.
+ *
+ * Une copie autonome existe pour la page WordPress :
+ * docs/merci-wordpress.html. Si le texte change ici, change-le là aussi.
  */
 export function Remerciement({ firstName, deja = false }: Props) {
   const prenom = firstName ? `, ${firstName}` : '';

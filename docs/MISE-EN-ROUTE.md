@@ -242,7 +242,7 @@ Deux adresses possibles :
 
 | Adresse | Ce que ça donne |
 | --- | --- |
-| `https://in-love.fr/merci/` | une page WordPress à créer, avec ton texte et **ton pixel** — le mieux pour les campagnes |
+| `https://in-love.fr/merci/` | une page WordPress à créer, avec ton texte et **ton pixel** — le mieux pour les campagnes. Colle [`merci-wordpress.html`](merci-wordpress.html) dans un bloc HTML : c'est le même message que dans l'application. |
 | `https://app.in-love.fr/merci` | rien à créer, mais on quitte le site et l'habillage WordPress |
 
 Puis exécute `supabase/07_fermer_formulaire_autonome.sql`, qui referme

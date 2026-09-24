@@ -1,0 +1,133 @@
+<!-- =====================================================================
+     LILLE IN LOVE — Bloc « merci », pour la page WordPress /merci/
+
+     À coller dans un bloc HTML personnalisé. Rien d'autre à installer.
+
+     Ce bloc n'envoie AUCUN événement au pixel : la conversion « Lead » est
+     déjà déclenchée sur la page d'inscription, juste avant la redirection.
+     En tirer une seconde ici ferait compter deux fois la même candidature.
+
+     Le texte reprend celui de l'application (src/components/form/
+     Remerciement.tsx) : si tu changes l'un, change l'autre.
+     ===================================================================== -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600&family=Cormorant+Garamond:wght@400;500&display=swap">
+
+<div id="lilm-racine">
+  <div class="lilm-carte">
+    <div class="lilm-sceau" aria-hidden="true">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+        <path d="M4 12.5l5 5L20 6.5" stroke="#A8946E" stroke-width="2.2"
+              stroke-linecap="round" stroke-linejoin="round"></path>
+      </svg>
+    </div>
+
+    <h2 class="lilm-titre">C’est envoyé</h2>
+
+    <p class="lilm-texte">
+      On vient de t’écrire pour confirmer. Chez nous, pas d’algorithme : on lit chaque profil
+      à la main. C’est plus lent, mais c’est exactement ce qui fait que les soirées se passent
+      bien.
+    </p>
+
+    <p class="lilm-texte">
+      On revient vers toi très vite. D’ici là, tu n’as rien à faire.
+    </p>
+
+    <p class="lilm-note">
+      Rien reçu&nbsp;? Regarde dans tes spams, ou écris-nous à
+      <a href="mailto:info@in-love.fr">info@in-love.fr</a>.
+    </p>
+  </div>
+</div>
+
+<style>
+/* Tout est enfermé sous #lilm-racine : le thème WordPress ne peut pas
+   déborder dedans, et ce bloc ne déborde pas sur la page. */
+#lilm-racine {
+  --lilm-cream:#fdfbf9; --lilm-sand:#f6f0e4; --lilm-gold:#c3b291; --lilm-gold-deep:#a8946e;
+  --lilm-ink:#1c130f; --lilm-soft:#77664c; --lilm-muted:#9c9186; --lilm-border:#e7dcc5;
+  --lilm-font:'Bricolage Grotesque',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  --lilm-titre:'Cormorant Garamond','Iowan Old Style',Georgia,'Times New Roman',serif;
+  font-family: var(--lilm-font);
+  color: var(--lilm-ink);
+  -webkit-font-smoothing: antialiased;
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 24px 20px 40px;
+  box-sizing: border-box;
+}
+
+/* Remises à zéro ciblées. Le « !important » n'est pas une coquetterie :
+   beaucoup de thèmes WordPress imposent leurs propres règles avec la même
+   arme (bordures sur les images, boutons étirés, titres réécrits). Sans
+   cela, le bloc s'affiche de travers sans qu'on sache pourquoi. */
+#lilm-racine *, #lilm-racine *::before, #lilm-racine *::after { box-sizing: border-box; }
+#lilm-racine p, #lilm-racine h2 { text-align: center !important; }
+#lilm-racine svg {
+  display: block !important;
+  width: 26px !important; height: 26px !important;
+  max-width: none !important;
+  border: 0 !important; box-shadow: none !important; border-radius: 0 !important;
+  background: none !important;
+}
+
+#lilm-racine .lilm-carte {
+  background: #fff;
+  border: 1px solid var(--lilm-border);
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(28,19,15,.07);
+  padding: 32px 30px 28px;
+}
+
+#lilm-racine .lilm-sceau {
+  width: 62px; height: 62px; margin: 0 auto 22px;
+  border-radius: 50%;
+  background: var(--lilm-sand);
+  border: 1.5px solid var(--lilm-gold);
+  display: grid; place-items: center;
+}
+
+#lilm-racine .lilm-titre {
+  font-family: var(--lilm-titre) !important;
+  font-size: 34px !important;
+  font-weight: 500 !important;
+  line-height: 1.15 !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: var(--lilm-ink) !important;
+  margin: 0 0 12px !important;
+}
+
+#lilm-racine .lilm-texte {
+  font-size: 16px !important;
+  line-height: 1.65 !important;
+  color: var(--lilm-soft) !important;
+  margin: 0 auto 14px !important;
+  max-width: 42ch;
+}
+
+#lilm-racine .lilm-note {
+  font-size: 13.5px !important;
+  line-height: 1.6 !important;
+  color: var(--lilm-muted) !important;
+  margin: 22px 0 0 !important;
+}
+
+/* L'adresse de contact aux couleurs du club : un lien bleu souligné
+   détonnerait sur cet écran. */
+#lilm-racine .lilm-note a {
+  color: var(--lilm-ink); font-weight: 600;
+  text-decoration: underline; text-decoration-color: var(--lilm-gold);
+  text-underline-offset: 2px;
+}
+#lilm-racine .lilm-note a:hover { text-decoration-color: var(--lilm-gold-deep); }
+
+@media (max-width: 520px) {
+  #lilm-racine { padding: 16px 14px 32px; }
+  #lilm-racine .lilm-carte { padding: 24px 18px 22px; border-radius: 12px; }
+  #lilm-racine .lilm-titre { font-size: 28px !important; }
+}
+</style>
