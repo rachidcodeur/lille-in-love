@@ -1082,6 +1082,71 @@ refusEffacement.error?.includes('corbeille')
 
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
+/* ================================================================ */
+section('14. Depuis la page WordPress : la redirection emporte toute la page');
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
+// On rejoue la vraie configuration : une page tierce, le widget, l'iframe.
+// Sans ça, embed.js — le seul morceau qui tourne réellement chez le client —
+// ne serait jamais testé.
+const { createServer } = await import('node:http');
+const PORT_SITE = 5597;
+const PAGE_MERCI = `http://localhost:${PORT_SITE}/merci-wordpress`;
+
+const siteWordpress = createServer(async (req, res) => {
+  if (req.url.startsWith('/embed.js')) {
+    const js = await fetch(`${BASE}/embed.js`).then((r) => r.text());
+    res.writeHead(200, { 'Content-Type': 'text/javascript; charset=utf-8' });
+    return res.end(js);
+  }
+  if (req.url.startsWith('/merci-wordpress')) {
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    return res.end('<!doctype html><meta charset="utf-8"><title>Merci</title><h1>Merci WordPress</h1>');
+  }
+  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+  res.end(
+    `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Inscription</title></head><body>
+     <div data-lil-form="court" data-lil-app="${BASE}" data-lil-merci="${PAGE_MERCI}" data-min-height="560"></div>
+     <script src="/embed.js" async></script></body></html>`,
+  );
+});
+siteWordpress.listen(PORT_SITE);
+
+await page.goto(`http://localhost:${PORT_SITE}/`, { waitUntil: 'networkidle' });
+const cadre = page.frameLocator('iframe');
+
+(await page.locator('iframe').count()) === 1
+  ? ok('le widget a posé l’iframe sur la page')
+  : bad('aucune iframe posée par embed.js');
+
+await cadre.getByRole('radio', { name: 'Une femme' }).click();
+await page.waitForTimeout(600);
+await cadre.locator('#firstName').fill('Leila');
+await cadre.locator('#lastName').fill('Wordpress');
+await cadre.locator('#email').fill('leila.wordpress@example.com');
+await cadre.getByRole('button', { name: 'Suivant' }).click();
+await page.waitForTimeout(500);
+
+await cadre.locator('input[type=file]').setInputFiles(fixture('photo-1.png'));
+await page.waitForTimeout(2500);
+// Le garde anti-robot du parcours court écarte tout envoi trop rapide.
+await page.waitForTimeout(6000);
+await cadre.getByRole('button', { name: 'Envoyer ma candidature' }).click();
+
+await page.waitForURL('**/merci-wordpress', { timeout: 15000 }).catch(() => {});
+page.url().includes('/merci-wordpress')
+  ? ok('la page entière part vers le remerciement, pas seulement l’iframe')
+  : bad('la page WordPress n’a pas bougé', page.url());
+
+s = await state();
+s.members.some((m) => m.email === 'leila.wordpress@example.com')
+  ? ok('et la candidature est bien enregistrée')
+  : bad('candidature perdue au passage');
+
+siteWordpress.close();
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
 await browser.close();
 console.log('\n' + (failures.length === 0
   ? '[32mTout est vert.[0m'

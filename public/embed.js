@@ -4,7 +4,9 @@
  * Posé sur in-love.fr/inscription/, ce script :
  *   1. remplace le conteneur par une iframe vers le formulaire ;
  *   2. ajuste sa hauteur au fil des étapes (plus de barre de défilement interne) ;
- *   3. ramène la vue en haut du formulaire à chaque changement d'étape.
+ *   3. ramène la vue en haut du formulaire à chaque changement d'étape ;
+ *   4. conduit la page entière vers le remerciement une fois la candidature
+ *      envoyée, si data-lil-merci indique où aller.
  *
  * Rien à installer côté WordPress : un simple bloc HTML suffit.
  */
@@ -32,6 +34,12 @@
 
     // data-lil-form="court" pour le parcours réduit, vide (ou "complet")
     // pour les 16 étapes. Changer ce seul mot suffit à basculer.
+    // data-lil-merci : l'adresse vers laquelle emmener TOUTE la page une fois
+    // la candidature envoyée. Sans elle, le remerciement s'affiche dans
+    // l'iframe — la personne reste sur la page WordPress, ce qui convient
+    // aussi, mais l'adresse du navigateur ne change pas.
+    var MERCI = (container.getAttribute('data-lil-merci') || '').trim();
+
     var version = (container.getAttribute('data-lil-form') || '').trim();
     var path = version === 'court' ? '/embed/court' : '/embed';
 
@@ -75,6 +83,19 @@
         } catch (e) {
           /* le suivi ne doit jamais gêner la page */
         }
+      }
+
+      // Une fois la conversion envoyée, on emmène la page entière vers le
+      // remerciement. Le court délai laisse partir l'événement du pixel
+      // avant que le navigateur ne quitte la page.
+      if (data.type === 'lil:done' && MERCI) {
+        setTimeout(function () {
+          try {
+            window.top.location.href = MERCI;
+          } catch (e) {
+            window.location.href = MERCI;
+          }
+        }, 500);
       }
 
       if (data.type === 'lil:step') {

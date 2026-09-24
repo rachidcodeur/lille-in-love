@@ -33,6 +33,10 @@ const testEnv = {
   EMAIL_REPLY_TO: 'info@in-love.fr',
   IP_HASH_SALT: 'sel-de-test',
   ADMIN_CODE: '',
+  // La fausse page WordPress de la section 14 : sans cette autorisation, la
+  // politique « frame-ancestors » refuse l'iframe — comme elle le ferait
+  // pour n'importe quel site non déclaré.
+  ALLOWED_EMBED_ORIGINS: 'http://localhost:5597',
   // Un seul vote suffit, et chaque réponse part 2 minutes après la décision :
   // le test vérifie que le délai configuré est bien celui transmis à Resend.
   VOTES_REQUIS: '1',

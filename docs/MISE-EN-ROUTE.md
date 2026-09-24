@@ -226,9 +226,24 @@ clé *anon public*) et purge le cache LiteSpeed.
 Remplace le contenu du bloc HTML par :
 
 ```html
-<div data-lil-form="complet" data-lil-app="https://app.in-love.fr" data-min-height="560"></div>
+<div data-lil-form="complet"
+     data-lil-app="https://app.in-love.fr"
+     data-lil-merci="https://in-love.fr/merci/"
+     data-min-height="560"></div>
 <script src="https://app.in-love.fr/embed.js" async></script>
 ```
+
+**`data-lil-merci` conduit toute la page** vers le remerciement une fois la
+candidature envoyée. Sans cet attribut, le message s'affiche dans l'iframe :
+la personne le lit, mais l'adresse du navigateur ne change pas — c'est ce qui
+donne l'impression que « la redirection ne marche pas ».
+
+Deux adresses possibles :
+
+| Adresse | Ce que ça donne |
+| --- | --- |
+| `https://in-love.fr/merci/` | une page WordPress à créer, avec ton texte et **ton pixel** — le mieux pour les campagnes |
+| `https://app.in-love.fr/merci` | rien à créer, mais on quitte le site et l'habillage WordPress |
 
 Puis exécute `supabase/07_fermer_formulaire_autonome.sql`, qui referme
 l'écriture directe depuis le navigateur.
@@ -255,8 +270,12 @@ dessous, une ligne sur le tarif exceptionnel. Le texte est volontairement
 neutre : ni tranche d'âge, ni ville.
 
 **La page de remerciement** vit à `/merci`. Après un envoi réussi, le
-formulaire y conduit automatiquement — le prénom voyage dans l'adresse
-(`/merci?p=Camille`), rien d'autre.
+formulaire y conduit — le prénom voyage dans l'adresse (`/merci?p=Camille`),
+rien d'autre.
+
+> Depuis la page WordPress, cette redirection a lieu **dans l'iframe** :
+> l'adresse du navigateur ne change pas. Pour que la page entière parte vers
+> un remerciement, ajoute `data-lil-merci` au widget (voir § 4).
 
 ### Les campagnes publicitaires
 
