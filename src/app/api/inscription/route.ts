@@ -154,19 +154,54 @@ export async function POST(request: Request) {
   }
 
   // --- Déjà inscrit ? -------------------------------------------------
-  const { data: existing } = await db
-    .from('lil_members')
-    .select('id')
-    .eq('email', data.email)
-    .maybeSingle();
+  /**
+   * Une candidature porte-t-elle déjà cette valeur ?
+   *
+   * Une fiche mise à la corbeille ne bloque personne : quelqu'un qu'on a
+   * retiré doit pouvoir se réinscrire. La colonne n'existe qu'après
+   * supabase/11_corbeille.sql, d'où le repli si elle manque encore.
+   */
+  const dejaPris = async (champ: 'email' | 'phone', valeur: string) => {
+    const requete = () => db.from('lil_members').select('id').eq(champ, valeur).limit(1);
 
-  if (existing) {
+    const premier = await requete().is('deleted_at', null);
+    if (!premier.error) return (premier.data ?? []).length > 0;
+
+    if (premier.error.code === '42703' || premier.error.code === 'PGRST204') {
+      const repli = await requete();
+      return (repli.data ?? []).length > 0;
+    }
+    // Une panne de lecture ne doit pas refuser une candidature valable :
+    // on laisse passer, l'unicité de l'email reste garantie par la base.
+    console.error('[inscription] contrôle des doublons impossible', premier.error.message);
+    return false;
+  };
+
+  if (await dejaPris('email', data.email)) {
     return NextResponse.json(
       {
         ok: true,
         alreadyRegistered: true,
+        motif: 'email',
         message:
           'Tu as déjà rempli le questionnaire avec cet email — pas besoin de recommencer. On revient vers toi.',
+      },
+      { status: 200, headers: cors },
+    );
+  }
+
+  // Le même numéro, sous une autre adresse : c'est la même personne, et le
+  // formulaire court ne demande pas de téléphone.
+  const telephone = isCourt ? null : normalizePhone((data as InscriptionInput).phone);
+
+  if (telephone && (await dejaPris('phone', telephone))) {
+    return NextResponse.json(
+      {
+        ok: true,
+        alreadyRegistered: true,
+        motif: 'telephone',
+        message:
+          'Ce numéro est déjà associé à une candidature — pas besoin de recommencer. On revient vers toi.',
       },
       { status: 200, headers: cors },
     );

@@ -563,6 +563,57 @@ dupeBody.alreadyRegistered ? ok('un second envoi du même email est reconnu, pas
 s = await state();
 s.members.length === 1 ? ok('toujours une seule candidature en base') : bad('membres en base', String(s.members.length));
 
+/* ---------------------------------------------------------------- */
+section('10 bis. Le même numéro sous une autre adresse');
+
+// Quelqu'un qui se réinscrit avec un autre email garde son téléphone :
+// c'est la même personne, et une seconde fiche fausserait la curation.
+const memeNumero = await (
+  await fetch(`${BASE}/api/inscription`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      formVersion: 'complet',
+      gender: 'homme', birthDate: '1992-05-14', city: 'Lille', postalCode: '59000',
+      orientation: 'hetero', hasChildren: 'non', lookingFor: 'relation_serieuse',
+      heightCm: 180, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
+      profession: 'Essai', referral: 'instagram', comesWith: 'non',
+      firstName: 'Premier', lastName: 'Numero', phone: '06 12 34 56 78',
+      email: 'premier.numero@example.com', consent: true, elapsedMs: 60000,
+      photos: [{ path: 'pending/66666666-6666-4666-8666-666666666666.jpg' }],
+    }),
+  })
+).json();
+memeNumero.id ? ok('première candidature enregistrée') : bad('inscription refusée', JSON.stringify(memeNumero));
+
+const secondEnvoi = await (
+  await fetch(`${BASE}/api/inscription`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      formVersion: 'complet',
+      gender: 'homme', birthDate: '1992-05-14', city: 'Lille', postalCode: '59000',
+      orientation: 'hetero', hasChildren: 'non', lookingFor: 'relation_serieuse',
+      heightCm: 180, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
+      profession: 'Essai', referral: 'instagram', comesWith: 'non',
+      firstName: 'Second', lastName: 'Numero',
+      // Écrit autrement, mais c'est le même numéro.
+      phone: '+33612345678',
+      email: 'second.numero@example.com', consent: true, elapsedMs: 60000,
+      photos: [{ path: 'pending/77777777-7777-4777-8777-777777777777.jpg' }],
+    }),
+  })
+).json();
+
+secondEnvoi.alreadyRegistered && secondEnvoi.motif === 'telephone'
+  ? ok('le numéro est reconnu, quelle que soit sa façon d’être écrit')
+  : bad('doublon de téléphone non détecté', JSON.stringify(secondEnvoi));
+
+s = await state();
+s.members.filter((m) => m.phone === '+33612345678').length === 1
+  ? ok('une seule fiche porte ce numéro')
+  : bad('fiches avec ce numéro', String(s.members.filter((m) => m.phone === '+33612345678').length));
+
 /* ================================================================ */
 section('11. Groupes A/B/C, filtres croisés et export CSV');
 

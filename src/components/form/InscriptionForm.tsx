@@ -143,7 +143,9 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
   const [submitting, setSubmitting] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
   const router = useRouter();
-  const [done, setDone] = useState<{ firstName: string; already: boolean } | null>(null);
+  const [done, setDone] = useState<
+    { firstName: string; already: boolean; motif?: 'email' | 'telephone' } | null
+  >(null);
 
   const startedAt = useRef(Date.now());
   const rootRef = useRef<HTMLDivElement>(null);
@@ -299,6 +301,8 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
         fieldErrors?: Errors;
         /** Sert de clé de déduplication au pixel, rien d'autre. */
         id?: string;
+        /** Ce qui a permis de reconnaître une personne déjà inscrite. */
+        motif?: 'email' | 'telephone';
         firstName?: string;
         alreadyRegistered?: boolean;
       };
@@ -329,7 +333,7 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
 
       // Le message s'affiche tout de suite : si la redirection tarde ou
       // échoue, la personne a quand même sa confirmation sous les yeux.
-      setDone({ firstName: prenom, already: deja });
+      setDone({ firstName: prenom, already: deja, motif: result.motif });
 
       // La conversion, pour les campagnes. Une candidature déjà reçue n'en
       // est pas une : on ne la compte pas deux fois.
@@ -346,6 +350,7 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
       const destination = `/merci?${new URLSearchParams({
         ...(prenom ? { p: prenom } : {}),
         ...(deja ? { deja: '1' } : {}),
+        ...(deja && result.motif ? { motif: result.motif } : {}),
       }).toString()}`;
       window.setTimeout(() => router.replace(destination), 400);
     } catch {
@@ -367,7 +372,7 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
       <div className="lil-shell" ref={rootRef}>
         <Entete />
         <div className="lil-card">
-          <Remerciement firstName={done.firstName} deja={done.already} />
+          <Remerciement firstName={done.firstName} deja={done.already} motif={done.motif} />
         </div>
       </div>
     );

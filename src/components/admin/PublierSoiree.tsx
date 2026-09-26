@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-const VIDE = { nom: '', ageMin: '27', ageMax: '35', date: '', heure: '', lieu: '' };
+const VIDE = { nom: '', ageMin: '26', ageMax: '36', date: '', heure: '', lieu: '' };
 
 /**
  * Enregistrer une soirée.

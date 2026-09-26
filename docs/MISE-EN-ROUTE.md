@@ -306,6 +306,12 @@ node tools/formulaire-autonome/build.mjs
 
 ### Deux détails à connaître
 
+**Une personne déjà inscrite est reconnue à son email ou à son numéro.**
+Se réinscrire avec une autre adresse mais le même téléphone ne crée pas de
+seconde fiche : le message dit lequel des deux a parlé. Le numéro est comparé
+sous sa forme normalisée, donc « 06 12 34 56 78 » et « +33612345678 » sont le
+même. Une fiche mise à la corbeille ne bloque personne.
+
 **Le nom de famille est demandé en entier**, avec une indication : « au
 minimum les trois premières lettres, si tu préfères rester discret·e ». Rien
 n'est coupé : qui écrit son nom complet le garde.

@@ -13,7 +13,7 @@
 create table if not exists public.lil_soirees (
   id           uuid primary key default gen_random_uuid(),
   nom          text not null check (length(trim(nom)) > 0),
-  -- La classe d'âge, bornes incluses : 27 et 35 pour « 27-35 ans ».
+  -- La classe d'âge, bornes incluses : 26 et 36 pour « 26-36 ans ».
   age_min      smallint not null check (age_min between 18 and 99),
   age_max      smallint not null check (age_max between 18 and 99),
   date_soiree  date not null,

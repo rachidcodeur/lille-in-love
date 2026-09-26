@@ -28,10 +28,10 @@ export const metadata: Metadata = {
  * existe pour qu'on puisse y renvoyer depuis ailleurs — un lien dans un
  * email, une redirection, un partage — sans refaire le questionnaire.
  */
-type Props = { searchParams: Promise<{ p?: string; deja?: string }> };
+type Props = { searchParams: Promise<{ p?: string; deja?: string; motif?: string }> };
 
 export default async function MerciPage({ searchParams }: Props) {
-  const { p, deja } = await searchParams;
+  const { p, deja, motif } = await searchParams;
 
   return (
     <div className="lil-shell">
@@ -41,7 +41,11 @@ export default async function MerciPage({ searchParams }: Props) {
       <div className="lil-card">
         {/* Le prénom passe par l'adresse, pour que le message reste celui
             qu'on vient de lire dans le formulaire. Rien d'autre n'y transite. */}
-        <Remerciement firstName={(p ?? '').slice(0, 40) || undefined} deja={deja === '1'} />
+        <Remerciement
+          firstName={(p ?? '').slice(0, 40) || undefined}
+          deja={deja === '1'}
+          motif={motif === 'telephone' ? 'telephone' : 'email'}
+        />
       </div>
     </div>
   );

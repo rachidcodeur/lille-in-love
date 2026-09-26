@@ -36,7 +36,7 @@ comment on column public.lil_members.soiree_group is
 comment on column public.lil_members.children_preference is
   'Préférence sur les enfants du partenaire, reprise de l''ancien formulaire (ex. peu_importe, sans_enfants). Non demandée par le questionnaire actuel.';
 
--- Parcourir « les femmes de 27 à 35 ans du groupe C » sans lire toute la table.
+-- Parcourir « les femmes de 26 à 36 ans du groupe C » sans lire toute la table.
 create index if not exists lil_members_groupe_idx
   on public.lil_members (soiree_group, gender)
   where soiree_group is not null;

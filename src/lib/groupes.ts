@@ -124,7 +124,7 @@ export function filtresActifs(filtres: Filtres): boolean {
   return versParams(filtres).toString().length > 0;
 }
 
-/** « Femmes · groupe C · 27–35 ans » — le résumé qui titre l'export. */
+/** « Femmes · groupe C · 26–36 ans » — le résumé qui titre l'export. */
 export function resume(filtres: Filtres): string[] {
   const morceaux: string[] = [];
   if (filtres.recherche) morceaux.push(`« ${filtres.recherche} »`);
@@ -144,7 +144,7 @@ export function resume(filtres: Filtres): string[] {
   return morceaux;
 }
 
-/** Le nom du fichier CSV : « candidatures_femmes_C_27-35.csv ». */
+/** Le nom du fichier CSV : « candidatures_femmes_C_26-36.csv ». */
 export function nomFichier(filtres: Filtres): string {
   const bouts = ['candidatures'];
   if (filtres.genre !== 'tous') bouts.push(filtres.genre === 'femme' ? 'femmes' : 'hommes');

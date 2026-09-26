@@ -5,7 +5,7 @@ import { SOIREE } from '@/lib/brand';
  *
  * La serif de titrage dessine des chiffres « anciens » (le 3 et le 5
  * descendent sous la ligne) et un euro trop maigre : à côté des capitales,
- * « 27-35 » et « 20 € » paraissent tombés. On ne change donc que ces
+ * « 26-36 » et « 20 € » paraissent tombés. On ne change donc que ces
  * caractères-là, le reste du titre garde sa serif.
  */
 function avecChiffres(texte: string) {

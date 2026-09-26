@@ -5,6 +5,8 @@ type Props = {
   firstName?: string;
   /** Cette adresse avait déjà servi : on le dit plutôt que de faire semblant. */
   deja?: boolean;
+  /** Ce qui a permis de reconnaître la personne : son email ou son numéro. */
+  motif?: 'email' | 'telephone';
 };
 
 /**
@@ -17,7 +19,7 @@ type Props = {
  * Une copie autonome existe pour la page WordPress :
  * docs/merci-wordpress.html. Si le texte change ici, change-le là aussi.
  */
-export function Remerciement({ firstName, deja = false }: Props) {
+export function Remerciement({ firstName, deja = false, motif = 'email' }: Props) {
   const prenom = firstName ? `, ${firstName}` : '';
 
   return (
@@ -38,8 +40,10 @@ export function Remerciement({ firstName, deja = false }: Props) {
         <>
           <h2 className="lil-done-title">On t’a déjà{prenom}</h2>
           <p className="lil-done-text">
-            Tu as déjà rempli le questionnaire avec cet email — pas besoin de recommencer. Ta
-            candidature est bien dans nos mains.
+            {motif === 'telephone'
+              ? 'Ce numéro est déjà associé à une candidature — pas besoin de recommencer.'
+              : 'Tu as déjà rempli le questionnaire avec cet email — pas besoin de recommencer.'}{' '}
+            Ta candidature est bien dans nos mains.
           </p>
         </>
       ) : (
