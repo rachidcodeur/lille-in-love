@@ -490,6 +490,53 @@
   gap: 14px;
 }
 
+/* --- L'intertitre des reprises ------------------------------------- */
+
+/* La frontière entre deux époques du questionnaire. Pas une carte : un
+   filet et un mot, pour que l'œil enregistre la bascule sans s'y arrêter.
+   Le premier bloc n'a pas besoin d'intertitre — c'est le présent. */
+.adm-separateur {
+  margin: calc(var(--adm-section) - 14px) 0 2px;
+  padding-top: 22px;
+  border-top: 1px solid var(--gold-soft);
+}
+
+.adm-separateur h2 {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  margin: 0;
+}
+
+.adm-separateur p {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-muted);
+  margin: 7px 0 0;
+  max-width: 68ch;
+}
+
+/* Les reprises se lisent comme les autres, mais leur blanc est d'un rien
+   plus chaud : la nuance suffit à retrouver la frontière après avoir fait
+   défiler la page, sans les reléguer. */
+.adm-row[data-ancienne='true'] {
+  background: color-mix(in srgb, var(--white) 94%, var(--sand));
+}
+
+/* La note d'une fiche reprise, en haut de la fiche : elle explique les
+   champs vides avant qu'on se demande qui a mal rempli. */
+.adm-reprise {
+  margin: 0 0 var(--adm-section);
+  padding: 2px 0 2px 16px;
+  border-left: 2px solid var(--gold-soft);
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: var(--ink-soft);
+  max-width: 78ch;
+}
+
 /* Pas de bordure : c'est l'ombre qui détache la fiche du fond crème.
    Au survol, elle se soulève d'un cheveu et un filet doré s'allume à
    gauche — de quoi suivre sa ligne sans la chercher. */

@@ -61,6 +61,11 @@ export type MemberSummary = {
   deleted_at?: string | null;
   /** Groupe de composition d'une soirée : A, B ou C. Vide tant qu'on n'a pas trié. */
   soiree_group: Groupe | null;
+  /**
+   * Candidature reprise de l'ancien site. Facultative : la colonne n'existe
+   * qu'une fois supabase/12_anciennes.sql exécuté.
+   */
+  legacy?: boolean;
   suspect: boolean;
   photo_count: number;
   votes_oui: number;
@@ -151,19 +156,35 @@ function filtrer<Q extends {
   return q;
 }
 
+/** Une colonne que la base ne connaît pas encore : une migration en attente. */
+function colonneAbsente(error: { code?: string; message?: string }): boolean {
+  return error.code === '42703' || /does not exist/i.test(error.message ?? '');
+}
+
 export async function listMembers(filtres: Filtres, limite = 300): Promise<MemberSummary[]> {
   // « * » plutôt qu'une liste de colonnes : la vue peut ne pas encore avoir
   // celles de supabase/04_signalement.sql, et une liste explicite ferait
   // échouer toute la page pour une colonne manquante.
-  const query = supabaseAdmin()
-    .from('lil_members_overview')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(limite);
+  //
+  // L'ordre : les candidatures du site actuel d'abord, les reprises de
+  // l'ancien ensuite — et dans chaque bloc, la dernière arrivée en tête. En
+  // SQL false précède true, donc « legacy asc » met les nouvelles devant.
+  const construire = (avecAnciennes: boolean) => {
+    const base = supabaseAdmin().from('lil_members_overview').select('*');
+    const triee = avecAnciennes ? base.order('legacy', { ascending: true }) : base;
+    return filtrer(triee.order('created_at', { ascending: false }).limit(limite), filtres);
+  };
 
-  const { data, error } = await filtrer(query, filtres);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as MemberSummary[];
+  const { data, error } = await construire(true);
+  if (!error) return (data ?? []) as MemberSummary[];
+
+  // supabase/12_anciennes.sql pas encore passé : la liste reste utilisable,
+  // simplement sans son intertitre.
+  if (!colonneAbsente(error)) throw new Error(error.message);
+
+  const secours = await construire(false);
+  if (secours.error) throw new Error(secours.error.message);
+  return (secours.data ?? []) as MemberSummary[];
 }
 
 /**

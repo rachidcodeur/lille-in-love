@@ -37,6 +37,9 @@ const record = (entry) => log.push({ at: Date.now(), ...entry });
 function overview() {
   return tables.lil_members.map((m) => ({
     ...m,
+    // « not null default false » en base : une fiche sans la colonne n'est
+    // pas une fiche au legacy inconnu, c'est une candidature du site actuel.
+    legacy: m.legacy ?? false,
     age: m.birth_date
       ? Math.floor((Date.now() - new Date(m.birth_date).getTime()) / (365.25 * 864e5))
       : null,
@@ -117,8 +120,11 @@ function applyFilters(rows, params) {
       out = out.filter((row) => row[key] !== null && row[key] !== undefined);
     } else if (op === 'is') {
       // « is.null » : une colonne absente de l'objet vaut null, comme en base.
-      if (value !== 'null') throw new Error(`is.${value} non géré`);
-      out = out.filter((row) => row[key] === null || row[key] === undefined);
+      // « is.true » / « is.false » : la façon dont PostgREST teste un booléen.
+      if (value === 'true') out = out.filter((row) => row[key] === true);
+      else if (value === 'false') out = out.filter((row) => row[key] === false);
+      else if (value === 'null') out = out.filter((row) => row[key] === null || row[key] === undefined);
+      else throw new Error(`is.${value} non géré`);
     } else if (op === 'ilike') {
       out = out.filter((row) => ilike(row[key], value));
     } else if (op === 'gte' || op === 'lte') {
@@ -295,10 +301,23 @@ async function traiter(req, res) {
         })),
       );
     }
-    if (req.method === 'POST') {
-      const key = decodeURIComponent(path.replace('/storage/v1/object/lil-photos/', ''));
+    // Le nom du bucket, quel qu'il soit, ne fait pas partie de la clé : la
+    // reprise des anciennes candidatures lit dans un bucket et écrit dans un
+    // autre, et ce faux stockage doit tenir les deux rôles.
+    const clef = (p) =>
+      decodeURIComponent(p.replace(/^\/storage\/v1\/object\/(?:authenticated\/|public\/)?[^/]+\//, ''));
+
+    if (req.method === 'POST' || req.method === 'PUT') {
+      const key = clef(path);
       storage.set(key, { size: body?.length ?? 0, bytes: Buffer.isBuffer(body) ? body : null });
-      return json(res, 200, { Key: `lil-photos/${key}` });
+      return json(res, 200, { Key: key });
+    }
+
+    if (req.method === 'GET') {
+      const file = storage.get(clef(path));
+      if (!file?.bytes) return json(res, 404, { message: 'objet absent' });
+      res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Content-Length': file.bytes.length });
+      return res.end(file.bytes);
     }
   }
 

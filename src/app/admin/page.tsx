@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import Link from 'next/link';
 import { facettes, listMembers, photoUrls } from '@/lib/admin';
 import { STATUS_ORDER, label, relative } from '@/lib/libelles';
@@ -69,6 +70,10 @@ export default async function AdminListPage({ searchParams }: Props) {
     filtres.orientation !== 'tous',
     filtres.ageMin !== null || filtres.ageMax !== null,
   ].filter(Boolean).length;
+
+  // Les reprises de l'ancien site, dans ce qui est affiché : le nombre que
+  // l'intertitre annonce.
+  const anciennes = members.filter((member) => member.legacy).length;
 
   // Une vignette par fiche : c'est le premier repère quand on parcourt la liste.
   const thumbnails = await Promise.all(
@@ -160,50 +165,67 @@ export default async function AdminListPage({ searchParams }: Props) {
       ) : (
         <div className="adm-list">
           {members.map((member, index) => (
-            <article key={member.id} className="adm-row">
-              <Link href={`/admin/${member.id}`} className="adm-row-lien">
-                {thumbnails[index] ? (
-                  <Vignette
-                    className="adm-avatar"
-                    src={thumbnails[index]!}
-                    initiale={member.first_name.slice(0, 1).toUpperCase()}
-                  />
-                ) : (
-                  <div className="adm-avatar adm-avatar-empty" aria-hidden="true">
-                    {member.first_name.slice(0, 1).toUpperCase()}
-                  </div>
-                )}
-
-                <div className="adm-row-main">
-                  <p className="adm-row-name">
-                    {member.first_name} {member.last_name}
-                  </p>
-                  <p className="adm-row-meta">
-                    {[
-                      label.gender(member.gender),
-                      member.age ? `${member.age} ans` : null,
-                      member.city,
-                      member.email,
-                      relative(member.created_at),
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
+            <Fragment key={member.id}>
+              {/* La bascule entre les deux blocs, affichée une seule fois, là
+                  où commence la première reprise. Sans elle on croirait à des
+                  fiches mal remplies plutôt qu'à un autre questionnaire. */}
+              {member.legacy && !members[index - 1]?.legacy && (
+                <div className="adm-separateur">
+                  <h2>Anciennes candidatures</h2>
+                  <p>
+                    {anciennes} {anciennes > 1 ? 'fiches reprises' : 'fiche reprise'} du site
+                    précédent. Le questionnaire d’alors ne demandait ni le nom de famille ni les
+                    centres d’intérêt : ces champs sont vides parce que la question n’a pas été
+                    posée.
                   </p>
                 </div>
-              </Link>
+              )}
 
-              <div className="adm-row-side">
-                {member.suspect && (
-                  <span className="adm-tag" data-alerte="true" title="Envoi inhabituel">
-                    à vérifier
+              <article className="adm-row" data-ancienne={member.legacy ? 'true' : undefined}>
+                <Link href={`/admin/${member.id}`} className="adm-row-lien">
+                  {thumbnails[index] ? (
+                    <Vignette
+                      className="adm-avatar"
+                      src={thumbnails[index]!}
+                      initiale={member.first_name.slice(0, 1).toUpperCase()}
+                    />
+                  ) : (
+                    <div className="adm-avatar adm-avatar-empty" aria-hidden="true">
+                      {member.first_name.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+
+                  <div className="adm-row-main">
+                    <p className="adm-row-name">
+                      {member.first_name} {member.last_name}
+                    </p>
+                    <p className="adm-row-meta">
+                      {[
+                        label.gender(member.gender),
+                        member.age ? `${member.age} ans` : null,
+                        member.city,
+                        member.email,
+                        relative(member.created_at),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  </div>
+                </Link>
+
+                <div className="adm-row-side">
+                  {member.suspect && (
+                    <span className="adm-tag" data-alerte="true" title="Envoi inhabituel">
+                      à vérifier
+                    </span>
+                  )}
+                  <span className="adm-chip" data-status={member.status}>
+                    {label.status(member.status)}
                   </span>
-                )}
-                <span className="adm-chip" data-status={member.status}>
-                  {label.status(member.status)}
-                </span>
-                <GroupePicker memberId={member.id} groupe={member.soiree_group} compact />
-              </div>
-            </article>
+                  <GroupePicker memberId={member.id} groupe={member.soiree_group} compact />
+                </div>
+              </article>
+            </Fragment>
           ))}
         </div>
       )}

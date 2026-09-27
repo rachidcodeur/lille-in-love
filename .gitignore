@@ -2,6 +2,9 @@ node_modules/
 .next/
 .next-test/
 .next-apercu/
+# Les autres dossiers de build ouverts par NEXT_DIST_DIR (tests, captures,
+# vérifications) : même nature que .next/, jamais versionnés.
+.next-*/
 out/
 build/
 .env

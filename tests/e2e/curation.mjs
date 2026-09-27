@@ -9,6 +9,7 @@
  */
 import { chromium } from 'playwright-core';
 import { readFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -1196,6 +1197,183 @@ s.members.some((m) => m.email === 'leila.wordpress@example.com')
   : bad('candidature perdue au passage');
 
 siteWordpress.close();
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
+/* ---------------------------------------------------------------- */
+section('15. La reprise des anciennes candidatures');
+
+const POSTE = { apikey: 'cle-de-test', 'Content-Type': 'application/json' };
+const poser = (table, corps) =>
+  fetch(`${FAKE}/rest/v1/${table}`, { method: 'POST', headers: POSTE, body: JSON.stringify(corps) });
+
+// Deux candidatures du site actuel : la liste doit les garder devant, et la
+// dernière arrivée en tête.
+await poser('lil_members', [
+  {
+    first_name: 'Avant',
+    last_name: 'Dernier',
+    email: 'avant@example.com',
+    gender: 'homme',
+    status: 'nouveau',
+    created_at: '2026-09-20T10:00:00.000Z',
+  },
+  {
+    first_name: 'Nouvelle',
+    last_name: 'Venue',
+    email: 'nouvelle@example.com',
+    gender: 'femme',
+    status: 'nouveau',
+    created_at: '2026-09-25T10:00:00.000Z',
+  },
+]);
+
+// La photo telle qu'elle dort dans le stockage de l'ancien projet.
+await fetch(`${FAKE}/storage/v1/object/anciennes-photos/ev/solene.jpg`, {
+  method: 'POST',
+  headers: { apikey: 'cle-de-test', 'Content-Type': 'image/jpeg' },
+  body: readFileSync(fixture('photo-1.png')),
+});
+
+const lancerImport = (...drapeaux) =>
+  execFileSync('node', ['scripts/importer-anciennes.mjs', fixture('anciennes.csv'), ...drapeaux], {
+    cwd: join(HERE, '..', '..'),
+    encoding: 'utf8',
+    env: {
+      ...process.env,
+      SUPABASE_URL: FAKE,
+      SUPABASE_SERVICE_ROLE_KEY: 'cle-de-test',
+      SUPABASE_STORAGE_BUCKET: 'lil-photos',
+      ANCIEN_SUPABASE_URL: FAKE,
+      ANCIEN_SERVICE_ROLE_KEY: 'cle-de-test',
+      ANCIEN_BUCKET: 'anciennes-photos',
+    },
+  });
+
+// --- L'essai à blanc n'écrit rien ---------------------------------
+// Le script colore sa sortie : on la dépouille avant de la lire.
+const blanc = lancerImport().replace(/\u001b\[\d+m/g, '');
+s = await state();
+s.members.length === 2
+  ? ok('sans --ecrire, rien n’est écrit')
+  : bad('l’essai à blanc a écrit en base', `${s.members.length} fiches`);
+/\n\s*2 à reprendre/.test(blanc) && /1 déjà en base/.test(blanc) && /1 illisible/.test(blanc)
+  ? ok('il annonce 2 reprises : la ligne bancale et le doublon sont écartés')
+  : bad('décompte inattendu', blanc.slice(-500));
+
+// --- Puis l'import pour de vrai -----------------------------------
+lancerImport('--ecrire');
+s = await state();
+
+const solene = s.members.find((m) => m.email === 'solene.ancienne@example.com');
+const marius = s.members.find((m) => m.email === 'marius.ancien@example.com');
+
+solene && marius ? ok('les 2 candidatures reprises sont en base') : bad('candidatures manquantes');
+s.members.some((m) => m.email === 'bancale@example.com')
+  ? bad('une ligne au genre inconnu est passée')
+  : ok('la ligne au genre inconnu est refusée, pas devinée');
+s.members.filter((m) => m.email === 'nouvelle@example.com').length === 1
+  ? ok('l’adresse déjà en base n’est pas dupliquée')
+  : bad('doublon d’email créé');
+
+solene?.legacy === true && solene?.gender === 'femme' && solene?.looking_for === 'relation_serieuse'
+  ? ok('le genre et la recherche sont traduits, la fiche est marquée « ancienne »')
+  : bad('correspondances fausses', JSON.stringify({ legacy: solene?.legacy, gender: solene?.gender, looking_for: solene?.looking_for }));
+
+solene?.phone === '+33612345678'
+  ? ok('le téléphone est normalisé comme à l’inscription (+33…)')
+  : bad('téléphone non normalisé', solene?.phone);
+
+solene?.instagram === '@solene.l'
+  ? ok('l’URL Instagram est ramenée à un pseudo')
+  : bad('instagram non normalisé', solene?.instagram);
+
+solene?.interests_other === 'Lecture, randonnée, théâtre' && Array.isArray(solene?.interests) && solene.interests.length === 0
+  ? ok('les centres d’intérêt en texte libre vont dans « autre »')
+  : bad('centres d’intérêt mal repris', JSON.stringify(solene?.interests_other));
+
+solene?.last_name === '' && solene?.id === '11111111-1111-4111-8111-111111111111'
+  ? ok('le nom de famille reste vide et l’identifiant d’origine est conservé')
+  : bad('identité mal reprise', JSON.stringify({ last_name: solene?.last_name, id: solene?.id }));
+
+solene?.soiree_group === 'C' && solene?.created_at.startsWith('2026-06-01')
+  ? ok('le groupe et la date d’origine sont conservés')
+  : bad('groupe ou date perdus', JSON.stringify({ g: solene?.soiree_group, d: solene?.created_at }));
+
+marius?.comes_with === true && marius?.companion_email === 'paul.ancien@example.com'
+  ? ok('l’accompagnant est repris')
+  : bad('accompagnant perdu', JSON.stringify(marius?.companion_email));
+
+marius?.about?.includes('chiche') && marius?.about?.includes('Deux lignes')
+  ? ok('une réponse à virgules, guillemets et retour à la ligne est lue correctement')
+  : bad('le CSV à champs multilignes est mal lu', JSON.stringify(marius?.about));
+
+solene?.comes_with === true && solene?.companion_email === null
+  ? ok('un accompagnant nommé sans son adresse est gardé quand même')
+  : bad('accompagnant sans email mal repris', JSON.stringify(solene?.companion_email));
+
+// --- Les photos ---------------------------------------------------
+const photoSolene = s.photos.find((p) => p.member_id === solene?.id);
+photoSolene?.storage_path === `candidatures/${solene?.id}/1.jpg`
+  ? ok('la photo est rangée sous la candidature, comme à l’inscription')
+  : bad('photo mal rangée', JSON.stringify(photoSolene));
+s.storage.includes(`candidatures/${solene?.id}/1.jpg`)
+  ? ok('et le fichier a bien été déposé dans le stockage')
+  : bad('fichier absent du stockage', JSON.stringify(s.storage));
+
+// --- Aucun email ne part ------------------------------------------
+s.emails.length === 0 && s.sent.length === 0
+  ? ok('aucun email n’est programmé ni envoyé par la reprise')
+  : bad('la reprise a écrit dans le journal des emails', `${s.emails.length} / ${s.sent.length}`);
+
+// --- Relancer ne duplique rien ------------------------------------
+lancerImport('--ecrire');
+s = await state();
+s.members.length === 4 && s.photos.length === 1
+  ? ok('relancé, l’import ne duplique ni fiche ni photo')
+  : bad('la relance a dupliqué', `${s.members.length} fiches, ${s.photos.length} photos`);
+
+// --- L'intertitre dans la liste -----------------------------------
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+
+const disposition = await page.evaluate(() =>
+  [...(document.querySelector('.adm-list')?.children ?? [])].map((el) =>
+    el.classList.contains('adm-separateur')
+      ? `— ${el.querySelector('h2')?.textContent?.trim()} —`
+      : el.querySelector('.adm-row-name')?.textContent?.trim(),
+  ),
+);
+
+JSON.stringify(disposition) ===
+JSON.stringify([
+  'Nouvelle Venue',
+  'Avant Dernier',
+  '— Anciennes candidatures —',
+  'Marius',
+  'Solène',
+])
+  ? ok('nouvelles en haut, intertitre, puis anciennes — chaque bloc du plus récent au plus ancien')
+  : bad('ordre ou intertitre inattendus', JSON.stringify(disposition));
+
+// Le séparateur ne doit apparaître qu'une fois, même avec plusieurs reprises.
+(await page.locator('.adm-separateur').count()) === 1
+  ? ok('l’intertitre n’apparaît qu’une fois')
+  : bad('intertitre répété');
+
+// --- La fiche dit d'où elle vient ---------------------------------
+await page.goto(`${BASE}/admin/${solene.id}`, { waitUntil: 'networkidle' });
+(await page.locator('.adm-reprise').count()) === 1 &&
+(await page.locator('.adm-reprise').innerText()).includes('question n’a pas été posée')
+  ? ok('la fiche explique ses champs vides au lieu de laisser croire à un oubli')
+  : bad('la fiche ne signale pas la reprise');
+
+// --- La sortie de secours ----------------------------------------
+lancerImport('--defaire', '--ecrire');
+s = await state();
+s.members.filter((m) => m.legacy && !m.deleted_at).length === 0 &&
+s.members.filter((m) => !m.legacy && !m.deleted_at).length === 2
+  ? ok('--defaire met les reprises à la corbeille sans toucher aux autres')
+  : bad('--defaire a mal visé', JSON.stringify(s.members.map((m) => [m.first_name, m.legacy, Boolean(m.deleted_at)])));
+
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
 await browser.close();

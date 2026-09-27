@@ -1,9 +1,10 @@
 # Mise en route
 
-État au 20 septembre 2026.
+État au 27 septembre 2026.
 
-Le formulaire tourne, la curation aussi. Il reste **une migration SQL à
-passer** et **le déploiement de l'application** sur `app.in-love.fr`.
+Le formulaire tourne, la curation aussi. Il reste **des migrations SQL à
+passer**, **la reprise des anciennes candidatures** et **le déploiement de
+l'application** sur `app.in-love.fr`.
 
 ---
 
@@ -14,14 +15,14 @@ passer** et **le déploiement de l'application** sur `app.in-love.fr`.
 | Projet Supabase | `sljvoplsedepnecgmjih`, bucket `lil-photos` privé |
 | Scripts SQL passés | `01` à `05`, et `08` |
 | **À passer d'urgence** | **`10_accompagnant.sql`** — sans lui, toute candidature « je viens accompagné » est refusée |
-| **À passer aussi** | **`09_simplification.sql`** (groupe G) puis **`11_corbeille.sql`** (corbeille) |
+| **À passer aussi** | **`09_simplification.sql`** (groupe G), **`11_corbeille.sql`** (corbeille), **`12_anciennes.sql`** (anciennes candidatures) |
 | Resend | domaine **`in-love.fr` vérifié**, clé en place |
 | Expéditeur / réponse | `Lille in Love <info@in-love.fr>` |
 | `.env.local` | rempli et valide — `/api/health` répond `ok: true` |
 | Sur WordPress | le **formulaire autonome** est en ligne sur `/inscription/` |
 | Application | **pas encore déployée** |
 
-Les deux sont relançables sans risque : ils n'envoient aucun email et ne
+Tous sont relançables sans risque : ils n'envoient aucun email et ne
 modifient aucune candidature.
 
 > **`10_accompagnant.sql` est urgent.** Le schéma d'origine exigeait l'email
@@ -390,10 +391,66 @@ envoyé** — ni à l'enregistrement, ni plus tard.
 
 ---
 
+## 6 bis. Reprendre les candidatures de l'ancien site
+
+Le site précédent a recueilli **117 candidatures** entre mai et septembre.
+Elles se reprennent d'un coup, sans envoyer un seul email.
+
+**Avant tout : passe `supabase/10_accompagnant.sql` et
+`supabase/12_anciennes.sql`.** Onze de ces candidatures nomment un
+accompagnant sans donner son email — sans la migration 10, la base les
+refuse toutes.
+
+```bash
+# 1. À blanc : le script dit ce qu'il ferait, sans rien écrire
+npm run import:anciennes -- "~/Downloads/candidatures_rows.csv"
+
+# 2. Pour de vrai
+npm run import:anciennes -- "~/Downloads/candidatures_rows.csv" --ecrire
+```
+
+Il ignore ce qui est déjà en base (même identifiant, même email, même
+numéro), refuse les lignes qu'il ne sait pas lire plutôt que de deviner, et
+se relance sans rien dupliquer. Pour revenir en arrière :
+`npm run import:anciennes -- --defaire --ecrire` met les reprises à la
+corbeille, d'où elles sont restaurables.
+
+Dans `/admin`, elles apparaissent sous l'intertitre **« Anciennes
+candidatures »**, après les inscriptions du site actuel, chaque bloc de la
+plus récente à la plus ancienne. Leur fiche porte la mention
+« ancienne candidature » et explique ses champs vides : l'ancien
+questionnaire ne demandait ni le nom de famille ni les centres d'intérêt à
+cocher.
+
+### Les photos
+
+Le CSV ne contient **que les chemins** des photos. Les fichiers eux-mêmes
+dorment dans le stockage de l'**ancien projet Supabase**
+(`tiazqkfnyhshweeqfuzw`), dans un bucket privé : aucune URL publique n'y
+donne accès — vérifié, bucket par bucket.
+
+Pour les récupérer, il faut la clé `service_role` de cet ancien projet
+(Supabase > l'ancien projet > Settings > API) et le nom du bucket
+(Storage) :
+
+```bash
+ANCIEN_SUPABASE_URL=https://tiazqkfnyhshweeqfuzw.supabase.co \
+ANCIEN_SERVICE_ROLE_KEY=<la clé service_role de l'ancien projet> \
+ANCIEN_BUCKET=<le nom du bucket> \
+npm run import:anciennes -- "~/Downloads/candidatures_rows.csv" --photos-seulement --ecrire
+```
+
+`--photos-seulement` n'écrit aucune candidature : il ne complète que les
+**207 photos** manquantes. On peut donc reprendre les réponses aujourd'hui
+et les photos le jour où la clé est sous la main.
+
+---
+
 ## 7. La recette avant d'ouvrir
 
 - [ ] `supabase/10_accompagnant.sql` exécuté (bloquant)
-- [ ] `supabase/09_simplification.sql` et `11_corbeille.sql` exécutés
+- [ ] `supabase/09_simplification.sql`, `11_corbeille.sql` et `12_anciennes.sql` exécutés
+- [ ] La reprise des anciennes candidatures lancée (section 8)
 - [ ] Une inscription en répondant **« oui, je viens avec quelqu'un »**
 - [ ] `DELAI_REPONSE_MINUTES=360` en production
 - [ ] `ADMIN_CODE` renseigné

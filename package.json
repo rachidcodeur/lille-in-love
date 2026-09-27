@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test:e2e": "node tests/e2e/formulaire.mjs",
     "test:curation": "node tests/run-curation.mjs",
-    "test:reel": "node --env-file=.env.local tests/reel.mjs"
+    "test:reel": "node --env-file=.env.local tests/reel.mjs",
+    "import:anciennes": "node --env-file=.env.local scripts/importer-anciennes.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

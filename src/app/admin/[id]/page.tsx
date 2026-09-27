@@ -47,6 +47,7 @@ export default async function FichePage({ params }: Props) {
 
   const [photos, emails] = await Promise.all([photoUrls(member.id), getEmailLog(member.id)]);
   const isCourt = member.form_version === 'court';
+  const ancienne = member.legacy === true;
 
   // Une réponse encore en attente qui ne correspond plus à la décision : elle
   // partirait à tort. On la signale et on propose de la stopper.
@@ -157,6 +158,11 @@ export default async function FichePage({ params }: Props) {
             {member.phone && <> · {member.phone}</>} · Candidature reçue{' '}
             {relative(member.created_at)}
             {isCourt && <span className="adm-tag">formulaire court</span>}
+            {ancienne && (
+              <span className="adm-tag" title="Reprise du site précédent">
+                ancienne candidature
+              </span>
+            )}
           </p>
         </div>
 
@@ -164,6 +170,14 @@ export default async function FichePage({ params }: Props) {
           {label.status(member.status)}
         </span>
       </section>
+
+      {ancienne && (
+        <p className="adm-reprise">
+          Candidature reprise du site précédent. Son questionnaire ne demandait ni le nom de
+          famille ni les centres d’intérêt à cocher : ce qui manque ici n’a pas été oublié, la
+          question n’a pas été posée.
+        </p>
+      )}
 
       <div className="adm-fiche">
         {/* ---- Colonne gauche : les photos, le rangement, la décision ---- */}
