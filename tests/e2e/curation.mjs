@@ -1225,14 +1225,31 @@ await poser('lil_members', [
     status: 'nouveau',
     created_at: '2026-09-25T10:00:00.000Z',
   },
+  // Une ancienne candidature déjà présente en base, sous son identifiant
+  // d'origine : le script ne doit pas la réécrire, seulement la marquer.
+  {
+    id: '55555555-5555-4555-8555-555555555555',
+    first_name: 'Adoptee',
+    last_name: 'Deja-La',
+    email: 'adoptee.ancienne@example.com',
+    gender: 'femme',
+    city: 'Tourcoing',
+    status: 'nouveau',
+    soiree_group: 'B',
+    admin_notes: 'Une note écrite à la main, qui ne doit pas disparaître.',
+    source: 'wordpress:/inscription/',
+    created_at: '2026-06-20T12:00:00.000Z',
+  },
 ]);
 
-// La photo telle qu'elle dort dans le stockage de l'ancien projet.
-await fetch(`${FAKE}/storage/v1/object/anciennes-photos/ev/solene.jpg`, {
-  method: 'POST',
-  headers: { apikey: 'cle-de-test', 'Content-Type': 'image/jpeg' },
-  body: readFileSync(fixture('photo-1.png')),
-});
+// Les photos telles qu'elles dorment dans le stockage de l'ancien projet.
+for (const nom of ['solene', 'adoptee']) {
+  await fetch(`${FAKE}/storage/v1/object/anciennes-photos/ev/${nom}.jpg`, {
+    method: 'POST',
+    headers: { apikey: 'cle-de-test', 'Content-Type': 'image/jpeg' },
+    body: readFileSync(fixture('photo-1.png')),
+  });
+}
 
 const lancerImport = (...drapeaux) =>
   execFileSync('node', ['scripts/importer-anciennes.mjs', fixture('anciennes.csv'), ...drapeaux], {
@@ -1253,12 +1270,15 @@ const lancerImport = (...drapeaux) =>
 // Le script colore sa sortie : on la dépouille avant de la lire.
 const blanc = lancerImport().replace(/\u001b\[\d+m/g, '');
 s = await state();
-s.members.length === 2
-  ? ok('sans --ecrire, rien n’est écrit')
-  : bad('l’essai à blanc a écrit en base', `${s.members.length} fiches`);
-/\n\s*2 à reprendre/.test(blanc) && /1 déjà en base/.test(blanc) && /1 illisible/.test(blanc)
-  ? ok('il annonce 2 reprises : la ligne bancale et le doublon sont écartés')
-  : bad('décompte inattendu', blanc.slice(-500));
+s.members.length === 3 && s.members.every((m) => !m.legacy)
+  ? ok('sans --ecrire, rien n’est écrit ni marqué')
+  : bad('l’essai à blanc a touché la base', `${s.members.length} fiches`);
+/\n\s*2 à écrire/.test(blanc) &&
+/1 déjà en base, à marquer/.test(blanc) &&
+/1 laissée telle quelle/.test(blanc) &&
+/1 illisible/.test(blanc)
+  ? ok('le plan distingue écrire, marquer, laisser et refuser')
+  : bad('décompte inattendu', blanc.slice(-600));
 
 // --- Puis l'import pour de vrai -----------------------------------
 lancerImport('--ecrire');
@@ -1315,6 +1335,20 @@ solene?.comes_with === true && solene?.companion_email === null
   ? ok('un accompagnant nommé sans son adresse est gardé quand même')
   : bad('accompagnant sans email mal repris', JSON.stringify(solene?.companion_email));
 
+// --- La ligne déjà présente est adoptée, pas réécrite ---------------
+const adoptee = s.members.find((m) => m.id === '55555555-5555-4555-8555-555555555555');
+s.members.filter((m) => m.email === 'adoptee.ancienne@example.com').length === 1
+  ? ok('la ligne déjà en base n’est pas dupliquée sous un nouvel identifiant')
+  : bad('doublon créé pour une ligne déjà présente');
+adoptee?.legacy === true && adoptee?.status === 'valide'
+  ? ok('elle est marquée « ancienne » et validée')
+  : bad('marquage manqué', JSON.stringify({ legacy: adoptee?.legacy, status: adoptee?.status }));
+adoptee?.last_name === 'Deja-La' &&
+adoptee?.admin_notes === 'Une note écrite à la main, qui ne doit pas disparaître.' &&
+adoptee?.source === 'wordpress:/inscription/'
+  ? ok('le reste de sa fiche est intact : le travail fait dessus n’est pas écrasé')
+  : bad('fiche écrasée', JSON.stringify({ nom: adoptee?.last_name, notes: adoptee?.admin_notes }));
+
 // --- Les photos ---------------------------------------------------
 const photoSolene = s.photos.find((p) => p.member_id === solene?.id);
 photoSolene?.storage_path === `candidatures/${solene?.id}/1.jpg`
@@ -1323,6 +1357,9 @@ photoSolene?.storage_path === `candidatures/${solene?.id}/1.jpg`
 s.storage.includes(`candidatures/${solene?.id}/1.jpg`)
   ? ok('et le fichier a bien été déposé dans le stockage')
   : bad('fichier absent du stockage', JSON.stringify(s.storage));
+s.photos.some((p) => p.member_id === adoptee?.id)
+  ? ok('la ligne adoptée reçoit sa photo elle aussi')
+  : bad('photo non rattachée à la ligne adoptée');
 
 // --- Aucun email ne part, malgré le statut « validée » --------------
 // C'est le point délicat : valider depuis le back-office programme l'email
@@ -1334,7 +1371,7 @@ s.emails.length === 0 && s.sent.length === 0
 // --- Relancer ne duplique rien ------------------------------------
 lancerImport('--ecrire');
 s = await state();
-s.members.length === 4 && s.photos.length === 1
+s.members.length === 5 && s.photos.length === 2
   ? ok('relancé, l’import ne duplique ni fiche ni photo')
   : bad('la relance a dupliqué', `${s.members.length} fiches, ${s.photos.length} photos`);
 
@@ -1355,6 +1392,7 @@ JSON.stringify([
   'Avant Dernier',
   '— Anciennes candidatures —',
   'Marius',
+  'Adoptee Deja-La',
   'Solène',
 ])
   ? ok('nouvelles en haut, intertitre, puis anciennes — chaque bloc du plus récent au plus ancien')
@@ -1375,10 +1413,23 @@ await page.goto(`${BASE}/admin/${solene.id}`, { waitUntil: 'networkidle' });
 // --- La sortie de secours ----------------------------------------
 lancerImport('--defaire', '--ecrire');
 s = await state();
-s.members.filter((m) => m.legacy && !m.deleted_at).length === 0 &&
-s.members.filter((m) => !m.legacy && !m.deleted_at).length === 2
-  ? ok('--defaire met les reprises à la corbeille sans toucher aux autres')
-  : bad('--defaire a mal visé', JSON.stringify(s.members.map((m) => [m.first_name, m.legacy, Boolean(m.deleted_at)])));
+const apres = (email) => s.members.find((m) => m.email === email);
+
+apres('solene.ancienne@example.com')?.deleted_at && apres('marius.ancien@example.com')?.deleted_at
+  ? ok('--defaire met à la corbeille ce que le script avait écrit')
+  : bad('--defaire n’a pas jeté les lignes écrites');
+
+!apres('adoptee.ancienne@example.com')?.deleted_at &&
+apres('adoptee.ancienne@example.com')?.legacy === false
+  ? ok('mais il se contente de démarquer celle qui existait avant lui, sans la jeter')
+  : bad(
+      'une ligne préexistante a été jetée',
+      JSON.stringify(apres('adoptee.ancienne@example.com')),
+    );
+
+s.members.filter((m) => !m.deleted_at).length === 3
+  ? ok('les candidatures du site actuel n’ont pas bougé')
+  : bad('--defaire a débordé', JSON.stringify(s.members.map((m) => [m.first_name, Boolean(m.deleted_at)])));
 
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 

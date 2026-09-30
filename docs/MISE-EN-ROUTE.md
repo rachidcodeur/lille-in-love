@@ -409,11 +409,19 @@ npm run import:anciennes -- "~/Downloads/candidatures_rows.csv"
 npm run import:anciennes -- "~/Downloads/candidatures_rows.csv" --ecrire
 ```
 
-Il ignore ce qui est déjà en base (même identifiant, même email, même
-numéro), refuse les lignes qu'il ne sait pas lire plutôt que de deviner, et
-se relance sans rien dupliquer. Pour revenir en arrière :
-`npm run import:anciennes -- --defaire --ecrire` met les reprises à la
-corbeille, d'où elles sont restaurables.
+Il traite quatre cas, et l'essai à blanc les compte séparément :
+
+| Cas | Ce qu'il fait |
+| --- | --- |
+| Identifiant inconnu | il écrit la candidature |
+| **Identifiant déjà en base** | il ne réécrit rien : il marque la ligne « ancienne », la valide, et va chercher ses photos. Notes, groupe, tout le travail fait dessus reste |
+| Même email ou numéro sous un **autre** identifiant | il n'y touche pas : c'est quelqu'un qui s'est réinscrit sur le site actuel, sa candidature d'aujourd'hui n'a rien d'ancien |
+| Ligne illisible | il la refuse plutôt que de deviner |
+
+Il se relance sans rien dupliquer. Pour revenir en arrière,
+`npm run import:anciennes -- --defaire --ecrire` met à la corbeille ce
+qu'il a écrit et se contente de **démarquer** ce qui existait avant lui —
+jeter une ligne qu'il n'a pas créée serait effacer une candidature.
 
 Dans `/admin`, elles apparaissent sous l'intertitre **« Anciennes
 candidatures »**, après les inscriptions du site actuel, chaque bloc de la

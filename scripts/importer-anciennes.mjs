@@ -290,27 +290,61 @@ if (!sonde.ok) {
 /* Défaire                                                             */
 /* ------------------------------------------------------------------ */
 if (DEFAIRE) {
-  const { corps: existantes } = await rest('lil_members?select=id,first_name&legacy=is.true&deleted_at=is.null');
-  const nb = Array.isArray(existantes) ? existantes.length : 0;
-  titre(`Défaire l'import — ${nb} candidature(s) reprise(s) encore active(s)`);
+  // Deux gestes différents, et les confondre serait grave : ce que le script
+  // a écrit peut partir à la corbeille, mais une ligne qui existait déjà et
+  // qu'il s'est contenté de marquer doit seulement perdre sa marque. La
+  // jeter effacerait une candidature qu'il n'a pas créée.
+  const ecrites = 'legacy=is.true&source=eq.ancien-site&deleted_at=is.null';
+  const adoptees = 'legacy=is.true&or=(source.neq.ancien-site,source.is.null)';
+
+  const { corps: a } = await rest(`lil_members?select=id,first_name&${ecrites}`);
+  const { corps: b } = await rest(`lil_members?select=id,first_name&${adoptees}`);
+  const nbEcrites = Array.isArray(a) ? a.length : 0;
+  const nbAdoptees = Array.isArray(b) ? b.length : 0;
+
+  titre('Défaire la reprise');
+  console.log(`  ${gras(String(nbEcrites))} écrite(s) par le script → corbeille
+  ${gras(String(nbAdoptees))} déjà en base avant lui → simplement démarquée(s)`);
 
   if (!ECRIRE) {
-    console.log(gris('Essai à blanc. Ajoute --ecrire pour les mettre à la corbeille.'));
+    console.log(gris('\nEssai à blanc. Ajoute --ecrire pour le faire.'));
     process.exit(0);
   }
-  if (nb === 0) process.exit(0);
 
-  const r = await rest('lil_members?legacy=is.true&deleted_at=is.null', {
-    method: 'PATCH',
-    headers: { Prefer: 'return=minimal' },
-    body: JSON.stringify({ deleted_at: new Date().toISOString() }),
-  });
-  console.log(
-    r.ok
-      ? vert(`${nb} candidature(s) mise(s) à la corbeille. Elles sont récupérables dans /admin/corbeille.`)
-      : rouge(`Échec : ${JSON.stringify(r.corps)}`),
-  );
-  process.exit(r.ok ? 0 : 1);
+  let souci = false;
+
+  if (nbEcrites > 0) {
+    const r = await rest(`lil_members?${ecrites}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ deleted_at: new Date().toISOString() }),
+    });
+    souci ||= !r.ok;
+    console.log(
+      r.ok
+        ? vert(`  ✓ ${nbEcrites} à la corbeille — récupérables dans /admin/corbeille`)
+        : rouge(`  ✗ ${JSON.stringify(r.corps)}`),
+    );
+  }
+
+  if (nbAdoptees > 0) {
+    // Le statut ne revient pas en arrière : on ne sait pas lequel il portait
+    // avant, et en inventer un serait pire que de le laisser tel quel.
+    const r = await rest(`lil_members?${adoptees}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ legacy: false }),
+    });
+    souci ||= !r.ok;
+    console.log(
+      r.ok
+        ? vert(`  ✓ ${nbAdoptees} démarquée(s)`) +
+            gris('\n    (leur statut « validée » reste : on ignore celui qu’elles portaient avant)')
+        : rouge(`  ✗ ${JSON.stringify(r.corps)}`),
+    );
+  }
+
+  process.exit(souci ? 1 : 0);
 }
 
 /* ------------------------------------------------------------------ */
@@ -330,63 +364,105 @@ for (const { fiche, problemes } of invalides) {
   console.log(`  ${rouge('✗')} ${fiche.first_name} <${fiche.email}> — ${problemes.join(', ')}`);
 }
 
-/* --- Ce qui est déjà en base ---------------------------------------- */
-const { corps: deja } = await rest('lil_members?select=id,email,phone');
-const parId = new Set(deja.map((m) => m.id));
+/* --- Ce qui est déjà en base ----------------------------------------
+ *
+ * Trois cas, et il faut les distinguer :
+ *
+ *  · même identifiant  — c'est la même ligne, déjà passée d'une manière ou
+ *    d'une autre. On ne la réécrit pas : on se contente de la marquer comme
+ *    ancienne et de la valider, puis d'aller chercher ses photos. Réécrire
+ *    effacerait le travail fait dessus depuis (notes, groupe).
+ *  · même email ou même numéro sous un AUTRE identifiant — quelqu'un qui
+ *    s'est réinscrit sur le site actuel. Sa candidature d'aujourd'hui ne
+ *    doit surtout pas basculer dans les anciennes : on n'y touche pas.
+ *  · rien de connu — on l'écrit.
+ */
+const { corps: deja } = await rest('lil_members?select=id,email,phone,legacy,status');
+const parId = new Map(deja.map((m) => [m.id, m]));
 const parEmail = new Set(deja.map((m) => (m.email ?? '').toLowerCase()));
 const parTel = new Set(deja.map((m) => m.phone).filter(Boolean));
 
 const aEcrire = [];
-const dejaLa = [];
+const aAdopter = [];
+const laissees = [];
 for (const c of valides) {
-  if (parId.has(c.fiche.id)) dejaLa.push({ ...c, motif: 'déjà importée' });
-  else if (parEmail.has(c.fiche.email)) dejaLa.push({ ...c, motif: 'email déjà en base' });
-  else if (c.fiche.phone && parTel.has(c.fiche.phone)) dejaLa.push({ ...c, motif: 'numéro déjà en base' });
-  else {
+  const memeLigne = parId.get(c.fiche.id);
+  if (memeLigne) {
+    aAdopter.push({ ...c, enBase: memeLigne });
+  } else if (parEmail.has(c.fiche.email)) {
+    laissees.push({ ...c, motif: 'réinscrite sur le site actuel (même email)' });
+  } else if (c.fiche.phone && parTel.has(c.fiche.phone)) {
+    laissees.push({ ...c, motif: 'réinscrite sur le site actuel (même numéro)' });
+  } else {
     aEcrire.push(c);
     parEmail.add(c.fiche.email);
     if (c.fiche.phone) parTel.add(c.fiche.phone);
   }
 }
 
-console.log(`
-  ${gras(String(aEcrire.length))} à reprendre
-  ${dejaLa.length} déjà en base (ignorée${dejaLa.length > 1 ? 's' : ''})
-  ${invalides.length} illisible${invalides.length > 1 ? 's' : ''}
-  ${aEcrire.reduce((n, c) => n + c.photos.length, 0)} photo(s) à récupérer`);
+// Une ligne déjà marquée et déjà validée n'a plus rien à recevoir.
+const aMarquer = aAdopter.filter((c) => c.enBase.legacy !== true || c.enBase.status !== 'valide');
 
-for (const c of dejaLa) console.log(gris(`  · ${c.fiche.first_name} <${c.fiche.email}> — ${c.motif}`));
+console.log(`
+  ${gras(String(aEcrire.length))} à écrire
+  ${gras(String(aMarquer.length))} déjà en base, à marquer « ancienne » et à valider${
+    aAdopter.length > aMarquer.length ? gris(` (${aAdopter.length - aMarquer.length} déjà en règle)`) : ''
+  }
+  ${laissees.length} laissée${laissees.length > 1 ? 's' : ''} telle${laissees.length > 1 ? 's' : ''} quelle${laissees.length > 1 ? 's' : ''}
+  ${invalides.length} illisible${invalides.length > 1 ? 's' : ''}
+  ${[...aEcrire, ...aAdopter].reduce((n, c) => n + c.photos.length, 0)} photo(s) au total`);
+
+for (const c of laissees) console.log(gris(`  · ${c.fiche.first_name} <${c.fiche.email}> — ${c.motif}`));
 
 /* ------------------------------------------------------------------ */
 /* Écriture des candidatures                                           */
 /* ------------------------------------------------------------------ */
 let importees = PHOTOS_SEULEMENT ? [] : aEcrire;
+let marquees = 0;
 
 if (PHOTOS_SEULEMENT) {
   titre('Photos seulement : aucune candidature ne sera écrite');
-} else if (ECRIRE && aEcrire.length > 0) {
-  titre('Écriture');
-  // Par paquets de 25 : un refus de la base nomme alors une poignée de
-  // lignes, pas cent, et on voit tout de suite laquelle pose problème.
-  const reussies = [];
-  for (let i = 0; i < aEcrire.length; i += 25) {
-    const paquet = aEcrire.slice(i, i + 25);
-    const r = await rest('lil_members', {
-      method: 'POST',
-      headers: { Prefer: 'return=representation' },
-      body: JSON.stringify(paquet.map((c) => c.fiche)),
-    });
-    if (!r.ok) {
-      console.log(rouge(`  ✗ paquet ${i / 25 + 1} refusé : ${JSON.stringify(r.corps)}`));
-      continue;
+} else if (ECRIRE) {
+  if (aEcrire.length > 0) {
+    titre('Écriture');
+    // Par paquets de 25 : un refus de la base nomme alors une poignée de
+    // lignes, pas cent, et on voit tout de suite laquelle pose problème.
+    const reussies = [];
+    for (let i = 0; i < aEcrire.length; i += 25) {
+      const paquet = aEcrire.slice(i, i + 25);
+      const r = await rest('lil_members', {
+        method: 'POST',
+        headers: { Prefer: 'return=representation' },
+        body: JSON.stringify(paquet.map((c) => c.fiche)),
+      });
+      if (!r.ok) {
+        console.log(rouge(`  ✗ paquet ${i / 25 + 1} refusé : ${JSON.stringify(r.corps)}`));
+        continue;
+      }
+      for (const m of r.corps) {
+        const source = paquet.find((c) => c.fiche.email === (m.email ?? '').toLowerCase());
+        reussies.push({ ...source, fiche: { ...source.fiche, id: m.id } });
+      }
+      console.log(vert(`  ✓ ${reussies.length}/${aEcrire.length}`));
     }
-    for (const m of r.corps) {
-      const source = paquet.find((c) => c.fiche.email === (m.email ?? '').toLowerCase());
-      reussies.push({ ...source, fiche: { ...source.fiche, id: m.id } });
-    }
-    console.log(vert(`  ✓ ${reussies.length}/${aEcrire.length}`));
+    importees = reussies;
   }
-  importees = reussies;
+
+  // Les lignes déjà présentes : on ne touche qu'au marquage et au statut.
+  // Le reste de la fiche appartient à qui l'a remplie et à qui l'a triée.
+  if (aMarquer.length > 0) {
+    titre('Marquage des lignes déjà présentes');
+    for (const c of aMarquer) {
+      const r = await rest(`lil_members?id=eq.${c.fiche.id}`, {
+        method: 'PATCH',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ legacy: true, status: 'valide', decided_at: decidee }),
+      });
+      if (r.ok) marquees += 1;
+      else console.log(rouge(`  ✗ ${c.fiche.first_name} : ${JSON.stringify(r.corps)}`));
+    }
+    console.log(vert(`  ✓ ${marquees}/${aMarquer.length} marquées « ancienne » et validées`));
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -410,15 +486,9 @@ if (!A_URL || !A_KEY) {
       `\n\n  Les candidatures, elles, sont reprises : seules les images manquent.`,
   );
 } else {
-  // En mode --photos-seulement, on repart de ce qui est déjà en base.
-  let cibles = importees;
-  if (PHOTOS_SEULEMENT) {
-    const { corps: enBase } = await rest('lil_members?select=id,email&legacy=is.true');
-    const idParEmail = new Map(enBase.map((m) => [(m.email ?? '').toLowerCase(), m.id]));
-    cibles = valides
-      .map((c) => ({ ...c, fiche: { ...c.fiche, id: idParEmail.get(c.fiche.email) } }))
-      .filter((c) => c.fiche.id);
-  }
+  // Les photos vont à tout ce qui est en base : ce qu'on vient d'écrire et
+  // ce qui y était déjà. En --photos-seulement, seulement ce second groupe.
+  let cibles = PHOTOS_SEULEMENT ? aAdopter : [...importees, ...aAdopter];
 
   const { corps: connues } = await rest('lil_photos?select=member_id,storage_path');
   const dejaPhoto = new Set(connues.map((p) => p.storage_path));
@@ -492,8 +562,9 @@ if (!ECRIRE) {
   console.log(gris('Rien n’a été écrit. Relance avec --ecrire.'));
 } else {
   console.log(
-    `${vert(`${importees.length} candidature(s) reprise(s).`)}` +
-      `\nElles apparaissent dans app.in-love.fr sous l’intertitre « Anciennes candidatures ».` +
+    `${vert(`${importees.length} écrite(s), ${marquees} marquée(s).`)}` +
+      `\nElles apparaissent dans app.in-love.fr sous l’intertitre « Anciennes candidatures »,` +
+      `\navec le statut « validée » : elles ne sont plus à examiner.` +
       `\nAucun email n’a été envoyé — ni maintenant, ni plus tard.` +
       `\nPour revenir en arrière :  npm run import:anciennes -- --defaire --ecrire`,
   );

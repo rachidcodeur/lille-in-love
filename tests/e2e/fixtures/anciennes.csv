@@ -4,3 +4,4 @@ id,event_id,first_name,last_name,email,phone,birth_date,gender,city,profession,i
 Deux lignes, donc.","Pour voir, tout simplement.","Menuiserie, vélo, cuisine",,A,,
 33333333-3333-4333-8333-333333333333,ev,Bancale,,bancale@example.com,0600000000,1992-01-01,X,Lens,Inconnue,,serieux,,pending,2026-08-01 10:00:00+00,62300,hetero,false,175,,[],,,,,,,,,
 44444444-4444-4444-8444-444444444444,ev,Deja,,nouvelle@example.com,0611111111,1995-05-05,F,Lille,Libraire,,serieux,,pending,2026-08-10 10:00:00+00,59000,hetero,false,170,,[],,,,,,,,,
+55555555-5555-4555-8555-555555555555,ev,Adoptee,,adoptee.ancienne@example.com,0655555555,1991-09-09,F,Tourcoing,Vétérinaire,,serieux,,pending,2026-06-20 12:00:00+00,59200,hetero,false,165,vierge,"[""ev/adoptee.jpg""]",,,Déjà passée par une autre porte.,Voir du monde.,Escalade,affiche,B,,
