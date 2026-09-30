@@ -63,6 +63,18 @@ Usage :  npm run import:anciennes -- <fichier.csv> [--ecrire]
   process.exit(1);
 }
 
+// Une coupure réseau ne doit pas se terminer par une trace de pile : le
+// script est relançable, et c'est ça qu'il faut lire quand ça casse.
+for (const ennui of ['uncaughtException', 'unhandledRejection']) {
+  process.on(ennui, (cause) => {
+    console.error(
+      `\n${rouge('Interrompu :')} ${cause?.message ?? String(cause)}` +
+        `\n${gris('Rien n’est perdu. Relance la même commande : le script reprend où il en est.')}\n`,
+    );
+    process.exit(1);
+  });
+}
+
 const SB = (process.env.SUPABASE_URL ?? '').replace(/\/+$/, '');
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const BUCKET = process.env.SUPABASE_STORAGE_BUCKET ?? 'lil-photos';
@@ -76,6 +88,29 @@ if (!SB || !KEY) {
 }
 
 const H = { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' };
+
+/**
+ * Réessayer ce qui a échoué pour une raison de réseau.
+ *
+ * Deux cents photos, c'est deux cents allers-retours : il suffit d'un
+ * serveur qui met trop longtemps à finir sa réponse pour que tout s'arrête,
+ * et c'est arrivé. Une coupure passagère ne doit pas coûter le reste du lot.
+ */
+async function avecReprises(faire, quoi, essais = 3) {
+  for (let essai = 1; ; essai += 1) {
+    try {
+      return await faire();
+    } catch (cause) {
+      const motif = cause?.cause?.code ?? cause?.code ?? cause?.message ?? String(cause);
+      if (essai >= essais) throw new Error(`${quoi} — ${motif}`);
+      console.log(gris(`  … ${quoi} : ${motif}, nouvel essai (${essai}/${essais - 1})`));
+      await new Promise((resoudre) => setTimeout(resoudre, essai * 2000));
+    }
+  }
+}
+
+/** Une minute par requête : au-delà, c'est que le réseau a lâché. */
+const MINUTE = 60_000;
 
 async function rest(chemin, options = {}) {
   const r = await fetch(`${SB}/rest/v1/${chemin}`, { ...options, headers: { ...H, ...options.headers } });
@@ -496,64 +531,83 @@ if (!A_URL || !A_KEY) {
   let reprises = 0;
   let manquantes = 0;
 
-  for (const { fiche, photos } of cibles) {
-    for (const [index, ancien] of photos.entries()) {
+  const aFaire = cibles.flatMap(({ fiche, photos }) =>
+    photos.map((ancien, index) => ({ fiche, ancien, index })).filter(({ ancien, index }) => {
+      const extension = (ancien.split('.').pop() || 'jpg').toLowerCase();
+      return !dejaPhoto.has(`candidatures/${fiche.id}/${index + 1}.${extension}`);
+    }),
+  );
+
+  if (!ECRIRE) {
+    reprises = aFaire.length;
+  } else {
+    if (aFaire.length === 0) console.log(gris('  Toutes les photos sont déjà en place.'));
+
+    for (const { fiche, ancien, index } of aFaire) {
       const extension = (ancien.split('.').pop() || 'jpg').toLowerCase();
       const destination = `candidatures/${fiche.id}/${index + 1}.${extension}`;
-      if (dejaPhoto.has(destination)) continue;
 
-      if (!ECRIRE) {
+      // Une photo qui résiste ne doit pas emporter les cent suivantes : on
+      // la note comme manquante et on avance. Une relance la rattrapera.
+      try {
+        const lu = await avecReprises(
+          () =>
+            fetch(`${A_URL}/storage/v1/object/${A_BUCKET}/${ancien}`, {
+              headers: { apikey: A_KEY, Authorization: `Bearer ${A_KEY}` },
+              signal: AbortSignal.timeout(MINUTE),
+            }).then(async (r) => (r.ok ? { octets: Buffer.from(await r.arrayBuffer()), type: r.headers.get('content-type') || 'image/jpeg' } : Promise.reject(new Error(`lecture ${r.status}`)))),
+          `${fiche.first_name} · ${ancien}`,
+        );
+
+        await avecReprises(
+          () =>
+            fetch(`${SB}/storage/v1/object/${BUCKET}/${destination}`, {
+              method: 'POST',
+              headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': lu.type, 'x-upsert': 'true' },
+              body: lu.octets,
+              signal: AbortSignal.timeout(MINUTE),
+            }).then(async (r) => (r.ok ? r : Promise.reject(new Error(`envoi ${r.status} ${await r.text()}`)))),
+          `envoi ${destination}`,
+        );
+
+        const lien = await avecReprises(
+          () =>
+            rest('lil_photos', {
+              method: 'POST',
+              headers: { Prefer: 'return=minimal' },
+              body: JSON.stringify({
+                member_id: fiche.id,
+                storage_path: destination,
+                position: index + 1,
+                mime_type: lu.type,
+                size_bytes: lu.octets.length,
+              }),
+            }),
+          `lien ${destination}`,
+        );
+        if (!lien.ok) throw new Error(JSON.stringify(lien.corps));
+
         reprises += 1;
-        continue;
-      }
-
-      const lu = await fetch(`${A_URL}/storage/v1/object/${A_BUCKET}/${ancien}`, {
-        headers: { apikey: A_KEY, Authorization: `Bearer ${A_KEY}` },
-      });
-      if (!lu.ok) {
+        if (reprises % 20 === 0) console.log(vert(`  ✓ ${reprises}/${aFaire.length} photos`));
+      } catch (cause) {
         manquantes += 1;
-        console.log(rouge(`  ✗ ${fiche.first_name} — ${ancien} (${lu.status})`));
-        continue;
+        console.log(rouge(`  ✗ ${cause instanceof Error ? cause.message : String(cause)}`));
       }
-      const octets = Buffer.from(await lu.arrayBuffer());
-      const type = lu.headers.get('content-type') || 'image/jpeg';
-
-      const envoi = await fetch(`${SB}/storage/v1/object/${BUCKET}/${destination}`, {
-        method: 'POST',
-        headers: { apikey: KEY, Authorization: `Bearer ${KEY}`, 'Content-Type': type, 'x-upsert': 'true' },
-        body: octets,
-      });
-      if (!envoi.ok) {
-        manquantes += 1;
-        console.log(rouge(`  ✗ envoi ${destination} : ${await envoi.text()}`));
-        continue;
-      }
-
-      const lien = await rest('lil_photos', {
-        method: 'POST',
-        headers: { Prefer: 'return=minimal' },
-        body: JSON.stringify({
-          member_id: fiche.id,
-          storage_path: destination,
-          position: index + 1,
-          mime_type: type,
-          size_bytes: octets.length,
-        }),
-      });
-      if (!lien.ok) {
-        manquantes += 1;
-        console.log(rouge(`  ✗ lien ${destination} : ${JSON.stringify(lien.corps)}`));
-        continue;
-      }
-      reprises += 1;
-      if (reprises % 20 === 0) console.log(vert(`  ✓ ${reprises} photos`));
     }
   }
 
   console.log(
     `  ${vert(`${reprises} photo(s) ${ECRIRE ? 'reprise(s)' : 'à reprendre'}`)}` +
-      (manquantes ? ` · ${rouge(`${manquantes} introuvable(s)`)}` : ''),
+      (manquantes ? ` · ${rouge(`${manquantes} en échec`)}` : ''),
   );
+  if (manquantes > 0) {
+    console.log(
+      gris(
+        `  Relance pour les rattraper — il ne refera que celles qui manquent :\n` +
+          `    npm run import:anciennes -- "${fichier}" --photos-seulement --ecrire`,
+      ),
+    );
+  }
 }
 
 /* ------------------------------------------------------------------ */
