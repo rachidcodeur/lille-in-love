@@ -1,6 +1,6 @@
 import { Fragment } from 'react';
 import Link from 'next/link';
-import { facettes, listMembers, photoUrls } from '@/lib/admin';
+import { facettes, listMembers, vignettes } from '@/lib/admin';
 import { STATUS_ORDER, label, relative } from '@/lib/libelles';
 import {
   compter,
@@ -75,12 +75,10 @@ export default async function AdminListPage({ searchParams }: Props) {
   // l'intertitre annonce.
   const anciennes = members.filter((member) => member.legacy).length;
 
-  // Une vignette par fiche : c'est le premier repère quand on parcourt la liste.
-  const thumbnails = await Promise.all(
-    members.map(async (member) =>
-      member.photo_count > 0 ? ((await photoUrls(member.id))[0] ?? null) : null,
-    ),
-  );
+  // Une vignette par fiche : c'est le premier repère quand on parcourt la
+  // liste. Une seule requête pour toute la page — une par ligne faisait
+  // crouler Supabase, et des vignettes revenaient vides.
+  const apercus = await vignettes(members.map((member) => member.id));
 
   return (
     <main className="adm-main">
@@ -183,10 +181,10 @@ export default async function AdminListPage({ searchParams }: Props) {
 
               <article className="adm-row" data-ancienne={member.legacy ? 'true' : undefined}>
                 <Link href={`/admin/${member.id}`} className="adm-row-lien">
-                  {thumbnails[index] ? (
+                  {apercus.get(member.id) ? (
                     <Vignette
                       className="adm-avatar"
-                      src={thumbnails[index]!}
+                      src={apercus.get(member.id)!}
                       initiale={member.first_name.slice(0, 1).toUpperCase()}
                     />
                   ) : (

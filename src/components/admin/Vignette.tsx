@@ -55,6 +55,19 @@ export function Vignette({ src, className, alt = '', initiale }: Props) {
     );
   }
 
-  // eslint-disable-next-line @next/next/no-img-element
-  return <img ref={image} className={className} src={url} alt={alt} onError={auSecours} />;
+  // « lazy » n'est pas un détail de confort : la liste peut porter cent
+  // quarante vignettes, et les demander toutes d'un coup fait tomber une
+  // partie des requêtes. On ne charge que ce qui approche de l'écran.
+  return (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      ref={image}
+      className={className}
+      src={url}
+      alt={alt}
+      loading="lazy"
+      decoding="async"
+      onError={auSecours}
+    />
+  );
 }

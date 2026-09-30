@@ -147,10 +147,36 @@ rowText.includes('Camille Dupont') ? ok('nom affiché, complet') : bad('nom abse
   ? ok('pas d’étiquette « court » : la ligne reste lisible')
   : bad('l’étiquette « court » est revenue sur la ligne');
 
-const avatarOk = await page.locator('.adm-avatar').first().evaluate(
-  (el) => el.tagName === 'IMG' && el.naturalWidth > 0,
-).catch(() => false);
-avatarOk ? ok('la vignette photo se charge (URL signée)') : bad('vignette non chargée');
+const vignette = page.locator('.adm-avatar').first();
+const avatarOk = await vignette
+  .evaluate((el) => el.tagName === 'IMG' && el.naturalWidth > 0)
+  .catch(() => false);
+avatarOk ? ok('la vignette photo se charge') : bad('vignette non chargée');
+
+// Une adresse stable, sinon le navigateur retélécharge tout à chaque
+// passage — c'est ce que faisaient les URL signées, dont le jeton changeait
+// à chaque rendu.
+const adressePhoto = await vignette.getAttribute('src');
+adressePhoto?.startsWith('/admin/photo/')
+  ? ok('la photo passe par une adresse du back-office, pas par le stockage')
+  : bad('adresse de photo inattendue', String(adressePhoto));
+
+await page.reload({ waitUntil: 'networkidle' });
+(await page.locator('.adm-avatar').first().getAttribute('src')) === adressePhoto
+  ? ok('et cette adresse ne bouge pas d’un affichage à l’autre')
+  : bad('l’adresse de la photo change à chaque rendu : rien ne peut être gardé');
+
+const servie = await fetch(`${BASE}${adressePhoto}`);
+const consigne = servie.headers.get('cache-control') ?? '';
+const empreinte = servie.headers.get('etag');
+servie.ok && consigne.includes('private') && /max-age=[1-9]/.test(consigne)
+  ? ok('elle est servie avec un cache privé : gardée par le navigateur, par personne d’autre')
+  : bad('en-têtes de cache inattendus', `${servie.status} ${consigne}`);
+
+const relue = await fetch(`${BASE}${adressePhoto}`, { headers: { 'If-None-Match': empreinte ?? '' } });
+relue.status === 304
+  ? ok('et redemandée, elle répond « inchangée » sans renvoyer l’image')
+  : bad('pas de 304 sur une photo inchangée', String(relue.status));
 
 await page.locator('.adm-row').first().click();
 await page.waitForLoadState('networkidle');

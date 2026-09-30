@@ -282,34 +282,55 @@ export async function getEmailLog(memberId: string): Promise<EmailLogRow[]> {
 }
 
 /**
- * URLs d'affichage des photos.
+ * L'adresse d'une photo dans le back-office.
  *
- * Le bucket est privé : on signe chaque accès pour une heure. Aucune photo
- * n'est jamais joignable par une URL devinable, et les liens du back-office
- * cessent de fonctionner peu après.
+ * Elle ne change pas d'une visite à l'autre — c'est tout l'intérêt. Une URL
+ * signée par Supabase porte un jeton différent à chaque rendu : le navigateur
+ * n'y reconnaît jamais deux fois la même image et retélécharge tout. Celle-ci
+ * passe par src/app/admin/photo/[id], qui vérifie l'accès, va chercher le
+ * fichier dans le bucket privé, et laisse le navigateur le garder un jour.
  */
-export async function photoUrls(memberId: string): Promise<string[]> {
-  const db = supabaseAdmin();
-  const { data: photos } = await db
+export function lienPhoto(photoId: string): string {
+  return `/admin/photo/${photoId}`;
+}
+
+/**
+ * Une vignette par candidature, pour toute la liste, en une seule requête.
+ *
+ * Auparavant chaque ligne demandait la sienne : sur cent quarante fiches,
+ * cela faisait presque trois cents allers-retours vers Supabase à chaque
+ * affichage, dont une partie revenait bredouille — d'où les vignettes qui
+ * manquaient tant qu'on n'avait pas rechargé.
+ */
+export async function vignettes(memberIds: string[]): Promise<Map<string, string>> {
+  if (memberIds.length === 0) return new Map();
+
+  const { data, error } = await supabaseAdmin()
     .from('lil_photos')
-    .select('storage_path')
+    .select('id, member_id, position')
+    .in('member_id', memberIds)
+    .order('position', { ascending: true });
+
+  if (error) throw new Error(error.message);
+
+  const parMembre = new Map<string, string>();
+  for (const photo of data ?? []) {
+    // La liste est triée par position : la première vue est la bonne.
+    if (!parMembre.has(photo.member_id)) parMembre.set(photo.member_id, lienPhoto(photo.id));
+  }
+  return parMembre;
+}
+
+/** Les photos d'une candidature, dans l'ordre où elles ont été déposées. */
+export async function photosDe(memberId: string): Promise<string[]> {
+  const { data, error } = await supabaseAdmin()
+    .from('lil_photos')
+    .select('id')
     .eq('member_id', memberId)
     .order('position', { ascending: true });
 
-  if (!photos?.length) return [];
-
-  const { data: signed } = await db.storage
-    .from(env.storageBucket())
-    .createSignedUrls(
-      photos.map((p) => p.storage_path),
-      3600,
-    );
-
-  // createSignedUrls renvoie une entrée par chemin, éventuellement en échec :
-  // on écarte celles qui n'ont pas d'URL plutôt que d'afficher une image morte.
-  return (signed ?? [])
-    .map((entry) => entry.signedUrl)
-    .filter((url): url is string => typeof url === 'string' && url.length > 0);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((photo) => lienPhoto(photo.id));
 }
 
 /** Le premier curateur actif — l'accès étant libre, les votes lui sont attribués. */

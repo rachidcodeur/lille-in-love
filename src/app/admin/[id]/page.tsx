@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { getEmailLog, getMember, photoUrls } from '@/lib/admin';
+import { getEmailLog, getMember, photosDe } from '@/lib/admin';
 import { env } from '@/lib/env';
 import {
   EMAIL_STATUS_LABELS,
@@ -45,7 +45,7 @@ export default async function FichePage({ params }: Props) {
   const member = await getMember(id);
   if (!member) notFound();
 
-  const [photos, emails] = await Promise.all([photoUrls(member.id), getEmailLog(member.id)]);
+  const [photos, emails] = await Promise.all([photosDe(member.id), getEmailLog(member.id)]);
   const isCourt = member.form_version === 'court';
   const ancienne = member.legacy === true;
 
