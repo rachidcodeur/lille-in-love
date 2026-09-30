@@ -1279,6 +1279,10 @@ solene?.legacy === true && solene?.gender === 'femme' && solene?.looking_for ===
   ? ok('le genre et la recherche sont traduits, la fiche est marquée « ancienne »')
   : bad('correspondances fausses', JSON.stringify({ legacy: solene?.legacy, gender: solene?.gender, looking_for: solene?.looking_for }));
 
+solene?.status === 'valide' && marius?.status === 'valide' && solene?.decided_at
+  ? ok('les reprises arrivent validées : elles ne sont plus à examiner')
+  : bad('statut inattendu', JSON.stringify({ solene: solene?.status, marius: marius?.status }));
+
 solene?.phone === '+33612345678'
   ? ok('le téléphone est normalisé comme à l’inscription (+33…)')
   : bad('téléphone non normalisé', solene?.phone);
@@ -1320,9 +1324,11 @@ s.storage.includes(`candidatures/${solene?.id}/1.jpg`)
   ? ok('et le fichier a bien été déposé dans le stockage')
   : bad('fichier absent du stockage', JSON.stringify(s.storage));
 
-// --- Aucun email ne part ------------------------------------------
+// --- Aucun email ne part, malgré le statut « validée » --------------
+// C'est le point délicat : valider depuis le back-office programme l'email
+// de bienvenue. Écrire le statut en base, non — et ce test le fige.
 s.emails.length === 0 && s.sent.length === 0
-  ? ok('aucun email n’est programmé ni envoyé par la reprise')
+  ? ok('aucun email n’est programmé ni envoyé, bien que les fiches soient validées')
   : bad('la reprise a écrit dans le journal des emails', `${s.emails.length} / ${s.sent.length}`);
 
 // --- Relancer ne duplique rien ------------------------------------

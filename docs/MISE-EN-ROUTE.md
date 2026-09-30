@@ -425,24 +425,27 @@ cocher.
 ### Les photos
 
 Le CSV ne contient **que les chemins** des photos. Les fichiers eux-mêmes
-dorment dans le stockage de l'**ancien projet Supabase**
-(`tiazqkfnyhshweeqfuzw`), dans un bucket privé : aucune URL publique n'y
-donne accès — vérifié, bucket par bucket.
+sont dans le stockage de l'**ancien projet Supabase**
+`ftvvarifktyxuqhmuoet`, bucket privé **`candidature-photos`**. Les
+**207 photos** annoncées par le CSV y sont toutes — vérifié, chemin par
+chemin, aucune manquante.
 
-Pour les récupérer, il faut la clé `service_role` de cet ancien projet
-(Supabase > l'ancien projet > Settings > API) et le nom du bucket
-(Storage) :
+Le script connaît ce projet et ce bucket. Il ne lui manque que la clé de
+lecture, qui est un secret et vit donc dans `.env.local` :
 
-```bash
-ANCIEN_SUPABASE_URL=https://tiazqkfnyhshweeqfuzw.supabase.co \
-ANCIEN_SERVICE_ROLE_KEY=<la clé service_role de l'ancien projet> \
-ANCIEN_BUCKET=<le nom du bucket> \
-npm run import:anciennes -- "~/Downloads/candidatures_rows.csv" --photos-seulement --ecrire
+```
+ANCIEN_SERVICE_ROLE_KEY=eyJ...
 ```
 
-`--photos-seulement` n'écrit aucune candidature : il ne complète que les
-**207 photos** manquantes. On peut donc reprendre les réponses aujourd'hui
-et les photos le jour où la clé est sous la main.
+Elle y est déjà. **À retirer une fois la reprise terminée** : cette clé
+ouvre l'ancien projet en entier, et elle ne sert plus à rien après.
+
+### Le statut des reprises
+
+Elles arrivent **validées**, pas « à examiner » : on ne refuse plus
+personne, ce sont les groupes qui disent le type de candidat. Écrire le
+statut directement en base **n'envoie aucun email** — la bienvenue n'existe
+que si quelqu'un clique « valider » dans le back-office. Un test le fige.
 
 ---
 

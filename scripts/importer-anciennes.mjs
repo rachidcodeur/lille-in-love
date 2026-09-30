@@ -12,18 +12,21 @@
  * c'est exact, la question n'a pas été posée — et la colonne « legacy »
  * permet au back-office de le dire au lieu de laisser croire à un oubli.
  *
- * LES PHOTOS vivent dans le stockage de l'ANCIEN projet Supabase. Le CSV ne
- * contient que leurs chemins. Pour les reprendre, il faut une clé de lecture
- * sur cet ancien projet :
+ * Les candidatures reprises sont validées d'office : on ne refuse plus
+ * personne, ce sont les groupes qui disent le type de candidat. Aucun email
+ * ne part — ni à la reprise, ni plus tard : l'email de bienvenue n'existe que
+ * si quelqu'un clique « valider » dans le back-office.
  *
- *   ANCIEN_SUPABASE_URL=https://xxxx.supabase.co \
- *   ANCIEN_SERVICE_ROLE_KEY=eyJ... \
- *   ANCIEN_BUCKET=photos \
- *   npm run import:anciennes -- <csv> --ecrire
+ * LES PHOTOS vivent dans le stockage de l'ANCIEN projet Supabase
+ * (ftvvarifktyxuqhmuoet, bucket privé candidature-photos). Le CSV ne contient
+ * que leurs chemins. Il faut donc la clé de lecture de ce projet, dans
+ * .env.local :
  *
- * Sans ces variables, les candidatures sont reprises sans leurs photos, et le
- * script le dit. Relancé plus tard avec les clés et --photos-seulement, il
- * n'ajoutera que les photos manquantes.
+ *   ANCIEN_SERVICE_ROLE_KEY=eyJ...
+ *
+ * Sans elle, les candidatures sont reprises sans leurs photos, et le script le
+ * dit. Relancé plus tard avec la clé et --photos-seulement, il n'ajoutera que
+ * les photos manquantes.
  *
  * Deux sorties de secours :
  *   --photos-seulement  n'écrit aucune candidature, complète les photos
@@ -171,6 +174,9 @@ function normaliserInstagram(brut) {
 const vide = (v) => !v || !String(v).trim();
 const ouRien = (v) => (vide(v) ? null : String(v).trim());
 
+/** L'instant de la reprise : c'est là qu'on décide de garder tout le monde. */
+const decidee = new Date().toISOString();
+
 function convertir(ligne) {
   const genre = GENRE[ligne.gender];
   const recherche = RECHERCHE[ligne.looking_for];
@@ -235,7 +241,13 @@ function convertir(ligne) {
     birth_date: ligne.birth_date,
     consent_at: ligne.created_at || new Date().toISOString(),
 
-    status: 'nouveau',
+    // Ces candidatures ne sont plus à examiner : elles sont validées d'office,
+    // comme le veut la règle actuelle — on garde tout le monde, et ce sont les
+    // groupes qui disent le type de candidat. Écrire le statut directement en
+    // base n'envoie rien : l'email de bienvenue n'existe que si quelqu'un
+    // clique « valider » dans le back-office.
+    status: 'valide',
+    decided_at: decidee,
     form_version: 'complet',
     soiree_group: groupe,
     children_preference: ouRien(ligne.children_preference),
@@ -251,6 +263,27 @@ function convertir(ligne) {
   }
 
   return { fiche, photos, problemes };
+}
+
+/* ------------------------------------------------------------------ */
+/* La colonne legacy doit exister — sauf pour un simple essai à blanc, */
+/* qui doit pouvoir montrer le plan avant qu'on touche à la base.      */
+/* ------------------------------------------------------------------ */
+const sonde = await rest('lil_members?select=legacy&limit=1');
+if (!sonde.ok) {
+  const message =
+    'La colonne « legacy » est absente de la base.' +
+    '\n\nOuvre Supabase > SQL Editor et exécute, dans cet ordre, ceux que tu n’as pas' +
+    '\nencore passés :' +
+    '\n  supabase/10_accompagnant.sql   (indispensable : des accompagnants sans email)' +
+    '\n  supabase/11_corbeille.sql' +
+    '\n  supabase/12_anciennes.sql';
+
+  if (ECRIRE) {
+    console.error(`${rouge(`\n${message}`)}\n\nDétail : ${JSON.stringify(sonde.corps)}\n`);
+    process.exit(1);
+  }
+  console.log(`\n${gris(message)}\n${gris('L’essai à blanc continue : il ne fait que lire.')}`);
 }
 
 /* ------------------------------------------------------------------ */
@@ -281,22 +314,6 @@ if (DEFAIRE) {
 }
 
 /* ------------------------------------------------------------------ */
-/* La colonne legacy doit exister                                      */
-/* ------------------------------------------------------------------ */
-const sonde = await rest('lil_members?select=legacy&limit=1');
-if (!sonde.ok) {
-  console.error(
-    rouge('\nLa colonne « legacy » est absente de la base.') +
-      '\n\nOuvre Supabase > SQL Editor et exécute, dans cet ordre, ceux que tu n’as pas encore passés :' +
-      '\n  supabase/10_accompagnant.sql   (indispensable : des accompagnants sans email)' +
-      '\n  supabase/11_corbeille.sql' +
-      '\n  supabase/12_anciennes.sql' +
-      `\n\nDétail : ${JSON.stringify(sonde.corps)}\n`,
-  );
-  process.exit(1);
-}
-
-/* ------------------------------------------------------------------ */
 /* Lecture et conversion                                               */
 /* ------------------------------------------------------------------ */
 const chemin = fichier.startsWith('~') ? fichier.replace('~', homedir()) : fichier;
@@ -314,7 +331,7 @@ for (const { fiche, problemes } of invalides) {
 }
 
 /* --- Ce qui est déjà en base ---------------------------------------- */
-const { corps: deja } = await rest('lil_members?select=id,email,phone,legacy');
+const { corps: deja } = await rest('lil_members?select=id,email,phone');
 const parId = new Set(deja.map((m) => m.id));
 const parEmail = new Set(deja.map((m) => (m.email ?? '').toLowerCase()));
 const parTel = new Set(deja.map((m) => m.phone).filter(Boolean));
@@ -375,21 +392,21 @@ if (PHOTOS_SEULEMENT) {
 /* ------------------------------------------------------------------ */
 /* Photos                                                              */
 /* ------------------------------------------------------------------ */
-const A_URL = (process.env.ANCIEN_SUPABASE_URL ?? '').replace(/\/+$/, '');
+// Le projet et le bucket de l'ancien site. Ni l'un ni l'autre n'est un
+// secret — seule la clé en est un, et elle reste dans .env.local.
+const A_URL = (process.env.ANCIEN_SUPABASE_URL ?? 'https://ftvvarifktyxuqhmuoet.supabase.co').replace(/\/+$/, '');
 const A_KEY = process.env.ANCIEN_SERVICE_ROLE_KEY ?? process.env.ANCIEN_ANON_KEY;
-const A_BUCKET = process.env.ANCIEN_BUCKET ?? 'photos';
+const A_BUCKET = process.env.ANCIEN_BUCKET ?? 'candidature-photos';
 
 titre('Photos');
 
 if (!A_URL || !A_KEY) {
   console.log(
-    `  ${gris('Non reprises.')} Les photos ne sont pas dans le CSV : il n’en contient que les chemins,` +
-      `\n  et les fichiers vivent dans le stockage de l’ancien projet Supabase.` +
-      `\n\n  Pour les récupérer, relance avec une clé de lecture sur cet ancien projet :` +
-      `\n    ANCIEN_SUPABASE_URL=https://xxxx.supabase.co \\` +
-      `\n    ANCIEN_SERVICE_ROLE_KEY=eyJ... \\` +
-      `\n    ANCIEN_BUCKET=<nom du bucket> \\` +
-      `\n    npm run import:anciennes -- "${fichier}" --photos-seulement --ecrire` +
+    `  ${gris('Non reprises.')} Les photos ne sont pas dans le CSV : il n’en contient que les` +
+      `\n  chemins, et les fichiers vivent dans le stockage de l’ancien projet Supabase.` +
+      `\n\n  Ajoute la clé de lecture de l’ancien projet dans .env.local :` +
+      `\n    ANCIEN_SERVICE_ROLE_KEY=eyJ...` +
+      `\n  puis :  npm run import:anciennes -- "${fichier}" --photos-seulement --ecrire` +
       `\n\n  Les candidatures, elles, sont reprises : seules les images manquent.`,
   );
 } else {
