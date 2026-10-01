@@ -93,8 +93,10 @@ create table if not exists public.lil_crush_likes (
   vers_id    uuid not null references public.lil_crush_participants(id) on delete cascade,
   created_at timestamptz not null default now(),
 
-  -- LA règle du jeu. On peut changer d'avis tant que la manche est ouverte
-  -- — c'est la même ligne qu'on déplace, pas une seconde qu'on ajoute.
+  -- LA règle du jeu, et elle est définitive : un seul like par manche, sans
+  -- retour en arrière. C'est ce qui lui donne sa valeur. L'application fait
+  -- un insert sec et lit le refus de cette contrainte — elle ne se contente
+  -- pas de regarder avant, ce qui laisserait passer deux clics simultanés.
   constraint lil_crush_likes_un_par_manche unique (round_id, de_id),
   constraint lil_crush_likes_pas_soi_meme  check (de_id <> vers_id)
 );

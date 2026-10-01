@@ -79,6 +79,25 @@ peutVoir(gens.femmeGay, { id: '8', gender: 'femme', orientation: 'gay' })
   ? ok('on ne se voit pas soi-même')
   : bad('on peut se liker soi-même');
 
+// Nos soirées n'accueillent que des hétéros pour l'instant ; le groupe G
+// reste une option. Cette vérification dit que la règle retenue donne
+// exactement « le sexe opposé » tant que personne n'est gay — autrement dit
+// qu'on n'a rien compliqué pour un cas qui ne se présente pas encore.
+const soireeHetero = [
+  { id: 'f1', gender: 'femme', orientation: 'hetero' },
+  { id: 'f2', gender: 'femme', orientation: 'hetero' },
+  { id: 'h1', gender: 'homme', orientation: 'hetero' },
+  { id: 'h2', gender: 'homme', orientation: 'hetero' },
+];
+const commeSexeOppose = soireeHetero.every((a) =>
+  soireeHetero.every(
+    (b) => peutVoir(a, b) === (a.id !== b.id && a.gender !== b.gender),
+  ),
+);
+commeSexeOppose
+  ? ok('dans une soirée 100 % hétéro, la règle vaut exactement « le sexe opposé »')
+  : bad('la règle ne redonne pas « le sexe opposé » sur une soirée hétéro');
+
 /* ---------------------------------------------------------------- */
 section('2. L’âge affiché');
 

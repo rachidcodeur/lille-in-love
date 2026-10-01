@@ -217,7 +217,9 @@ export type Profil = {
   photo: string | null;
   profession: string | null;
   about: string | null;
+  /** De quoi se retrouver. Jamais avant le match — sinon le jeu n'en est plus un. */
   email?: string;
+  instagram?: string | null;
 };
 
 /** Les participants qu'une personne peut voir, avec leur photo. */
@@ -232,15 +234,26 @@ export async function profilsPour(moi: Participant): Promise<Profil[]> {
   return habiller(visibles);
 }
 
-/** Photo, métier, présentation : tout vient de la candidature d'origine. */
-async function habiller(participants: Participant[]): Promise<Profil[]> {
+/**
+ * Photo, métier, présentation : tout vient de la candidature d'origine.
+ *
+ * Le moyen de recontacter quelqu'un n'est joint qu'après un match. Pendant
+ * le crush time, on ne doit pas pouvoir court-circuiter le jeu en écrivant
+ * directement à la personne qu'on vient de repérer.
+ */
+async function habiller(
+  participants: Participant[],
+  options: { contact?: boolean } = {},
+): Promise<Profil[]> {
   const ids = participants.map((p) => p.member_id).filter((id): id is string => Boolean(id));
   const db = supabaseAdmin();
 
   const [{ data: membres }, { data: photos }] = await Promise.all([
     ids.length
-      ? db.from('lil_members').select('id, profession, about').in('id', ids)
-      : Promise.resolve({ data: [] as { id: string; profession: string; about: string }[] }),
+      ? db.from('lil_members').select('id, profession, about, instagram').in('id', ids)
+      : Promise.resolve({
+          data: [] as { id: string; profession: string; about: string; instagram: string | null }[],
+        }),
     ids.length
       ? db.from('lil_photos').select('id, member_id, position').in('member_id', ids)
       : Promise.resolve({ data: [] as { id: string; member_id: string; position: number }[] }),
@@ -259,6 +272,12 @@ async function habiller(participants: Participant[]): Promise<Profil[]> {
     photo: p.member_id ? (premiere.get(p.member_id) ?? null) : null,
     profession: p.member_id ? (infos.get(p.member_id)?.profession ?? null) : null,
     about: p.member_id ? (infos.get(p.member_id)?.about ?? null) : null,
+    ...(options.contact
+      ? {
+          email: p.email,
+          instagram: p.member_id ? (infos.get(p.member_id)?.instagram ?? null) : null,
+        }
+      : {}),
   }));
 }
 
@@ -267,22 +286,21 @@ export type ResultatLike =
   | { ok: false; raison: string };
 
 /**
- * Liker quelqu'un — une seule personne par manche.
+ * Liker quelqu'un — une seule personne par manche, et c'est définitif.
  *
- * On peut changer d'avis tant qu'on n'a pas matché : c'est la même ligne
- * qu'on déplace. Une fois le match fait, le like se fige — l'autre a déjà
- * reçu sa notification, et lui retirer son match serait une cruauté.
+ * Pas de retour en arrière : c'est ce qui donne au like sa valeur. Trois
+ * manches, trois choix, qu'on assume. L'écran demande confirmation avant
+ * d'écrire, parce qu'un geste irréversible se mérite.
  *
- * Un match ne regarde pas la manche : si elle l'a liké ce soir et qu'il la
- * like deux heures plus tard, c'est un match. Avec un seul like par manche,
- * s'en tenir à la manche ne laisserait presque aucune chance aux deux
- * personnes de se croiser au même moment.
+ * Un match ne regarde pas la manche : si elle l'a liké à 20h et qu'il la
+ * like à minuit, c'est un match. Avec un seul like par manche, exiger que
+ * les deux se croisent au même moment ne laisserait presque aucune chance.
  */
 export async function liker(moi: Participant, versId: string): Promise<ResultatLike> {
   const db = supabaseAdmin();
 
-  const ouvertes = (await manches(moi.soiree_id)).filter(estOuverte);
-  const manche = ouvertes[0];
+  const toutes = await manches(moi.soiree_id);
+  const manche = toutes.find(estOuverte);
   if (!manche) return { ok: false, raison: 'Le crush time n’est pas ouvert.' };
 
   const { data: cibleBrute } = await db
@@ -295,39 +313,34 @@ export async function liker(moi: Participant, versId: string): Promise<ResultatL
     return { ok: false, raison: 'Ce profil n’est pas disponible.' };
   }
 
-  // Déjà matché dans cette manche ? Le choix est fait.
-  const { data: dejaMatche } = await db
-    .from('lil_crush_matches')
-    .select('id')
-    .eq('round_id', manche.id)
-    .or(`a_id.eq.${moi.id},b_id.eq.${moi.id}`)
-    .limit(1);
-  if (dejaMatche?.length) {
-    return { ok: false, raison: 'Tu as déjà un match sur cette manche.' };
-  }
-
+  // Un insert sec, jamais un upsert : si la contrainte d'unicité refuse,
+  // c'est que le choix de cette manche est déjà fait, et il ne se reprend
+  // pas. C'est la base qui tient la règle, pas la lecture qui précède.
   const { error } = await db
     .from('lil_crush_likes')
-    .upsert(
-      { round_id: manche.id, de_id: moi.id, vers_id: versId },
-      { onConflict: 'round_id,de_id' },
-    );
-  if (error) return { ok: false, raison: error.message };
+    .insert({ round_id: manche.id, de_id: moi.id, vers_id: versId });
 
-  // Est-ce qu'elle ou il m'a liké, ce soir, dans n'importe quelle manche ?
-  const toutes = (await manches(moi.soiree_id)).map((m) => m.id);
+  if (error) {
+    const dejaChoisi = error.code === '23505';
+    return {
+      ok: false,
+      raison: dejaChoisi ? 'Tu as déjà fait ton choix pour ce crush time.' : error.message,
+    };
+  }
+
+  // Est-ce qu'elle ou il m'a liké ce soir, dans n'importe quelle manche ?
   const { data: retour } = await db
     .from('lil_crush_likes')
     .select('id')
-    .in('round_id', toutes)
+    .in('round_id', toutes.map((m) => m.id))
     .eq('de_id', versId)
     .eq('vers_id', moi.id)
     .limit(1);
 
   if (!retour?.length) return { ok: true, match: null };
 
-  // La paire est rangée : deux clics simultanés ne peuvent pas créer deux
-  // matchs pour un seul couple, c'est la base qui s'en charge.
+  // La paire est rangée par identifiant croissant : deux clics simultanés
+  // ne peuvent pas créer deux matchs pour un seul couple.
   const [a_id, b_id] = [moi.id, versId].sort();
   const { error: eMatch } = await db
     .from('lil_crush_matches')
@@ -337,7 +350,7 @@ export async function liker(moi: Participant, versId: string): Promise<ResultatL
     );
   if (eMatch) return { ok: false, raison: eMatch.message };
 
-  const [profil] = await habiller([cible]);
+  const [profil] = await habiller([cible], { contact: true });
   return { ok: true, match: profil ?? null };
 }
 
@@ -365,9 +378,5 @@ export async function matchsDe(moi: Participant): Promise<Profil[]> {
   if (ids.length === 0) return [];
 
   const { data: gens } = await db.from('lil_crush_participants').select('*').in('id', ids);
-  const profils = await habiller((gens ?? []) as Participant[]);
-
-  // Un match donne droit à l'adresse : c'est tout l'intérêt du lendemain.
-  const emails = new Map(((gens ?? []) as Participant[]).map((p) => [p.id, p.email]));
-  return profils.map((p) => ({ ...p, email: emails.get(p.id) }));
+  return habiller((gens ?? []) as Participant[], { contact: true });
 }
