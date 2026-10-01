@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { PublierSoiree } from '@/components/admin/PublierSoiree';
 import { formatDate, formatDateTime } from '@/lib/libelles';
 import { listerSoirees, type SoireeRow } from '@/lib/soirees';
@@ -58,6 +59,9 @@ export default async function SoireesPage() {
                     <p className="adm-hint" style={{ margin: '8px 0 0' }}>
                       Enregistrée {formatDateTime(s.publiee_at)}
                     </p>
+                    <Link href={`/admin/soirees/${s.id}`} className="adm-btn" style={{ marginTop: 12 }}>
+                      Crush Time{s.crush_actif ? ' · en cours' : ''}
+                    </Link>
                   </div>
                 ))
               )}

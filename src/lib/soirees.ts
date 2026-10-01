@@ -69,6 +69,9 @@ export type SoireeRow = {
   heure: string | null;
   lieu: string;
   publiee_at: string;
+  /** Le crush time, quand il y en a un. Absent tant que 13_crushtime.sql n'est pas passé. */
+  crush_code?: string | null;
+  crush_actif?: boolean;
 };
 
 export async function listerSoirees(): Promise<SoireeRow[]> {
@@ -78,4 +81,15 @@ export async function listerSoirees(): Promise<SoireeRow[]> {
     .order('date_soiree', { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as SoireeRow[];
+}
+
+/** Une soirée et son crush time, pour le tableau de bord de l'hôte. */
+export async function getSoiree(id: string): Promise<SoireeRow | null> {
+  const { data, error } = await supabaseAdmin()
+    .from('lil_soirees')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return (data as SoireeRow | null) ?? null;
 }

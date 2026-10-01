@@ -19,6 +19,7 @@ export type Participant = {
   orientation: Orientation | null;
   jeton: string;
   claimed_at: string | null;
+  retire_at: string | null;
 };
 
 /* ====================================================================
@@ -155,6 +156,7 @@ export async function participantParJeton(jetonRecu: string): Promise<Participan
     .from('lil_crush_participants')
     .select('*')
     .eq('jeton', jetonRecu)
+    .is('retire_at', null)
     .maybeSingle();
   return (data as Participant | null) ?? null;
 }
@@ -178,6 +180,7 @@ export async function entrerAvecCode(
     .select('*')
     .eq('soiree_id', soiree.id)
     .eq('email', email.trim().toLowerCase())
+    .is('retire_at', null)
     .maybeSingle();
 
   return (data as Participant | null) ?? null;
@@ -228,7 +231,8 @@ export async function profilsPour(moi: Participant): Promise<Profil[]> {
   const { data } = await db
     .from('lil_crush_participants')
     .select('*')
-    .eq('soiree_id', moi.soiree_id);
+    .eq('soiree_id', moi.soiree_id)
+    .is('retire_at', null);
 
   const visibles = ((data ?? []) as Participant[]).filter((autre) => peutVoir(moi, autre));
   return habiller(visibles);
@@ -309,7 +313,7 @@ export async function liker(moi: Participant, versId: string): Promise<ResultatL
     .eq('id', versId)
     .maybeSingle();
   const cible = cibleBrute as Participant | null;
-  if (!cible || cible.soiree_id !== moi.soiree_id || !peutVoir(moi, cible)) {
+  if (!cible || cible.soiree_id !== moi.soiree_id || cible.retire_at || !peutVoir(moi, cible)) {
     return { ok: false, raison: 'Ce profil n’est pas disponible.' };
   }
 
@@ -379,4 +383,112 @@ export async function matchsDe(moi: Participant): Promise<Profil[]> {
 
   const { data: gens } = await db.from('lil_crush_participants').select('*').in('id', ids);
   return habiller((gens ?? []) as Participant[], { contact: true });
+}
+
+/* ====================================================================
+   Tenir la liste, le soir même
+   ==================================================================== */
+
+export type LigneParticipant = Participant & { photo: string | null };
+
+/** Tout le monde, retirés compris : c'est la liste d'émargement de l'hôte. */
+export async function participants(soireeId: string): Promise<LigneParticipant[]> {
+  const db = supabaseAdmin();
+  const { data } = await db
+    .from('lil_crush_participants')
+    .select('*')
+    .eq('soiree_id', soireeId)
+    .order('first_name', { ascending: true });
+
+  const gens = (data ?? []) as Participant[];
+  const ids = gens.map((p) => p.member_id).filter((id): id is string => Boolean(id));
+
+  const { data: photos } = ids.length
+    ? await db.from('lil_photos').select('id, member_id, position').in('member_id', ids)
+    : { data: [] as { id: string; member_id: string; position: number }[] };
+
+  const premiere = new Map<string, string>();
+  for (const photo of [...(photos ?? [])].sort((a, b) => a.position - b.position)) {
+    if (!premiere.has(photo.member_id)) premiere.set(photo.member_id, lienPhoto(photo.id));
+  }
+
+  return gens.map((p) => ({
+    ...p,
+    photo: p.member_id ? (premiere.get(p.member_id) ?? null) : null,
+  }));
+}
+
+/**
+ * Retirer quelqu'un qui n'est pas venu.
+ *
+ * Ses likes partent avec lui, et c'est le point délicat : quelqu'un qui
+ * l'avait choisi récupère son choix pour la manche en cours, au lieu
+ * d'attendre toute la soirée un match impossible. Les matchs déjà faits,
+ * eux, restent — ils appartiennent aussi à l'autre.
+ */
+export async function retirer(participantId: string): Promise<void> {
+  const db = supabaseAdmin();
+
+  const { error } = await db
+    .from('lil_crush_participants')
+    .update({ retire_at: new Date().toISOString() })
+    .eq('id', participantId);
+  if (error) throw new Error(error.message);
+
+  const { error: eLikes } = await db
+    .from('lil_crush_likes')
+    .delete()
+    .or(`de_id.eq.${participantId},vers_id.eq.${participantId}`);
+  if (eLikes) throw new Error(eLikes.message);
+}
+
+/** Il était bien là, finalement. */
+export async function remettre(participantId: string): Promise<void> {
+  const { error } = await supabaseAdmin()
+    .from('lil_crush_participants')
+    .update({ retire_at: null })
+    .eq('id', participantId);
+  if (error) throw new Error(error.message);
+}
+
+/* ====================================================================
+   Ouvrir et fermer une manche
+   ==================================================================== */
+
+export async function ouvrirManche(mancheId: string): Promise<void> {
+  const { error } = await supabaseAdmin()
+    .from('lil_crush_rounds')
+    .update({ ouvert_at: new Date().toISOString(), ferme_at: null })
+    .eq('id', mancheId);
+  if (error) throw new Error(error.message);
+}
+
+export async function fermerManche(mancheId: string): Promise<void> {
+  const { error } = await supabaseAdmin()
+    .from('lil_crush_rounds')
+    .update({ ferme_at: new Date().toISOString() })
+    .eq('id', mancheId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Ouvrir le crush time d'une soirée, et refermer celui d'avant.
+ *
+ * Un seul à la fois, garanti par un index unique : deux crush times ouverts
+ * voudraient dire deux salles, et ce n'est jamais arrivé. On éteint donc
+ * avant d'allumer.
+ */
+export async function activerCrushTime(soireeId: string, code: string): Promise<void> {
+  const db = supabaseAdmin();
+  const { error: extinction } = await db
+    .from('lil_soirees')
+    .update({ crush_actif: false })
+    .eq('crush_actif', true);
+  if (extinction) throw new Error(extinction.message);
+
+  const { error } = await db
+    .from('lil_soirees')
+    .update({ crush_actif: true, crush_code: code })
+    .eq('id', soireeId);
+  if (error) throw new Error(error.message);
 }

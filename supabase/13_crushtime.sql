@@ -52,6 +52,9 @@ create table if not exists public.lil_crush_participants (
   -- part, et il ne sert que cette soirée.
   jeton       text   not null unique,
   claimed_at  timestamptz,          -- première ouverture
+  -- Celui qui a payé mais n'est pas venu. On ne l'efface pas : une absence
+  -- se constate à la porte, parfois à tort, et il faut pouvoir le remettre.
+  retire_at   timestamptz,
   created_at  timestamptz not null default now(),
 
   constraint lil_crush_participants_une_fois unique (soiree_id, email)
@@ -61,7 +64,11 @@ comment on table public.lil_crush_participants is
   'Les personnes attendues à une soirée, importées de la billetterie. Une ligne par soirée : la même personne revient avec un nouveau jeton.';
 
 create index if not exists lil_crush_participants_soiree_idx
-  on public.lil_crush_participants (soiree_id);
+  on public.lil_crush_participants (soiree_id)
+  where retire_at is null;
+
+comment on column public.lil_crush_participants.retire_at is
+  'Retiré de la soirée faute d''être venu. Il ne voit plus personne et n''est plus vu ; ses matchs déjà faits restent, eux, acquis des deux côtés.';
 
 -- ---------------------------------------------------------------------
 -- 3. Les manches

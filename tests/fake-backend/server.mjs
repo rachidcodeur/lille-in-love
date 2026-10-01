@@ -19,6 +19,11 @@ const tables = {
   lil_reviews: [],
   lil_emails: [],
   lil_soirees: [],
+  lil_crush_participants: [],
+  lil_crush_rounds: [],
+  lil_crush_likes: [],
+  lil_crush_matches: [],
+  lil_crush_push: [],
 };
 
 const storage = new Map();       // chemin -> { contentType, size }
@@ -443,6 +448,10 @@ async function traiter(req, res) {
       members: tables.lil_members,
       emails: tables.lil_emails,
       soirees: tables.lil_soirees,
+      crushParticipants: tables.lil_crush_participants,
+      crushRounds: tables.lil_crush_rounds,
+      crushLikes: tables.lil_crush_likes,
+      crushMatches: tables.lil_crush_matches,
       reviews: tables.lil_reviews,
       photos: tables.lil_photos,
       curators: tables.lil_curators,
@@ -458,6 +467,11 @@ async function traiter(req, res) {
     tables.lil_reviews = [];
     tables.lil_emails = [];
     tables.lil_soirees = [];
+    tables.lil_crush_participants = [];
+    tables.lil_crush_rounds = [];
+    tables.lil_crush_likes = [];
+    tables.lil_crush_matches = [];
+    tables.lil_crush_push = [];
     refuseBatch = false;
     sentEmails.length = 0;
     cancelled.clear();

@@ -2024,3 +2024,157 @@
     white-space: nowrap;
   }
 }
+
+/* --- Crush Time ----------------------------------------------------- */
+
+/* Le dépôt du fichier de billetterie. Un rectangle en pointillés dit
+   « pose quelque chose ici » sans qu'on ait à l'écrire. */
+.adm-depot {
+  display: block;
+  padding: 26px 22px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--cream);
+  text-align: center;
+  font-size: 14.5px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease;
+}
+
+.adm-depot:hover {
+  border-color: var(--gold);
+  color: var(--ink);
+}
+
+.adm-depot[data-rempli='true'] {
+  border-style: solid;
+  border-color: var(--gold-soft);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.adm-depot input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Le code de la salle. Il sera lu à voix haute depuis un téléphone tenu à
+   bout de bras : il n'est jamais trop gros. */
+.adm-code-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold-deep);
+  margin: 0;
+}
+
+.adm-code {
+  font-size: 56px;
+  line-height: 1.1;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--ink);
+  margin: 6px 0 0;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* Les trois manches */
+.adm-manches {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.adm-manche {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  background: var(--cream);
+  border-left: 3px solid var(--border);
+}
+
+.adm-manche[data-etat='ouverte'] {
+  background: color-mix(in srgb, var(--white) 88%, var(--sand));
+  border-left-color: var(--gold);
+}
+
+.adm-manche[data-etat='finie'] {
+  opacity: 0.62;
+}
+
+.adm-manche-nom {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.adm-manche-heure {
+  margin: 3px 0 0;
+  font-size: 13px;
+  color: var(--ink-muted);
+}
+
+/* La liste d'émargement */
+.adm-emargement {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.adm-present {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--cream);
+}
+
+.adm-present:last-child {
+  border-bottom: 0;
+}
+
+/* Retiré, pas effacé : on le voit encore, en retrait. */
+.adm-present[data-retire='true'] {
+  opacity: 0.45;
+}
+
+.adm-present .adm-avatar {
+  width: 40px;
+  height: 40px;
+  flex: none;
+}
+
+.adm-present-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.adm-present-nom {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.adm-present-mail {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
