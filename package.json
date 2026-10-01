@@ -12,7 +12,8 @@
     "test:e2e": "node tests/e2e/formulaire.mjs",
     "test:curation": "node tests/run-curation.mjs",
     "test:reel": "node --env-file=.env.local tests/reel.mjs",
-    "import:anciennes": "node --env-file=.env.local scripts/importer-anciennes.mjs"
+    "import:anciennes": "node --env-file=.env.local scripts/importer-anciennes.mjs",
+    "test:regles": "node tests/regles.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

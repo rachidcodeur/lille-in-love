@@ -1,0 +1,49 @@
+/**
+ * Les règles du crush time, sans rien autour.
+ *
+ * Aucune base, aucun réseau : ce fichier ne dépend de rien, et c'est voulu.
+ * Ce sont les règles du jeu — qui voit qui, quel âge affiche-t-on — et elles
+ * doivent pouvoir être éprouvées seules, en une seconde, sans monter un
+ * serveur. Tout ce qui touche à Supabase vit dans crush.ts.
+ */
+
+export type Genre = 'femme' | 'homme';
+export type Orientation = 'hetero' | 'gay';
+
+/** Le minimum pour savoir si deux personnes ont quelque chose à faire ensemble. */
+export type Gouts = {
+  id: string;
+  gender: Genre | null;
+  orientation: Orientation | null;
+};
+
+/** Cette personne pourrait-elle s'intéresser à celle-là ? */
+function interesse(qui: Gouts, par: Gouts): boolean {
+  if (!qui.gender || !qui.orientation || !par.gender) return false;
+  return qui.orientation === 'gay' ? par.gender === qui.gender : par.gender !== qui.gender;
+}
+
+/**
+ * Qui voit qui.
+ *
+ * L'intérêt doit aller dans les deux sens, sinon on fait perdre son temps à
+ * tout le monde : un homme gay n'a rien à faire dans la liste d'une femme
+ * hétéro, et réciproquement. Dire « le sexe opposé » aurait effacé le
+ * groupe G ; cette règle-ci le prend naturellement en compte.
+ *
+ * Une personne dont on ignore le genre ne voit personne et n'est vue de
+ * personne : mieux vaut qu'elle manque à l'appel — l'hôte le verra dans son
+ * tableau de bord — que d'être proposée à côté de la plaque.
+ */
+export function peutVoir(a: Gouts, b: Gouts): boolean {
+  if (a.id === b.id) return false;
+  return interesse(a, b) && interesse(b, a);
+}
+
+/** L'âge affiché sur un profil. */
+export function age(naissance: string | null, maintenant = Date.now()): number | null {
+  if (!naissance) return null;
+  const date = new Date(naissance);
+  if (Number.isNaN(date.getTime())) return null;
+  return Math.floor((maintenant - date.getTime()) / 86_400_000 / 365.25);
+}
