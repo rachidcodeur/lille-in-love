@@ -80,3 +80,17 @@ atteindre la session du back-office. Repli possible sur
 ## Les migrations
 
 `13_crushtime.sql` (le schéma) et `14_ordre_photos.sql` (l'ordre des photos).
+
+## Voir tout ça en local
+
+```bash
+npm run demo
+```
+
+Faux Supabase, application par-dessus, et de quoi cliquer : des
+candidatures avec leurs photos, une soirée, son crush time, ses
+participants, et un acheteur sans profil pour voir l'alerte. **Rien n'est
+écrit dans la vraie base, aucun email ne part.**
+
+`npm run dev`, lui, parle au vrai Supabase : un import de test y créerait
+de vraies lignes.
