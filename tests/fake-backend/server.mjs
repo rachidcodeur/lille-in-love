@@ -183,6 +183,20 @@ function applyFilters(rows, params) {
   return out;
 }
 
+/**
+ * « Un seul like par manche » — la règle maîtresse du crush time.
+ *
+ * Elle est tenue en base par une contrainte d'unicité, et l'application
+ * compte dessus : elle insère sans regarder avant, puis lit le refus. Un
+ * faux serveur qui laisserait passer un second like ferait croire que la
+ * règle marche, et la soirée découvrirait le contraire.
+ */
+function violeUnLikeParManche(row) {
+  return tables.lil_crush_likes.some(
+    (existant) => existant.round_id === row.round_id && existant.de_id === row.de_id,
+  );
+}
+
 /** L'index unique (member_id, template) limité aux statuts actifs. */
 function violatesEmailUnique(row) {
   return tables.lil_emails.some(
@@ -399,6 +413,14 @@ async function traiter(req, res) {
             }
             continue;
           }
+        }
+
+        if (table === 'lil_crush_likes' && violeUnLikeParManche(item)) {
+          return json(res, 409, {
+            code: '23505',
+            message:
+              'duplicate key value violates unique constraint "lil_crush_likes_un_par_manche"',
+          });
         }
 
         if (table === 'lil_emails' && !isUpsert && violatesEmailUnique(item)) {

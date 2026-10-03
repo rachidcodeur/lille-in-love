@@ -107,9 +107,12 @@ npm run demo
 ```
 
 Faux Supabase, application par-dessus, et de quoi cliquer : des
-candidatures avec leurs photos, une soirée, son crush time, ses
-participants, et un acheteur sans profil pour voir l'alerte. **Rien n'est
-écrit dans la vraie base, aucun email ne part.**
+candidatures avec leurs photos, une soirée, son crush time **déjà ouvert**,
+ses participants, et un acheteur sans profil pour voir l'alerte. **Rien
+n'est écrit dans la vraie base, aucun email ne part.**
+
+La commande affiche aussi deux liens de participants. Samir a déjà choisi
+Inès : entre comme Inès, choisis Samir, et le match se fait sous tes yeux.
 
 `npm run dev`, lui, parle au vrai Supabase : un import de test y créerait
 de vraies lignes.

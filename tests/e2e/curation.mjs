@@ -1755,6 +1755,212 @@ apresAjout.every((p) => !jetonsAvant.has(p.email) || jetonsAvant.get(p.email) ==
 
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
+/* ---------------------------------------------------------------- */
+section('18. Le crush time, côté participant');
+
+const [soireeCrush] = await (
+  await fetch(`${FAKE}/rest/v1/lil_soirees`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({
+      nom: 'Soirée du crush time',
+      age_min: 26,
+      age_max: 36,
+      date_soiree: '2026-10-18',
+      lieu: 'Un lieu, Lille',
+      publiee_at: new Date().toISOString(),
+      crush_code: '4812',
+      crush_actif: true,
+    }),
+  })
+).json();
+
+const salle = [
+  ['Inès', 'femme', 'ines'],
+  ['Salomé', 'femme', 'salome'],
+  ['Samir', 'homme', 'samir'],
+  ['Thomas', 'homme', 'thomas'],
+];
+const presents = await (
+  await fetch(`${FAKE}/rest/v1/lil_crush_participants`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify(
+      salle.map(([prenom, genre, jeton]) => ({
+        soiree_id: soireeCrush.id,
+        member_id: null,
+        email: `${jeton}@soiree.test`,
+        first_name: prenom,
+        gender: genre,
+        orientation: 'hetero',
+        birth_date: '1994-01-01',
+        jeton,
+      })),
+    ),
+  })
+).json();
+const qui = Object.fromEntries(presents.map((p) => [p.first_name, p]));
+
+const [manche1] = await (
+  await fetch(`${FAKE}/rest/v1/lil_crush_rounds`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({
+      soiree_id: soireeCrush.id,
+      numero: 1,
+      prevu_a: new Date().toISOString(),
+      ouvert_at: new Date().toISOString(),
+    }),
+  })
+).json();
+
+const tel = await browser.newPage({
+  viewport: { width: 390, height: 844 },
+  isMobile: true,
+  hasTouch: true,
+});
+tel.on('pageerror', (e) => bad('erreur JS (crush)', e.message));
+
+// --- Entrer par le code annoncé dans la salle ----------------------
+await tel.goto(`${BASE}/crush`, { waitUntil: 'networkidle' });
+await tel.fill('#cr-email', 'ines@soiree.test');
+await tel.fill('#cr-code', '1234');
+await tel.getByRole('button', { name: 'Entrer' }).click();
+await tel.waitForTimeout(900);
+(await tel.locator('.cr-erreur').innerText().catch(() => '')).includes('incorrect')
+  ? ok('un mauvais code est refusé, sans dire laquelle des deux moitiés est fausse')
+  : bad('mauvais code accepté');
+
+await tel.fill('#cr-code', '4812');
+await tel.getByRole('button', { name: 'Entrer' }).click();
+await tel.waitForTimeout(1800);
+
+// --- Qui on voit ---------------------------------------------------
+const vus = (await tel.locator('.cr-carte-nom').allInnerTexts()).map((t) => t.split(' ·')[0].trim());
+JSON.stringify(vus.sort()) === JSON.stringify(['Samir', 'Thomas'])
+  ? ok('une femme hétéro ne voit que les hommes de la soirée')
+  : bad('profils inattendus', vus.join(', ') || '(aucun)');
+
+(await tel.locator('.cr-grille')).isVisible() &&
+(await tel.locator('.cr-grille').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length)) === 2
+  ? ok('les profils s’affichent deux par rangée')
+  : bad('la grille n’a pas deux colonnes');
+
+// --- Liker, avec confirmation --------------------------------------
+await tel.locator('.cr-carte', { hasText: 'Samir' }).click();
+await tel.waitForTimeout(500);
+await tel.getByRole('button', { name: /Je choisis/ }).click();
+await tel.waitForTimeout(400);
+(await tel.locator('.cr-confirme').innerText()).includes('ne se reprend pas')
+  ? ok('un geste irréversible demande confirmation')
+  : bad('pas de confirmation avant le like');
+
+await tel.getByRole('button', { name: /^Oui/ }).click();
+await tel.waitForTimeout(1800);
+
+s = await state();
+s.crushLikes.filter((l) => l.de_id === qui['Inès'].id).length === 1
+  ? ok('le like est enregistré, une seule fois')
+  : bad('like non enregistré', String(s.crushLikes.length));
+s.crushMatches.length === 0
+  ? ok('aucun match tant que l’autre n’a pas choisi')
+  : bad('match créé à sens unique');
+
+// --- Un second like est refusé -------------------------------------
+await tel.locator('.cr-carte', { hasText: 'Thomas' }).click();
+await tel.waitForTimeout(500);
+(await tel.locator('.cr-fiche-etat').innerText().catch(() => '')).includes('déjà fait')
+  ? ok('le second choix de la manche n’est même pas proposé')
+  : bad('on peut liker deux fois dans une manche');
+
+const secondLike = await tel.evaluate(async (versId) => {
+  const r = await fetch('/api/crush/liker', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ versId }),
+  });
+  return r.status;
+}, qui['Thomas'].id);
+secondLike === 409
+  ? ok('et la base le refuse aussi quand on contourne l’écran')
+  : bad('un second like est passé par l’API', String(secondLike));
+
+// --- Le match, des deux côtés --------------------------------------
+const tel2 = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
+await tel2.goto(`${BASE}/crush/c/samir`, { waitUntil: 'networkidle' });
+await tel2.waitForTimeout(1200);
+!tel2.url().includes('/c/samir')
+  ? ok('le lien personnel échange son jeton contre une session et disparaît de l’adresse')
+  : bad('le jeton reste dans la barre d’adresse', tel2.url());
+
+await tel2.locator('.cr-carte', { hasText: 'Inès' }).click();
+await tel2.waitForTimeout(500);
+await tel2.getByRole('button', { name: /Je choisis/ }).click();
+await tel2.waitForTimeout(400);
+await tel2.getByRole('button', { name: /^Oui/ }).click();
+await tel2.waitForTimeout(2000);
+
+(await tel2.locator('.cr-match-mot').innerText().catch(() => ''))
+  .includes('match')
+  ? ok('le match s’annonce tout de suite à celui qui ferme la boucle')
+  : bad('aucun match annoncé');
+
+s = await state();
+s.crushMatches.length === 1
+  ? ok('un seul match en base pour la paire')
+  : bad('nombre de matchs inattendu', String(s.crushMatches.length));
+s.crushMatches[0].a_id < s.crushMatches[0].b_id
+  ? ok('la paire est rangée : deux clics simultanés ne peuvent pas la dédoubler')
+  : bad('paire non ordonnée');
+
+// --- Le contact, seulement après le match --------------------------
+await tel2.getByRole('button', { name: 'Continuer' }).click();
+await tel2.waitForTimeout(600);
+await tel2.locator('.cr-matchs-onglet').click();
+await tel2.waitForTimeout(600);
+(await tel2.locator('.cr-matchs-corps').innerText()).includes('ines@soiree.test')
+  ? ok('l’adresse de la personne n’apparaît qu’une fois le match fait')
+  : bad('contact absent de l’onglet matchs');
+
+const htmlProfils = await tel.content();
+!htmlProfils.includes('samir@soiree.test')
+  ? ok('et jamais dans la page des profils, où elle court-circuiterait le jeu')
+  : bad('une adresse email fuite dans la liste des profils');
+
+// --- La photo de quelqu'un d'une autre soirée est refusée ----------
+const [intruse] = await (
+  await fetch(`${FAKE}/rest/v1/lil_photos`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({
+      member_id: '99999999-9999-4999-8999-999999999999',
+      storage_path: 'candidatures/ailleurs/1.png',
+      position: 1,
+      mime_type: 'image/png',
+    }),
+  })
+).json();
+const volee = await tel.evaluate(async (id) => (await fetch(`/crush/photo/${id}`)).status, intruse.id);
+volee === 404
+  ? ok('la photo de quelqu’un qui n’est pas de la soirée est introuvable')
+  : bad('on peut parcourir les photos de toute la base', String(volee));
+
+// --- Hors manche ----------------------------------------------------
+await fetch(`${FAKE}/rest/v1/lil_crush_rounds?id=eq.${manche1.id}`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ ferme_at: new Date().toISOString() }),
+});
+await tel.goto(`${BASE}/crush`, { waitUntil: 'networkidle' });
+await tel.waitForTimeout(800);
+(await tel.locator('.cr-attente').count()) === 1 && (await tel.locator('.cr-carte').count()) === 0
+  ? ok('manche fermée : les profils disparaissent, les horaires restent')
+  : bad('les profils restent visibles hors manche');
+
+await tel.close();
+await tel2.close();
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
 await browser.close();
 console.log('\n' + (failures.length === 0
   ? '[32mTout est vert.[0m'

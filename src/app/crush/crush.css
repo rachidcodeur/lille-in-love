@@ -1,0 +1,486 @@
+/* =====================================================================
+   CRUSH TIME — l'application des participants
+
+   Une salle sombre, un téléphone à bout de bras, dix minutes. Fond
+   profond pour que les visages ressortent et que l'écran n'éblouisse
+   personne, cibles larges, et une seule chose à faire par écran.
+   ===================================================================== */
+
+.cr-racine {
+  --nuit: #141010;
+  --nuit-2: #1e1817;
+  --carte: #241d1b;
+  --or: #c3b291;
+  --or-clair: #e4d6b4;
+  --creme: #f6f0e4;
+  --creme-doux: #cbc0b2;
+  --rouge: #e0657a;
+
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--nuit);
+  color: var(--creme);
+  font-family: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.cr-main {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 18px 16px 110px;
+}
+
+.cr-centre {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-bottom: 60px;
+}
+
+.cr-entete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.cr-marque,
+.cr-moi {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  margin: 0;
+  color: var(--or);
+}
+
+.cr-moi {
+  color: var(--creme-doux);
+}
+
+.cr-titre {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 46px;
+  font-weight: 500;
+  line-height: 1.05;
+  margin: 10px 0 0;
+  color: var(--creme);
+}
+
+.cr-soiree {
+  margin: 10px 0 0;
+  font-size: 15px;
+  color: var(--creme-doux);
+}
+
+.cr-texte {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--creme-doux);
+  margin: 14px 0 0;
+}
+
+.cr-aide {
+  font-size: 13px;
+  color: var(--creme-doux);
+  opacity: 0.75;
+  margin: 8px 0 0;
+}
+
+.cr-erreur {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--rouge);
+  margin: 14px 0 0;
+}
+
+/* --- La porte d'entrée --------------------------------------------- */
+
+.cr-form {
+  display: flex;
+  flex-direction: column;
+  margin-top: 30px;
+}
+
+.cr-form label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--creme-doux);
+  margin: 18px 0 7px;
+}
+
+.cr-form input {
+  font: inherit;
+  font-size: 17px; /* en dessous de 16px, iOS zoome tout seul à la saisie */
+  padding: 15px 16px;
+  border-radius: 14px;
+  border: 1px solid #3a302d;
+  background: var(--nuit-2);
+  color: var(--creme);
+  width: 100%;
+}
+
+.cr-form input:focus {
+  outline: 2px solid var(--or);
+  outline-offset: 1px;
+}
+
+.cr-code-saisie {
+  letter-spacing: 0.4em;
+  text-align: center;
+  font-size: 26px !important;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.cr-bouton {
+  font: inherit;
+  font-size: 16px;
+  font-weight: 650;
+  margin-top: 26px;
+  padding: 17px 20px;
+  border-radius: 999px;
+  border: 0;
+  background: var(--creme);
+  color: #1c130f;
+  cursor: pointer;
+  width: 100%;
+}
+
+.cr-bouton:disabled {
+  opacity: 0.4;
+}
+
+.cr-coeur {
+  background: var(--rouge);
+  color: #fff;
+}
+
+/* --- La manche en cours --------------------------------------------- */
+
+.cr-manche {
+  margin-bottom: 18px;
+}
+
+.cr-manche-titre {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 34px;
+  font-weight: 500;
+  margin: 0;
+}
+
+.cr-manche-regle {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--creme-doux);
+}
+
+/* Deux par rangée : assez grand pour reconnaître un visage croisé il y a
+   dix minutes, assez court pour qu'on parcoure la salle du pouce. */
+.cr-grille {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.cr-carte {
+  position: relative;
+  border: 0;
+  padding: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--carte);
+  aspect-ratio: 3 / 4;
+  cursor: pointer;
+  display: block;
+  width: 100%;
+}
+
+.cr-carte img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cr-carte-vide {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 54px;
+  color: var(--or);
+}
+
+.cr-carte[data-choisi] {
+  outline: 2px solid var(--rouge);
+  outline-offset: -2px;
+}
+
+.cr-carte-pied {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 26px 12px 11px;
+  background: linear-gradient(to top, rgba(10, 7, 6, 0.88), transparent);
+  text-align: left;
+}
+
+.cr-carte-nom {
+  font-size: 14.5px;
+  font-weight: 650;
+  color: #fff;
+}
+
+.cr-carte-coeur {
+  color: var(--rouge);
+  font-size: 17px;
+}
+
+.cr-carte-match {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--rouge);
+  color: #fff;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+/* --- Le profil en grand --------------------------------------------- */
+
+.cr-voile {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(8, 5, 5, 0.9);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 14px;
+}
+
+@media (min-width: 560px) {
+  .cr-voile {
+    align-items: center;
+  }
+}
+
+.cr-fiche {
+  width: 100%;
+  max-width: 420px;
+  max-height: 92dvh;
+  overflow-y: auto;
+  background: var(--nuit-2);
+  border-radius: 22px;
+  padding: 18px;
+  text-align: center;
+}
+
+.cr-fiche-photo {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 16px;
+  display: block;
+  background: var(--carte);
+}
+
+.cr-fiche-nom {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 32px;
+  font-weight: 500;
+  margin: 16px 0 0;
+}
+
+.cr-fiche-nom span {
+  font-size: 20px;
+  color: var(--creme-doux);
+}
+
+.cr-fiche-metier {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--or);
+}
+
+.cr-fiche-mot {
+  margin: 14px 0 0;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--creme-doux);
+}
+
+.cr-fiche-etat {
+  margin: 20px 0 0;
+  font-size: 14px;
+  color: var(--creme-doux);
+}
+
+.cr-fermer {
+  font: inherit;
+  font-size: 14px;
+  background: transparent;
+  border: 0;
+  color: var(--creme-doux);
+  padding: 8px;
+  cursor: pointer;
+  float: right;
+}
+
+.cr-annuler {
+  float: none;
+  display: block;
+  margin: 10px auto 0;
+}
+
+.cr-confirme,
+.cr-match {
+  text-align: center;
+  padding: 26px 20px;
+}
+
+.cr-match-mot {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 30px;
+  color: var(--rouge);
+  margin: 0 0 16px;
+}
+
+/* --- L'attente ------------------------------------------------------- */
+
+.cr-attente {
+  margin-top: 10px;
+}
+
+.cr-attente-mot {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 28px;
+  line-height: 1.2;
+  margin: 0 0 22px;
+}
+
+.cr-horaires {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cr-horaires li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 17px;
+  border-radius: 14px;
+  background: var(--nuit-2);
+  font-size: 15px;
+  color: var(--creme-doux);
+}
+
+.cr-horaires li[data-passee] {
+  opacity: 0.4;
+}
+
+.cr-horaires li[data-prochaine] {
+  background: var(--carte);
+  color: var(--creme);
+  border-left: 3px solid var(--or);
+}
+
+.cr-horaires b {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* --- Les matchs, toujours à portée de pouce -------------------------- */
+
+.cr-matchs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  background: var(--nuit-2);
+  border-top: 1px solid #332a28;
+  max-height: 80dvh;
+  overflow-y: auto;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.cr-matchs-onglet {
+  font: inherit;
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 17px;
+  background: transparent;
+  border: 0;
+  color: var(--creme);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cr-matchs-onglet b {
+  background: var(--rouge);
+  color: #fff;
+  border-radius: 999px;
+  min-width: 24px;
+  padding: 2px 8px;
+  font-size: 13px;
+}
+
+.cr-matchs-corps {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 0 16px 22px;
+}
+
+.cr-match-ligne {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid #2c2422;
+}
+
+.cr-match-ligne img,
+.cr-match-ligne .cr-carte-vide {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  border-radius: 14px;
+  object-fit: cover;
+  font-size: 24px;
+}
+
+.cr-match-nom {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.cr-match-contact {
+  margin: 2px 0 0;
+  font-size: 13.5px;
+  color: var(--or);
+  word-break: break-all;
+}
+
+.cr-match-contact a {
+  color: inherit;
+}

@@ -300,8 +300,11 @@ export async function getEmailLog(memberId: string): Promise<EmailLogRow[]> {
  * passe par src/app/admin/photo/[id], qui vérifie l'accès, va chercher le
  * fichier dans le bucket privé, et laisse le navigateur le garder un jour.
  */
-export function lienPhoto(photoId: string): string {
-  return `/admin/photo/${photoId}`;
+export function lienPhoto(photoId: string, espace: 'admin' | 'crush' = 'admin'): string {
+  // Deux portes pour le même fichier, parce que l'autorisation n'est pas la
+  // même : le back-office demande le code d'accès, le crush time demande
+  // d'être de la soirée.
+  return `/${espace}/photo/${photoId}`;
 }
 
 /**

@@ -342,7 +342,7 @@ async function habiller(
   const infos = new Map((membres ?? []).map((m) => [m.id, m]));
   const premiere = new Map<string, string>();
   for (const photo of [...(photos ?? [])].sort((a, b) => a.position - b.position)) {
-    if (!premiere.has(photo.member_id)) premiere.set(photo.member_id, lienPhoto(photo.id));
+    if (!premiere.has(photo.member_id)) premiere.set(photo.member_id, lienPhoto(photo.id, 'crush'));
   }
 
   return participants.map((p) => ({

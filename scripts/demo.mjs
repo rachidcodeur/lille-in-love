@@ -203,16 +203,19 @@ async function remplir() {
     },
   ]);
 
-  await poser(
+  const rounds = await poser(
     'lil_crush_rounds',
     [20, 22, 0].map((heure, index) => ({
       soiree_id: soiree.id,
       numero: index + 1,
       prevu_a: `${jour}T${String(heure).padStart(2, '0')}:00:00.000Z`,
+      // Le premier crush time est déjà ouvert : sans cela, la maquette ne
+      // montre qu'une salle d'attente.
+      ouvert_at: index === 0 ? new Date().toISOString() : null,
     })),
   );
 
-  return { soiree, membres };
+  return { soiree, membres, rounds };
 }
 
 /* ------------------------------------------------------------------ */
@@ -250,7 +253,21 @@ try {
   await attendre(`${APP}/api/health`, 'l’application');
 
   console.log(gris('Remplissage…'));
-  const { soiree } = await remplir();
+  const { soiree, rounds } = await remplir();
+
+  // Quelqu'un a déjà donné son like : en entrant comme Inès et en le
+  // choisissant en retour, le match se fait sous les yeux.
+  const participants = await (
+    await fetch(`${FAKE}/rest/v1/lil_crush_participants?soiree_id=eq.${soiree.id}`, {
+      headers: { apikey: 'cle-de-demo' },
+    })
+  ).json();
+  const parPrenom = Object.fromEntries(participants.map((p) => [p.first_name, p]));
+  if (parPrenom['Samir'] && parPrenom['Inès']) {
+    await poser('lil_crush_likes', [
+      { round_id: rounds[0].id, de_id: parPrenom['Samir'].id, vers_id: parPrenom['Inès'].id },
+    ]);
+  }
 
   console.log(`
 ${vert('La maquette tourne.')} Rien n'est écrit dans ta vraie base.
@@ -260,8 +277,12 @@ ${vert('La maquette tourne.')} Rien n'est écrit dans ta vraie base.
   ${gras('Crush Time')}     ${APP}/admin/soirees/${soiree.id}
   ${gras('Formulaire')}     ${APP}/embed
 
-  ${gris('Code de la salle : 4812 · 8 participants, plus un acheteur sans profil')}
-  ${gris('L’application des participants (crush.in-love.fr) reste à construire.')}
+  ${gras('Crush Time — Inès')}   ${APP}/crush/c/${parPrenom['Inès']?.jeton ?? 'demo-0'}
+  ${gras('Crush Time — Samir')}  ${APP}/crush/c/${parPrenom['Samir']?.jeton ?? 'demo-4'}
+  ${gras('Par le code')}         ${APP}/crush  ${gris('(email + 4812)')}
+
+  ${gris('Le premier crush time est ouvert. Samir a déjà choisi Inès :')}
+  ${gris('entre comme Inès, choisis Samir, et le match se fait.')}
 
 ${gris('Ctrl+C pour tout éteindre.')}
 `);
