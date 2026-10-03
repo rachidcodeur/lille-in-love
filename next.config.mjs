@@ -5,6 +5,11 @@ const nextConfig = {
   // l'un l'autre : les tests s'en donnent donc un bien à eux. En temps
   // normal, la variable est absente et rien ne change.
   distDir: process.env.NEXT_DIST_DIR ?? '.next',
+  // Un package.json traîne dans le dossier personnel depuis mars 2025 : sans
+  // cette ligne, Next en déduit que la racine du projet est /Users/<toi>, le
+  // dit à chaque démarrage, et c'est de là qu'il choisirait les fichiers à
+  // emporter dans un build autonome.
+  outputFileTracingRoot: process.cwd(),
   // Le formulaire est servi dans une iframe posée sur le site WordPress.
   // On autorise explicitement ces parents-là, et personne d'autre.
   async headers() {
