@@ -22,7 +22,7 @@ const section = (l) => console.log('\n\x1b[1m' + l + '\x1b[0m');
 const sortie = mkdtempSync(join(tmpdir(), 'lil-regles-'));
 execFileSync(
   'npx',
-  ['tsc', 'src/lib/crush-regles.ts', 'src/lib/csv.ts', 'src/lib/groupes.ts',
+  ['tsc', 'src/lib/crush-regles.ts', 'src/lib/csv.ts', 'src/lib/groupes.ts', 'src/lib/manches.ts',
    '--outDir', sortie, '--target', 'ES2022', '--module', 'esnext',
    '--moduleResolution', 'bundler', '--strict'],
   { stdio: 'inherit' },
@@ -31,7 +31,7 @@ execFileSync(
 // butte sur le premier « export ».
 writeFileSync(join(sortie, 'package.json'), '{ "type": "module" }');
 
-const { peutVoir, age } = await import(join(sortie, 'crush-regles.js'));
+const { peutVoir, age, rang, nomManche } = await import(join(sortie, 'crush-regles.js'));
 const { lireCsv, colonne } = await import(join(sortie, 'csv.js'));
 const { trouve, presque, sansAccent } = await import(join(sortie, 'groupes.js'));
 
@@ -172,7 +172,52 @@ age(null) === null && age('pas une date') === null
   : bad('une date illisible produit un âge');
 
 /* ---------------------------------------------------------------- */
-section('4. Le CSV de la billetterie');
+section('4. Le nom d’une manche');
+
+rang(1) === '1er' && rang(2) === '2e' && rang(3) === '3e'
+  ? ok('1er, 2e, 3e — et non « 1ème »')
+  : bad('rang mal formé', [rang(1), rang(2), rang(3)].join(' '));
+
+nomManche(1) === '1er crush time' && nomManche(3) === '3e crush time'
+  ? ok('« 1er crush time » se dit à voix haute, « Crush time 1 » non')
+  : bad('nom de manche inattendu', nomManche(1));
+
+/* ---------------------------------------------------------------- */
+section('5. Une manche se referme toute seule');
+
+const { estOuverte, finPrevue } = await import(join(sortie, 'manches.js'));
+
+const t = (minutes) => new Date(Date.now() - minutes * 60_000).toISOString();
+
+!estOuverte({ ouvert_at: null, ferme_at: null })
+  ? ok('une manche jamais ouverte est fermée')
+  : bad('une manche jamais ouverte se dit ouverte');
+
+estOuverte({ ouvert_at: t(5), ferme_at: null })
+  ? ok('ouverte il y a cinq minutes : encore ouverte')
+  : bad('une manche récente est déjà close');
+
+!estOuverte({ ouvert_at: t(16), ferme_at: null })
+  ? ok('ouverte il y a seize minutes : close, même sans que personne l’ait refermée')
+  : bad('une manche oubliée accepterait encore des likes');
+
+!estOuverte({ ouvert_at: t(2), ferme_at: t(1) })
+  ? ok('et l’hôte peut toujours abréger')
+  : bad('la fermeture manuelle est ignorée');
+
+estOuverte({ ouvert_at: t(20), ferme_at: null, duree_minutes: 30 })
+  ? ok('une durée différente est respectée')
+  : bad('duree_minutes ignorée');
+
+(() => {
+  const fin = finPrevue({ ouvert_at: '2026-10-18T21:00:00.000Z', ferme_at: null });
+  return fin && fin.toISOString() === '2026-10-18T21:15:00.000Z';
+})()
+  ? ok('la fin tombe quinze minutes après l’ouverture')
+  : bad('fin mal calculée');
+
+/* ---------------------------------------------------------------- */
+section('6. Le CSV de la billetterie');
 
 const virgules = lireCsv('Email,Prénom\nmarie@exemple.fr,Marie\njean@exemple.fr,Jean\n');
 virgules.length === 2 && virgules[0]['Email'] === 'marie@exemple.fr'

@@ -162,23 +162,95 @@
   color: #fff;
 }
 
+/* --- La règle du jeu, avant tout le reste ---------------------------- */
+
+/* Au-dessus du titre, et non en légende : depuis qu'un toucher suffit à
+   choisir, il faut l'avoir lue avant d'approcher un cœur. */
+.cr-regle {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(224, 101, 122, 0.4);
+  background: rgba(224, 101, 122, 0.12);
+  font-size: 15px;
+  color: var(--creme);
+}
+
+.cr-regle strong {
+  font-weight: 700;
+}
+
+.cr-regle-texte {
+  flex: 1;
+  min-width: 0;
+}
+
+.cr-regle-ligne {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* Le compte à droite, détaché par un filet : on le cherche du regard sans
+   avoir à relire la phrase. */
+.cr-regle-compte {
+  flex: none;
+  text-align: center;
+  padding-left: 14px;
+  border-left: 1px solid rgba(246, 240, 228, 0.18);
+}
+
+.cr-regle-compte .cr-compte {
+  display: block;
+  font-size: 27px;
+  line-height: 1.1;
+}
+
+.cr-regle-compte span:last-child {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--creme-doux);
+}
+
+/* Collée à la règle, pas sous le titre : les deux répondent à la même
+   question — combien de choix il me reste, et jusqu'à quand. */
+.cr-regle-suite {
+  margin: 7px 0 0 28px;
+  font-size: 13px;
+  color: var(--creme-doux);
+}
+
+.cr-regle-coeur {
+  color: var(--rouge);
+  font-size: 18px;
+  flex: none;
+}
+
+/* Une fois le choix fait, la règle n'a plus à alerter : elle rappelle. */
+.cr-regle[data-fait] {
+  border-color: #3a302d;
+  background: var(--nuit-2);
+  color: var(--creme-doux);
+}
+
 /* --- La manche en cours --------------------------------------------- */
 
-.cr-manche {
-  margin-bottom: 18px;
-}
-
+/* Pas de serif ici : « 1er » en Cormorant, avec son exposant et ses
+   chiffres bas-de-casse, se lit mal au premier coup d'œil — et c'est
+   justement ce qu'on lit en premier. */
 .cr-manche-titre {
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 34px;
-  font-weight: 500;
-  margin: 0;
-}
-
-.cr-manche-regle {
-  margin: 4px 0 0;
-  font-size: 14px;
-  color: var(--creme-doux);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0 0 14px;
+  color: var(--creme);
+  font-variant-numeric: lining-nums;
 }
 
 /* Deux par rangée : assez grand pour reconnaître un visage croisé il y a
@@ -541,4 +613,28 @@
 
 .cr-match-contact a {
   color: inherit;
+}
+
+/* --- Le compte à rebours ---------------------------------------------- */
+
+/* Quinze minutes, ça se regarde fondre : chiffres à chasse fixe pour que le
+   texte autour ne tressaute pas à chaque seconde. */
+.cr-compte {
+  font-variant-numeric: lining-nums tabular-nums;
+  font-weight: 700;
+  color: var(--creme);
+}
+
+.cr-compte[data-urgent] {
+  color: var(--rouge);
+}
+
+.cr-attente-compte {
+  margin: 0 0 22px;
+  font-size: 19px;
+  color: var(--creme-doux);
+}
+
+.cr-attente-compte .cr-compte {
+  font-size: 26px;
 }

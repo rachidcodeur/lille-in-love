@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { BRAND } from '@/lib/brand';
+import { nomManche } from '@/lib/crush-regles';
 import { sansAccent } from '@/lib/groupes';
 import { Icone } from './Icones';
 
@@ -12,6 +13,7 @@ type Manche = {
   prevu_a: string;
   ouvert_at: string | null;
   ferme_at: string | null;
+  duree_minutes?: number | null;
 };
 
 type Personne = {
@@ -222,17 +224,24 @@ export function CrushPilotage({
 
         <div className="adm-manches">
           {manches.map((manche) => {
-            const ouverte = Boolean(manche.ouvert_at) && !manche.ferme_at;
-            const finie = Boolean(manche.ferme_at);
+            // Une manche dont les quinze minutes sont écoulées est close,
+            // même si personne ne l'a refermée : c'est ce que voit le
+            // serveur quand quelqu'un essaie de liker.
+            const fin = manche.ouvert_at
+              ? new Date(manche.ouvert_at).getTime() + (manche.duree_minutes ?? 15) * 60_000
+              : null;
+            const ecoulee = fin !== null && Date.now() >= fin;
+            const ouverte = Boolean(manche.ouvert_at) && !manche.ferme_at && !ecoulee;
+            const finie = Boolean(manche.ferme_at) || ecoulee;
             return (
               <div className="adm-manche" key={manche.id} data-etat={ouverte ? 'ouverte' : finie ? 'finie' : 'attente'}>
                 <div>
-                  <p className="adm-manche-nom">Crush time {manche.numero}</p>
+                  <p className="adm-manche-nom">{nomManche(manche.numero)}</p>
                   <p className="adm-manche-heure">
                     {ouverte
-                      ? `Ouvert depuis ${heure(manche.ouvert_at!)}`
+                      ? `Ouvert à ${heure(manche.ouvert_at!)} · se referme à ${heure(new Date(fin!).toISOString())}`
                       : finie
-                        ? `Terminé à ${heure(manche.ferme_at!)}`
+                        ? `Terminé à ${heure(manche.ferme_at ?? new Date(fin!).toISOString())}`
                         : `Annoncé à ${heure(manche.prevu_a)}`}
                   </p>
                 </div>
@@ -261,8 +270,9 @@ export function CrushPilotage({
         </div>
 
         <p className="adm-hint">
-          Ouvrir envoie la notification à tout le monde — fais l’appel avant. Une manche rouverte
-          reprend là où elle s’était arrêtée : les choix déjà faits sont faits.
+          Ouvrir envoie la notification à tout le monde — fais l’appel avant. Chaque crush time se
+          referme seul au bout de quinze minutes ; tu peux l’abréger, ou le rouvrir — il reprend là
+          où il s’était arrêté, les choix déjà faits sont faits.
         </p>
       </div>
 

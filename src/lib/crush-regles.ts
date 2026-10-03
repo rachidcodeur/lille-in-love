@@ -47,3 +47,18 @@ export function age(naissance: string | null, maintenant = Date.now()): number |
   if (Number.isNaN(date.getTime())) return null;
   return Math.floor((maintenant - date.getTime()) / 86_400_000 / 365.25);
 }
+
+/**
+ * « 1er », « 2e », « 3e ».
+ *
+ * « Crush time 1 » se lit comme une référence de dossier ; « 1er crush
+ * time » se dit à voix haute dans une salle, et c'est là que le mot sert.
+ */
+export function rang(numero: number): string {
+  return numero === 1 ? '1er' : `${numero}e`;
+}
+
+/** « 2e crush time » — le titre d'une manche, partout pareil. */
+export function nomManche(numero: number): string {
+  return `${rang(numero)} crush time`;
+}

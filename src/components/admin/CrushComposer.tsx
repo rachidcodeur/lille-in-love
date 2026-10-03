@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
+import { nomManche } from '@/lib/crush-regles';
 import { sansAccent } from '@/lib/groupes';
 import { Icone } from './Icones';
 
@@ -49,7 +50,9 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
   const [groupes, setGroupes] = useState<Set<string>>(new Set());
   const [csv, setCsv] = useState<string | null>(null);
   const [nomFichier, setNomFichier] = useState('');
-  const [heures, setHeures] = useState([`${date}T20:00`, `${date}T22:00`, `${date}T00:00`]);
+  // Les heures du déroulé type : 21h, 22h30, 23h45. Modifiables, mais
+  // c'est le planning réel qu'on retrouve d'une soirée à l'autre.
+  const [heures, setHeures] = useState([`${date}T21:00`, `${date}T22:30`, `${date}T23:45`]);
   const [main, setMain] = useState({ email: '', prenom: '', genre: '', naissance: '' });
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -346,7 +349,7 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
           <div className="adm-form-grille" style={{ marginTop: 20 }}>
             {heures.map((heure, index) => (
               <div className="adm-champ" key={index}>
-                <label htmlFor={`manche-${index}`}>Crush time {index + 1}</label>
+                <label htmlFor={`manche-${index}`}>{nomManche(index + 1)}</label>
                 <input
                   id={`manche-${index}`}
                   className="lil-input"
@@ -361,7 +364,7 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
           </div>
           <p className="adm-hint">
             Ces heures sont celles qu’on annonce. L’ouverture reste un geste : rien ne part sans que
-            tu appuies.
+            tu appuies. Chaque crush time se referme ensuite tout seul au bout de quinze minutes.
           </p>
         </>
       )}

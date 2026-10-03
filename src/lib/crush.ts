@@ -1,6 +1,7 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { colonne, lireCsv } from './csv';
 import { age, peutVoir, type Genre, type Orientation } from './crush-regles';
+import { estOuverte, finPrevue } from './manches';
 import { supabaseAdmin } from './supabase';
 import { lienPhoto } from './admin';
 
@@ -308,24 +309,28 @@ export async function entrerAvecCode(
    Les manches
    ==================================================================== */
 
+export { estOuverte, finPrevue, DUREE_PAR_DEFAUT } from './manches';
+
 export type Manche = {
   id: string;
   numero: number;
   prevu_a: string;
   ouvert_at: string | null;
   ferme_at: string | null;
+  /** Facultative : la colonne n'existe qu'une fois 15_duree_manches.sql passé. */
+  duree_minutes?: number | null;
 };
 
 export async function manches(soireeId: string): Promise<Manche[]> {
+  // « * » plutôt qu'une liste : duree_minutes peut ne pas exister encore,
+  // et une colonne nommée mais absente ferait échouer toute la page.
   const { data } = await supabaseAdmin()
     .from('lil_crush_rounds')
-    .select('id, numero, prevu_a, ouvert_at, ferme_at')
+    .select('*')
     .eq('soiree_id', soireeId)
     .order('numero', { ascending: true });
   return (data ?? []) as Manche[];
 }
-
-export const estOuverte = (m: Manche) => Boolean(m.ouvert_at) && !m.ferme_at;
 
 /* ====================================================================
    Les profils, les likes, les matchs

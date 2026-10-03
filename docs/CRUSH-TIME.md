@@ -10,7 +10,8 @@ de ces choix ont l'air arbitraires et ne le sont pas.
 | Règle | Détail |
 | --- | --- |
 | **Un like par crush time** | Trois manches, trois choix. Tenu par une contrainte d'unicité en base, pas par le code |
-| **Définitif** | Pas de retour en arrière, pas de « deliker ». C'est ce qui donne au like sa valeur. L'écran confirme avant d'écrire |
+| **Définitif** | Pas de retour en arrière, pas de « deliker ». Et sans confirmation : un toucher sur le cœur suffit |
+| **Quinze minutes** | Une manche se referme d'elle-même passé ce délai, même si personne ne l'a refermée. L'hôte peut abréger |
 | **Un match ignore la manche** | Likée à 20h, qui like en retour à minuit : c'est un match. Sinon l'espérance tombe à ~1 match par manche |
 | **Qui voit qui** | L'intérêt doit aller dans les deux sens. Sur une soirée 100 % hétéro, cela vaut exactement « le sexe opposé » ; le groupe G marche sans cas particulier |
 | **Profil incomplet** | Sans genre connu, on ne voit personne et personne ne vous voit. Le tableau de bord le signale |
@@ -85,6 +86,25 @@ Un **widget** est impossible — réservé aux applications natives. Une icône,
 oui.
 
 Le vrai filet, le soir même, reste l'hôte qui annonce à voix haute.
+
+## Le déroulé d'une soirée
+
+| Heure | |
+| --- | --- |
+| 20h00 | Arrivée, verre, quizz |
+| 20h30 | Règles des mini-jeux, formation des équipes |
+| **21h00** | **1er crush time** |
+| 22h00 | Fin des jeux, temps libre, boîte à défis |
+| **22h30** | **2e crush time** |
+| 23h00 | Événement surprise |
+| **23h45** | **3e crush time** |
+| 00h00 | Fin de l'événement |
+
+Ce sont les heures proposées par défaut à la composition d'une soirée.
+**Pour l'instant, l'hôte ouvre chaque crush time à la main** depuis son
+tableau de bord ; quand tout sera rodé, l'ouverture suivra l'horaire toute
+seule et les boutons disparaîtront. La fermeture, elle, est déjà
+automatique.
 
 ## Le soir
 

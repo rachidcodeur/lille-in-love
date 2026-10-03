@@ -2098,12 +2098,20 @@
   padding: 16px 18px;
   border-radius: var(--radius);
   background: var(--cream);
-  border-left: 3px solid var(--border);
+  /* Une bordure franche sur les quatre côtés : trois blocs posés sur un
+     fond crème sans contour se lisaient comme un seul pavé. */
+  border: 1px solid var(--border);
+  border-left-width: 3px;
 }
 
 .adm-manche[data-etat='ouverte'] {
   background: color-mix(in srgb, var(--white) 88%, var(--sand));
-  border-left-color: var(--gold);
+  border-color: var(--gold);
+  box-shadow: var(--shadow-sm);
+}
+
+.adm-manche[data-etat='finie'] {
+  border-style: dashed;
 }
 
 .adm-manche[data-etat='finie'] {
@@ -2522,4 +2530,33 @@
 .adm-soiree-effacer:hover {
   color: var(--error);
   border-color: var(--error);
+}
+
+/* --- Le lien vers un crush time en cours ------------------------------ */
+
+.adm-crush-lien {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+
+/* Un soir de soirée, c'est le bouton qu'on cherche des yeux : il bat. */
+.adm-pastille-vive {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+  animation: adm-battement 1.8s ease-in-out infinite;
+}
+
+@keyframes adm-battement {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-pastille-vive {
+    animation: none;
+  }
 }

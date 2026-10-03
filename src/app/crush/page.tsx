@@ -1,5 +1,6 @@
 import {
   estOuverte,
+  finPrevue,
   manches,
   matchsDe,
   monLike,
@@ -41,6 +42,11 @@ export default async function CrushPage({ searchParams }: Props) {
 
   const [rounds, matchs] = await Promise.all([manches(moi.soiree_id), matchsDe(moi)]);
   const manche = rounds.find(estOuverte) ?? null;
+  // Celui d'après : savoir qu'il reste un tour, et à quelle heure, change
+  // la façon dont on dépense son unique like.
+  const suivante = manche
+    ? (rounds.find((m) => m.numero > manche.numero && !m.ferme_at) ?? null)
+    : null;
   const [profils, dejaLike] = await Promise.all([
     manche ? profilsPour(moi) : Promise.resolve([]),
     manche ? monLike(moi, manche.id) : Promise.resolve(null),
@@ -62,13 +68,17 @@ export default async function CrushPage({ searchParams }: Props) {
           profils={profils}
           dejaLike={dejaLike}
           matchs={matchs}
+          prochaine={suivante?.prevu_a ?? null}
+          fin={finPrevue(manche)?.toISOString() ?? null}
         />
       ) : (
         <CrushAttente
           manches={rounds.map((m) => ({
             numero: m.numero,
             prevu_a: m.prevu_a,
-            passee: Boolean(m.ferme_at),
+            // Une manche dont le temps est écoulé est passée, même si
+            // personne ne l'a refermée.
+            passee: Boolean(m.ferme_at) || (Boolean(m.ouvert_at) && !estOuverte(m)),
           }))}
         />
       )}

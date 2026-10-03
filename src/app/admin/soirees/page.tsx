@@ -75,8 +75,18 @@ export default async function SoireesPage() {
                       {(charges[s.id]?.participants ?? 0) > 0 &&
                         ` · ${charges[s.id].participants} participants`}
                     </p>
-                    <Link href={`/admin/soirees/${s.id}`} className="adm-btn" style={{ marginTop: 12 }}>
-                      Crush Time{s.crush_actif ? ' · en cours' : ''}
+                    {/* En cours, ce bouton est celui qu'on cherche des yeux
+                        un soir de soirée : il ne doit pas ressembler aux
+                        autres. */}
+                    <Link
+                      href={`/admin/soirees/${s.id}`}
+                      className={`adm-btn adm-crush-lien${s.crush_actif ? ' adm-btn-yes' : ''}`}
+                      data-encours={s.crush_actif || undefined}
+                    >
+                      {s.crush_actif && (
+                        <span className="adm-pastille-vive" aria-hidden="true" />
+                      )}
+                      Crush Time{s.crush_actif ? ' en cours' : ''}
                     </Link>
                   </div>
                 ))

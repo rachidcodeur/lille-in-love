@@ -3,6 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { Profil } from '@/lib/crush';
+import { nomManche } from '@/lib/crush-regles';
+import { Compte } from './Compte';
 
 /**
  * Les profils de la manche, deux par rangée.
@@ -29,20 +31,29 @@ function court(texte: string, max = 140): string {
   return `${coupe.slice(0, dernierEspace > 60 ? dernierEspace : max).trimEnd()}…`;
 }
 
+/** « 22h00 » — lisible d'un coup d'œil, au fond d'une salle. */
+const heure = (iso: string) =>
+  new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
 export function CrushProfils({
   numero,
   profils,
   dejaLike,
   matchs,
+  prochaine,
+  fin,
 }: {
   numero: number;
   profils: Profil[];
   dejaLike: string | null;
   matchs: Profil[];
+  /** L'heure annoncée du crush time suivant, s'il en reste un. */
+  prochaine: string | null;
+  /** L'instant où celui-ci se referme : quinze minutes, ça se regarde fondre. */
+  fin: string | null;
 }) {
   const router = useRouter();
   const [ouvert, setOuvert] = useState<Profil | null>(null);
-  const [aConfirmer, setAConfirmer] = useState<Profil | null>(null);
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [nouveauMatch, setNouveauMatch] = useState<Profil | null>(null);
@@ -69,7 +80,6 @@ export function CrushProfils({
       return;
     }
 
-    setAConfirmer(null);
     setOuvert(null);
     if (res?.match) setNouveauMatch(res.match);
     setBusy(false);
@@ -78,17 +88,38 @@ export function CrushProfils({
 
   return (
     <>
-      <div className="cr-manche">
-        <p className="cr-manche-titre">Crush time {numero}</p>
-        <p className="cr-manche-regle">
-          {choisi ? (
-            <>
-              Ton choix est fait&nbsp;: <strong>{choisi.first_name}</strong>.
-            </>
-          ) : (
-            'Une seule personne, et c’est définitif.'
-          )}
-        </p>
+      {/* Le titre d'abord, le rappel ensuite : on sait où l'on est, puis
+          ce qu'on a le droit de faire. */}
+      <p className="cr-manche-titre">{nomManche(numero)}</p>
+
+      <div className="cr-regle" data-fait={Boolean(choisi) || undefined}>
+        <div className="cr-regle-texte">
+          <p className="cr-regle-ligne">
+            <span className="cr-regle-coeur" aria-hidden="true">
+              ♥
+            </span>
+            {choisi ? (
+              <span>
+                Ton choix : <strong>{choisi.first_name}</strong>
+              </span>
+            ) : (
+              <span>
+                Tu as <strong>un like</strong> à donner pour l’instant. Utilise-le pour la personne
+                qui t’intéresse le plus.
+              </span>
+            )}
+          </p>
+
+          {prochaine && <p className="cr-regle-suite">Prochain crush time à {heure(prochaine)}</p>}
+        </div>
+
+        {/* À droite et en gros : quinze minutes, ça se regarde fondre. */}
+        {fin && (
+          <div className="cr-regle-compte">
+            <Compte jusqua={fin} />
+            <span>restantes</span>
+          </div>
+        )}
       </div>
 
       <div className="cr-grille">
@@ -142,7 +173,8 @@ export function CrushProfils({
                     type="button"
                     className="cr-coeur-carte"
                     aria-label={`Choisir ${profil.first_name}`}
-                    onClick={() => setAConfirmer(profil)}
+                    onClick={() => liker(profil)}
+                    disabled={busy}
                   >
                     ♡
                   </button>
@@ -188,34 +220,15 @@ export function CrushProfils({
                 Ton choix de ce crush time est déjà fait.
               </p>
             ) : (
-              <button type="button" className="cr-bouton cr-coeur" onClick={() => setAConfirmer(ouvert)}>
-                ♥ Je choisis {ouvert.first_name}
+              <button
+                type="button"
+                className="cr-bouton cr-coeur"
+                disabled={busy}
+                onClick={() => liker(ouvert)}
+              >
+                {busy ? 'Un instant…' : `♥ Je choisis ${ouvert.first_name}`}
               </button>
             )}
-          </div>
-        </div>
-      )}
-
-      {/* --- La confirmation, parce que ça ne se reprend pas --- */}
-      {aConfirmer && (
-        <div className="cr-voile" role="dialog" aria-modal="true">
-          <div className="cr-fiche cr-confirme">
-            <h2 className="cr-fiche-nom">{aConfirmer.first_name}</h2>
-            <p className="cr-texte">
-              C’est ton seul choix pour ce crush time, et il ne se reprend pas.
-            </p>
-            {erreur && <p className="cr-erreur">{erreur}</p>}
-            <button
-              type="button"
-              className="cr-bouton cr-coeur"
-              disabled={busy}
-              onClick={() => liker(aConfirmer)}
-            >
-              {busy ? 'Un instant…' : 'Oui, c’est elle ou lui'}
-            </button>
-            <button type="button" className="cr-fermer cr-annuler" onClick={() => setAConfirmer(null)}>
-              Revenir
-            </button>
           </div>
         </div>
       )}

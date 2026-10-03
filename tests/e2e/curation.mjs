@@ -1301,7 +1301,7 @@ await page.waitForTimeout(2500);
 await page.waitForTimeout(6000);
 await cadre.getByRole('button', { name: 'Envoyer ma candidature' }).click();
 
-await page.waitForURL('**/merci-wordpress', { timeout: 15000 }).catch(() => {});
+await jusqua(() => page.url().includes('/merci-wordpress'), 25_000);
 page.url().includes('/merci-wordpress')
   ? ok('la page entière part vers le remerciement, pas seulement l’iframe')
   : bad('la page WordPress n’a pas bougé', page.url());
@@ -1941,16 +1941,30 @@ const presents = await (
 ).json();
 const qui = Object.fromEntries(presents.map((p) => [p.first_name, p]));
 
+// Trois manches, comme une vraie soirée : la première ouverte, pour que
+// l'écran puisse annoncer l'heure de la suivante.
 const [manche1] = await (
   await fetch(`${FAKE}/rest/v1/lil_crush_rounds`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
-    body: JSON.stringify({
-      soiree_id: soireeCrush.id,
-      numero: 1,
-      prevu_a: new Date().toISOString(),
-      ouvert_at: new Date().toISOString(),
-    }),
+    body: JSON.stringify([
+      {
+        soiree_id: soireeCrush.id,
+        numero: 1,
+        prevu_a: new Date().toISOString(),
+        ouvert_at: new Date().toISOString(),
+      },
+      {
+        soiree_id: soireeCrush.id,
+        numero: 2,
+        prevu_a: new Date(Date.now() + 2 * 3600_000).toISOString(),
+      },
+      {
+        soiree_id: soireeCrush.id,
+        numero: 3,
+        prevu_a: new Date(Date.now() + 4 * 3600_000).toISOString(),
+      },
+    ]),
   })
 ).json();
 
@@ -2007,25 +2021,37 @@ await tel.waitForTimeout(400);
   ? ok('« Mes matchs » est en haut, dans l’en-tête')
   : bad('le bouton des matchs n’est pas dans l’en-tête');
 
+// --- La règle, lisible avant qu'on touche quoi que ce soit ---------
+const regle = await tel.locator('.cr-regle').innerText();
+regle.includes('un like à donner')
+  ? ok('la règle est affichée avant les profils, pas en légende')
+  : bad('la règle du like unique n’est pas en évidence', regle);
+
+// L'heure du suivant est dans le même bloc que la règle : les deux
+// répondent à la même question, « combien il m'en reste ».
+(await tel.locator('.cr-regle').innerText()).includes('Prochain crush time à')
+  ? ok('et l’heure du crush time suivant est dans le même bloc')
+  : bad('heure du prochain crush time absente', await tel.locator('.cr-regle').innerText());
+
+(await tel.locator('.cr-regle').innerText()).includes('un like à donner')
+  ? ok('la règle est dite avec les mots de la soirée')
+  : bad('texte de la règle inattendu', await tel.locator('.cr-regle').innerText());
+
+(await tel.locator('.cr-manche-titre').innerText()) === '1er crush time'
+  ? ok('les manches se nomment « 1er crush time », pas « Crush time 1 »')
+  : bad('titre de manche inattendu', await tel.locator('.cr-manche-titre').innerText());
+
+// Quinze minutes, ça se regarde fondre.
+/^1[0-5]:\d{2}$/.test((await tel.locator('.cr-regle-compte .cr-compte').innerText()) || '')
+  ? ok('le temps restant s’affiche en grand, dans le bloc, à droite')
+  : bad('pas de compte à rebours', await tel.locator('.cr-compte').innerText().catch(() => ''));
+
+// --- Liker d'un seul geste, sans confirmation ----------------------
 await tel.locator('.cr-carte', { hasText: 'Samir' }).locator('.cr-coeur-carte').click();
-await tel.waitForTimeout(500);
-(await tel.locator('.cr-confirme').count()) === 1 && (await tel.locator('.cr-fiche-mot').count()) === 0
-  ? ok('le cœur de la carte mène droit à la confirmation, sans passer par le profil')
-  : bad('le cœur de la carte n’ouvre pas la confirmation');
-await tel.getByRole('button', { name: 'Revenir' }).click();
-await tel.waitForTimeout(300);
-
-// --- Liker, avec confirmation --------------------------------------
-await tel.locator('.cr-carte', { hasText: 'Samir' }).click();
-await tel.waitForTimeout(500);
-await tel.getByRole('button', { name: /Je choisis/ }).click();
-await tel.waitForTimeout(400);
-(await tel.locator('.cr-confirme').innerText()).includes('ne se reprend pas')
-  ? ok('un geste irréversible demande confirmation')
-  : bad('pas de confirmation avant le like');
-
-await tel.getByRole('button', { name: /^Oui/ }).click();
 await jusqua(async () => (await state()).crushLikes.length > 0);
+(await tel.locator('.cr-confirme').count()) === 0
+  ? ok('le cœur de la carte choisit tout de suite, sans étape de confirmation')
+  : bad('une confirmation s’est interposée');
 
 s = await state();
 s.crushLikes.filter((l) => l.de_id === qui['Inès'].id).length === 1
@@ -2041,6 +2067,12 @@ await tel.waitForTimeout(500);
 (await tel.locator('.cr-fiche-etat').innerText().catch(() => '')).includes('déjà fait')
   ? ok('le second choix de la manche n’est même pas proposé')
   : bad('on peut liker deux fois dans une manche');
+
+await tel.locator('.cr-fermer').click();
+await tel.waitForTimeout(300);
+(await tel.locator('.cr-regle').innerText()).includes('Samir')
+  ? ok('et la règle devient le rappel de qui l’on a choisi')
+  : bad('le choix fait n’est pas rappelé', await tel.locator('.cr-regle').innerText());
 
 const secondLike = await tel.evaluate(async (versId) => {
   const r = await fetch('/api/crush/liker', {
@@ -2062,11 +2094,7 @@ await tel2.waitForTimeout(1200);
   ? ok('le lien personnel échange son jeton contre une session et disparaît de l’adresse')
   : bad('le jeton reste dans la barre d’adresse', tel2.url());
 
-await tel2.locator('.cr-carte', { hasText: 'Inès' }).click();
-await tel2.waitForTimeout(500);
-await tel2.getByRole('button', { name: /Je choisis/ }).click();
-await tel2.waitForTimeout(400);
-await tel2.getByRole('button', { name: /^Oui/ }).click();
+await tel2.locator('.cr-carte', { hasText: 'Inès' }).locator('.cr-coeur-carte').click();
 await jusqua(async () => (await state()).crushMatches.length === 1);
 
 (await tel2.locator('.cr-match-mot').innerText().catch(() => ''))
@@ -2113,6 +2141,31 @@ const volee = await tel.evaluate(async (id) => (await fetch(`/crush/photo/${id}`
 volee === 404
   ? ok('la photo de quelqu’un qui n’est pas de la soirée est introuvable')
   : bad('on peut parcourir les photos de toute la base', String(volee));
+
+// --- Quinze minutes passées, la manche est close d'elle-même --------
+const [salome] = (await state()).crushParticipants.filter((p) => p.first_name === 'Salomé');
+await fetch(`${FAKE}/rest/v1/lil_crush_rounds?id=eq.${manche1.id}`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ ouvert_at: new Date(Date.now() - 20 * 60_000).toISOString() }),
+});
+const apresLHeure = await tel2.evaluate(async (versId) => {
+  const r = await fetch('/api/crush/liker', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ versId }),
+  });
+  return r.status;
+}, salome.id);
+apresLHeure === 409
+  ? ok('vingt minutes après l’ouverture, le serveur refuse : la manche s’est close seule')
+  : bad('un like est passé après la fin de la manche', String(apresLHeure));
+
+await fetch(`${FAKE}/rest/v1/lil_crush_rounds?id=eq.${manche1.id}`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ ouvert_at: new Date().toISOString() }),
+});
 
 // --- Hors manche ----------------------------------------------------
 await fetch(`${FAKE}/rest/v1/lil_crush_rounds?id=eq.${manche1.id}`, {
@@ -2165,6 +2218,27 @@ await faire('lil_crush_matches', [
 
 await page.goto(`${BASE}/admin/soirees`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(600);
+
+// --- Celle dont le crush time tourne doit se repérer d'un regard ---
+await fetch(`${FAKE}/rest/v1/lil_soirees?id=eq.${soireePleine.id}`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ crush_actif: true, crush_code: '4812' }),
+});
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(500);
+
+const vif = page.locator('.adm-soiree', { hasText: 'Vraie soirée' }).locator('.adm-crush-lien');
+(await vif.getAttribute('data-encours')) === 'true' &&
+(await vif.innerText()).includes('en cours') &&
+(await vif.locator('.adm-pastille-vive').count()) === 1
+  ? ok('le crush time en cours se repère d’un regard dans la liste')
+  : bad('le lien du crush time en cours ne ressort pas', await vif.innerText());
+
+const terne = page.locator('.adm-soiree', { hasText: 'Essai à jeter' }).locator('.adm-crush-lien');
+(await terne.getAttribute('data-encours')) === null
+  ? ok('et les autres restent discrètes')
+  : bad('toutes les soirées se signalent comme en cours');
 
 // --- Une soirée d'essai, sans rien dedans --------------------------
 await page.locator('.adm-soiree', { hasText: 'Essai à jeter' }).locator('.adm-soiree-effacer').click();
