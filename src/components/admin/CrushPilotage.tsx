@@ -68,6 +68,14 @@ export function CrushPilotage({
   const hommes = presents.filter((p) => p.gender === 'homme').length;
   const incomplets = presents.filter((p) => !p.gender);
 
+  // Avant la première ouverture, cet écran sert à l'appel. Après, il sert à
+  // rattraper : les deux ne se racontent pas de la même façon.
+  const aucuneOuverte = manches.every((m) => !m.ouvert_at);
+
+  // Seule la manche suivante porte le bouton franc. Trois boutons également
+  // engageants, c'est une invitation à ouvrir le troisième crush time à 20h.
+  const prochaine = manches.find((m) => !m.ouvert_at);
+
   const terme = recherche.trim().toLowerCase();
   const visibles = terme
     ? gens.filter(
@@ -80,58 +88,7 @@ export function CrushPilotage({
     <>
       <div className="adm-card">
         <div className="adm-card-head">
-          <p className="adm-card-title">Les trois crush times</p>
-        </div>
-
-        <div className="adm-manches">
-          {manches.map((manche) => {
-            const ouverte = Boolean(manche.ouvert_at) && !manche.ferme_at;
-            const finie = Boolean(manche.ferme_at);
-            return (
-              <div className="adm-manche" key={manche.id} data-etat={ouverte ? 'ouverte' : finie ? 'finie' : 'attente'}>
-                <div>
-                  <p className="adm-manche-nom">Crush time {manche.numero}</p>
-                  <p className="adm-manche-heure">
-                    {ouverte
-                      ? `Ouvert depuis ${heure(manche.ouvert_at!)}`
-                      : finie
-                        ? `Terminé à ${heure(manche.ferme_at!)}`
-                        : `Annoncé à ${heure(manche.prevu_a)}`}
-                  </p>
-                </div>
-                {ouverte ? (
-                  <button
-                    type="button"
-                    className="adm-btn"
-                    disabled={occupe === manche.id}
-                    onClick={() => agir(manche.id, { action: 'fermer', mancheId: manche.id })}
-                  >
-                    Fermer
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="adm-btn adm-btn-yes"
-                    disabled={occupe === manche.id}
-                    onClick={() => agir(manche.id, { action: 'ouvrir', mancheId: manche.id })}
-                  >
-                    {finie ? 'Rouvrir' : 'Ouvrir'}
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <p className="adm-hint">
-          Ouvrir envoie la notification à tout le monde. Une manche rouverte reprend là où elle
-          s’était arrêtée : les choix déjà faits sont faits.
-        </p>
-      </div>
-
-      <div className="adm-card">
-        <div className="adm-card-head">
-          <p className="adm-card-title">Les participants</p>
+          <p className="adm-card-title">Qui est là ce soir</p>
           <span className="adm-card-aside">
             {presents.length} présents · {femmes} femmes · {hommes} hommes
             {/* Sans cette mention, le compte ne s'additionne pas et on
@@ -204,9 +161,60 @@ export function CrushPilotage({
         </div>
 
         <p className="adm-hint">
-          Retirer quelqu’un qui n’est pas venu le fait disparaître des profils, et rend son choix à
-          qui l’avait liké sur la manche en cours. Ses matchs déjà faits restent : ils appartiennent
-          aussi à l’autre.
+          {aucuneOuverte
+            ? 'Fais l’appel avant d’ouvrir le premier crush time : quelqu’un qui a payé sans venir occuperait une place dans les profils toute la soirée. Retiré, il disparaît ; remis, il revient.'
+            : 'Les crush times ont commencé. Retirer quelqu’un maintenant le fait disparaître des profils et rend son choix à qui l’avait liké sur la manche en cours — mais les matchs déjà faits restent, ils appartiennent aussi à l’autre.'}
+        </p>
+      </div>
+
+      <div className="adm-card">
+        <div className="adm-card-head">
+          <p className="adm-card-title">Les trois crush times</p>
+        </div>
+
+        <div className="adm-manches">
+          {manches.map((manche) => {
+            const ouverte = Boolean(manche.ouvert_at) && !manche.ferme_at;
+            const finie = Boolean(manche.ferme_at);
+            return (
+              <div className="adm-manche" key={manche.id} data-etat={ouverte ? 'ouverte' : finie ? 'finie' : 'attente'}>
+                <div>
+                  <p className="adm-manche-nom">Crush time {manche.numero}</p>
+                  <p className="adm-manche-heure">
+                    {ouverte
+                      ? `Ouvert depuis ${heure(manche.ouvert_at!)}`
+                      : finie
+                        ? `Terminé à ${heure(manche.ferme_at!)}`
+                        : `Annoncé à ${heure(manche.prevu_a)}`}
+                  </p>
+                </div>
+                {ouverte ? (
+                  <button
+                    type="button"
+                    className="adm-btn"
+                    disabled={occupe === manche.id}
+                    onClick={() => agir(manche.id, { action: 'fermer', mancheId: manche.id })}
+                  >
+                    Fermer
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={`adm-btn${manche.id === prochaine?.id ? ' adm-btn-yes' : ''}`}
+                    disabled={occupe === manche.id}
+                    onClick={() => agir(manche.id, { action: 'ouvrir', mancheId: manche.id })}
+                  >
+                    {finie ? 'Rouvrir' : 'Ouvrir'}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="adm-hint">
+          Ouvrir envoie la notification à tout le monde — fais l’appel avant. Une manche rouverte
+          reprend là où elle s’était arrêtée : les choix déjà faits sont faits.
         </p>
       </div>
 

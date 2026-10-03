@@ -421,10 +421,14 @@ export async function participants(soireeId: string): Promise<LigneParticipant[]
 /**
  * Retirer quelqu'un qui n'est pas venu.
  *
- * Ses likes partent avec lui, et c'est le point délicat : quelqu'un qui
- * l'avait choisi récupère son choix pour la manche en cours, au lieu
- * d'attendre toute la soirée un match impossible. Les matchs déjà faits,
- * eux, restent — ils appartiennent aussi à l'autre.
+ * C'est l'appel, fait à la porte avant d'ouvrir le premier crush time :
+ * quelqu'un qui a payé sans venir occuperait sinon une place dans les
+ * profils toute la soirée, et recevrait des likes perdus.
+ *
+ * Ses likes partent avec lui — en pratique il n'en a aucun à ce moment-là,
+ * mais si on retire quelqu'un plus tard, celui qui l'avait choisi récupère
+ * son choix pour la manche en cours au lieu d'attendre un match impossible.
+ * Les matchs déjà faits, eux, restent : ils appartiennent aussi à l'autre.
  */
 export async function retirer(participantId: string): Promise<void> {
   const db = supabaseAdmin();
