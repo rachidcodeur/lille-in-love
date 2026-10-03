@@ -27,6 +27,27 @@ const bad = (l, d) => { failures.push(l); console.log('  [31m✗[0m ' + l + (d
 const section = (l) => console.log('\n[1m' + l + '[0m');
 const state = async () => (await fetch(`${FAKE}/__state`)).json();
 
+/**
+ * Attendre qu'une condition devienne vraie.
+ *
+ * Compter en millisecondes après un clic marche sur une machine au repos et
+ * échoue sur une machine chargée — et un test qui échoue au hasard finit par
+ * ne plus rien prouver. On regarde donc jusqu'à ce que ce soit vrai, ou
+ * jusqu'à ce que ce soit vraiment faux.
+ */
+const jusqua = async (verifier, limite = 10_000) => {
+  const fin = Date.now() + limite;
+  for (;;) {
+    try {
+      if (await verifier()) return true;
+    } catch {
+      /* pas encore prêt */
+    }
+    if (Date.now() >= fin) return false;
+    await new Promise((r) => setTimeout(r, 150));
+  }
+};
+
 await fetch(`${FAKE}/__reset`);
 
 const browser = await chromium.launch({ executablePath: CHROME, headless: true });
@@ -184,6 +205,10 @@ await page.waitForLoadState('networkidle');
 const fiche = await page.locator('.adm-name').innerText();
 fiche.includes('Camille') ? ok('fiche ouverte') : bad('fiche non ouverte', fiche);
 
+await jusqua(async () =>
+  (await page.locator('.adm-photo').count()) === 2 &&
+  (await page.locator('.adm-photo').evaluateAll((els) => els.every((el) => el.naturalWidth > 0))),
+);
 const bigPhotos = await page.locator('.adm-photo').count();
 const bigLoaded = await page.locator('.adm-photo').evaluateAll(
   (els) => els.every((el) => el.naturalWidth > 0),
@@ -684,7 +709,9 @@ await ranger({ first_name: 'Flore', email: 'flore@example.com', form_version: 'c
 // --- Attribuer un groupe depuis la fiche --------------------------
 await page.goto(`${BASE}/admin/${idAmande}`, { waitUntil: 'networkidle' });
 await page.locator('.adm-groupes[data-compact="false"] [title="Groupe C"]').click();
-await page.waitForTimeout(900);
+await jusqua(async () =>
+  (await state()).members.find((m) => m.id === idAmande)?.soiree_group === 'C',
+);
 
 s = await state();
 s.members.find((m) => m.id === idAmande)?.soiree_group === 'C'
@@ -879,7 +906,7 @@ await page.waitForTimeout(500);
 // lien — et c'est précisément ce recouvrement qu'on veut vérifier.
 const pastille = await page.locator('.adm-row', { hasText: 'Carmen' }).locator('.adm-chip').boundingBox();
 await page.mouse.click(pastille.x + pastille.width / 2, pastille.y + pastille.height / 2);
-await page.waitForTimeout(1500);
+await jusqua(async () => page.url().includes('/admin/') && page.url() !== `${BASE}/admin`);
 ((await page.locator('.adm-name').innerText().catch(() => '')) || '').includes('Carmen')
   ? ok('cliquer une pastille de statut ouvre la fiche, comme le reste de la ligne')
   : bad('la pastille de statut avale le clic', page.url());
@@ -1103,7 +1130,14 @@ await page.waitForTimeout(800);
 
 await page.goto(`${BASE}/admin/${idJetee}`, { waitUntil: 'networkidle' });
 await page.getByRole('button', { name: 'Mettre à la corbeille' }).click();
-await page.waitForTimeout(2000);
+await jusqua(async () => {
+  const etat = await state();
+  return (
+    Boolean(etat.members.find((m) => m.id === idJetee)?.deleted_at) &&
+    etat.emails.find((e) => e.member_id === idJetee && e.template === '02_bienvenue')?.status ===
+      'annule'
+  );
+});
 
 s = await state();
 s.members.find((m) => m.id === idJetee)?.deleted_at
@@ -1117,6 +1151,7 @@ s.emails.find((e) => e.member_id === idJetee && e.template === '02_bienvenue')?.
   : bad('bienvenue non annulée', s.emails.find((e) => e.member_id === idJetee)?.status);
 
 await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+await jusqua(async () => (await page.locator('.adm-row').count()) === 1);
 const restantes = (await page.locator('.adm-row-name').allInnerTexts()).map((t) => t.trim());
 restantes.length === 1 && restantes[0].includes('Gardee')
   ? ok('elle a quitté la liste des candidatures')
@@ -1706,7 +1741,13 @@ await page.locator('.adm-choix-ligne', { hasText: 'Inès' }).locator('input').ch
 
 // --- Créer -----------------------------------------------------------
 await page.getByRole('button', { name: 'Créer le crush time' }).click();
-await page.waitForTimeout(1800);
+await jusqua(async () => {
+  const etat = await state();
+  return (
+    etat.crushParticipants.filter((p) => p.soiree_id === soireeC.id).length === 3 &&
+    etat.crushRounds.filter((r) => r.soiree_id === soireeC.id).length === 3
+  );
+});
 
 s = await state();
 const inscrits = s.crushParticipants.filter((p) => p.soiree_id === soireeC.id);
@@ -1741,7 +1782,10 @@ await page.waitForTimeout(400);
 const jetonsAvant = new Map(inscrits.map((p) => [p.email, p.jeton]));
 await page.locator('.adm-choix-ligne:not([data-deja])').first().locator('input').check();
 await page.getByRole('button', { name: 'Ajouter à la soirée' }).click();
-await page.waitForTimeout(1800);
+await jusqua(
+  async () =>
+    (await state()).crushParticipants.filter((p) => p.soiree_id === soireeC.id).length === 4,
+);
 
 s = await state();
 const apresAjout = s.crushParticipants.filter((p) => p.soiree_id === soireeC.id);
@@ -1764,7 +1808,9 @@ await page.fill('#main-email', 'organisateur@in-love.fr');
 await page.fill('#main-prenom', 'Rachid');
 await page.selectOption('#main-genre', 'homme');
 await page.getByRole('button', { name: 'Ajouter cette personne' }).click();
-await page.waitForTimeout(1800);
+await jusqua(async () =>
+  (await state()).crushParticipants.some((p) => p.email === 'organisateur@in-love.fr'),
+);
 
 s = await state();
 const ajoutMain = s.crushParticipants.find((p) => p.email === 'organisateur@in-love.fr');
@@ -1885,7 +1931,7 @@ await tel.waitForTimeout(400);
   : bad('pas de confirmation avant le like');
 
 await tel.getByRole('button', { name: /^Oui/ }).click();
-await tel.waitForTimeout(1800);
+await jusqua(async () => (await state()).crushLikes.length > 0);
 
 s = await state();
 s.crushLikes.filter((l) => l.de_id === qui['Inès'].id).length === 1
@@ -1927,7 +1973,7 @@ await tel2.waitForTimeout(500);
 await tel2.getByRole('button', { name: /Je choisis/ }).click();
 await tel2.waitForTimeout(400);
 await tel2.getByRole('button', { name: /^Oui/ }).click();
-await tel2.waitForTimeout(2000);
+await jusqua(async () => (await state()).crushMatches.length === 1);
 
 (await tel2.locator('.cr-match-mot').innerText().catch(() => ''))
   .includes('match')
