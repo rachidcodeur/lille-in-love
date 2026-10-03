@@ -93,3 +93,49 @@ export async function getSoiree(id: string): Promise<SoireeRow | null> {
   if (error) throw new Error(error.message);
   return (data as SoireeRow | null) ?? null;
 }
+
+/** Ce qu'une soirée emporterait avec elle. */
+export type CeQuEllePorte = { participants: number; matchs: number };
+
+/**
+ * Compter avant d'effacer.
+ *
+ * Supprimer une soirée fait tomber en cascade ses participants, leurs likes
+ * et leurs matchs. Un match n'est pas une donnée d'organisation : c'est ce
+ * que deux personnes ont obtenu d'une soirée. On veut donc savoir ce qu'on
+ * s'apprête à défaire avant de le défaire.
+ *
+ * Les tables du crush time peuvent ne pas exister : 13_crushtime.sql n'a
+ * peut-être pas été passé, et la liste des soirées doit s'afficher quand même.
+ */
+export async function ceQuElleporte(soireeId: string): Promise<CeQuEllePorte> {
+  const db = supabaseAdmin();
+  const [participants, matchs] = await Promise.all([
+    db.from('lil_crush_participants').select('id').eq('soiree_id', soireeId),
+    db.from('lil_crush_matches').select('id').eq('soiree_id', soireeId),
+  ]);
+  return {
+    participants: participants.data?.length ?? 0,
+    matchs: matchs.data?.length ?? 0,
+  };
+}
+
+/**
+ * Effacer une soirée, et son crush time avec elle.
+ *
+ * Rien ne l'interdit, même si des matchs y sont attachés : c'est ton
+ * organisation, et une soirée d'essai qu'on ne peut plus retirer encombre
+ * pour toujours. L'écran dit en revanche ce que la suppression emporte,
+ * compté avant de demander — on peut se tromper de ligne dans une liste.
+ */
+export async function supprimerSoiree(soireeId: string): Promise<CeQuEllePorte> {
+  const porte = await ceQuElleporte(soireeId);
+
+  // Les participants, leurs likes et leurs matchs partent en cascade, et
+  // les emails envoyés à l'occasion de cette soirée perdent simplement leur
+  // rattachement : leur trace, elle, reste.
+  const { error } = await supabaseAdmin().from('lil_soirees').delete().eq('id', soireeId);
+  if (error) throw new Error(error.message);
+
+  return porte;
+}

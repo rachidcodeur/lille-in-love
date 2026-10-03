@@ -2494,3 +2494,32 @@
 .adm-tri-cases label[data-on='true'] b {
   color: var(--gold-deep);
 }
+
+/* --- Retirer une soirée ---------------------------------------------- */
+
+.adm-soiree-tete {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Discret : c'est un geste rare, qui ne doit pas rivaliser avec le nom de
+   la soirée. Il se colore au survol, quand la main est déjà dessus. */
+.adm-soiree-effacer {
+  flex: none;
+  padding: 7px 10px;
+  color: var(--ink-muted);
+  opacity: 0.55;
+  transition: opacity 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.adm-soiree:hover .adm-soiree-effacer,
+.adm-soiree-effacer:focus-visible {
+  opacity: 1;
+}
+
+.adm-soiree-effacer:hover {
+  color: var(--error);
+  border-color: var(--error);
+}

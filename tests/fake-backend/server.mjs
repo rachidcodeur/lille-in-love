@@ -491,6 +491,26 @@ async function traiter(req, res) {
       const rows = applyFilters(readTable(table), params);
       const ids = new Set(rows.map((r) => r.id));
       tables[table] = tables[table].filter((r) => !ids.has(r.id));
+
+      // « on delete cascade » : effacer une soirée fait tomber son crush
+      // time. Sans cela, le faux serveur laisserait croire qu'on peut
+      // retirer une soirée sans conséquence.
+      if (table === 'lil_soirees') {
+        const manches = new Set(
+          tables.lil_crush_rounds.filter((r) => ids.has(r.soiree_id)).map((r) => r.id),
+        );
+        tables.lil_crush_rounds = tables.lil_crush_rounds.filter((r) => !ids.has(r.soiree_id));
+        tables.lil_crush_matches = tables.lil_crush_matches.filter((m) => !ids.has(m.soiree_id));
+        tables.lil_crush_likes = tables.lil_crush_likes.filter((l) => !manches.has(l.round_id));
+        tables.lil_crush_participants = tables.lil_crush_participants.filter(
+          (p) => !ids.has(p.soiree_id),
+        );
+        // « on delete set null » pour les emails : leur trace reste.
+        for (const email of tables.lil_emails) {
+          if (ids.has(email.soiree_id)) email.soiree_id = null;
+        }
+      }
+
       return json(res, 200, rows);
     }
   }

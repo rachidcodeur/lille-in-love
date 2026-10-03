@@ -2130,6 +2130,91 @@ await tel.close();
 await tel2.close();
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
+/* ---------------------------------------------------------------- */
+section('19. Retirer une soirée');
+
+const faire = async (table, corps) =>
+  (
+    await (
+      await fetch(`${FAKE}/rest/v1/${table}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+        body: JSON.stringify(corps),
+      })
+    ).json()
+  )[0];
+
+const soireeVide = await faire('lil_soirees', [
+  { nom: 'Essai à jeter', age_min: 26, age_max: 36, date_soiree: '2026-10-09', lieu: 'Le bowling', publiee_at: new Date().toISOString() },
+]);
+const soireePleine = await faire('lil_soirees', [
+  { nom: 'Vraie soirée', age_min: 26, age_max: 36, date_soiree: '2026-11-15', lieu: 'Un lieu', publiee_at: new Date().toISOString() },
+]);
+const a = await faire('lil_crush_participants', [
+  { soiree_id: soireePleine.id, email: 'a@x.fr', first_name: 'Ada', gender: 'femme', orientation: 'hetero', jeton: 'ja' },
+]);
+const bb = await faire('lil_crush_participants', [
+  { soiree_id: soireePleine.id, email: 'b@x.fr', first_name: 'Bob', gender: 'homme', orientation: 'hetero', jeton: 'jb' },
+]);
+const r1 = await faire('lil_crush_rounds', [
+  { soiree_id: soireePleine.id, numero: 1, prevu_a: new Date().toISOString() },
+]);
+await faire('lil_crush_matches', [
+  { soiree_id: soireePleine.id, round_id: r1.id, a_id: [a.id, bb.id].sort()[0], b_id: [a.id, bb.id].sort()[1] },
+]);
+
+await page.goto(`${BASE}/admin/soirees`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+
+// --- Une soirée d'essai, sans rien dedans --------------------------
+await page.locator('.adm-soiree', { hasText: 'Essai à jeter' }).locator('.adm-soiree-effacer').click();
+await page.waitForTimeout(400);
+const demandeVide = await page.locator('.adm-soiree', { hasText: 'Essai à jeter' }).locator('.adm-alerte').innerText();
+demandeVide.includes('aucun participant')
+  ? ok('une soirée vide le dit : il n’y a rien d’autre à perdre')
+  : bad('la demande ne dit pas ce qu’elle emporte', demandeVide.replace(/\n+/g, ' | '));
+
+await page.getByRole('button', { name: 'Oui, supprimer' }).click();
+await jusqua(async () => (await state()).soirees.every((s) => s.nom !== 'Essai à jeter'));
+(await state()).soirees.some((s) => s.nom !== 'Essai à jeter')
+  ? ok('elle disparaît de la liste')
+  : bad('la soirée est toujours là');
+
+// --- Une soirée qui porte des matchs -------------------------------
+await page.goto(`${BASE}/admin/soirees`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+await page.locator('.adm-soiree', { hasText: 'Vraie soirée' }).locator('.adm-soiree-effacer').click();
+await page.waitForTimeout(400);
+const demandePleine = await page.locator('.adm-soiree', { hasText: 'Vraie soirée' }).locator('.adm-alerte').innerText();
+demandePleine.includes('2 participants') && demandePleine.includes('1 match')
+  ? ok('une soirée habitée annonce ses participants et leurs matchs')
+  : bad('le décompte manque', demandePleine.replace(/\n+/g, ' | '));
+
+// Prévenu, pas empêché : c'est son organisation.
+await page.getByRole('button', { name: 'Oui, supprimer' }).click();
+await jusqua(async () => (await state()).soirees.length === 0);
+s = await state();
+s.soirees.length === 0
+  ? ok('prévenu mais non empêché : la suppression passe quand même')
+  : bad('la suppression a été refusée', String(s.soirees.length));
+
+// --- Annuler ne doit rien faire ------------------------------------
+const encore = await faire('lil_soirees', [
+  { nom: 'À garder', age_min: 26, age_max: 36, date_soiree: '2026-12-01', lieu: 'Ici', publiee_at: new Date().toISOString() },
+]);
+void encore;
+await page.goto(`${BASE}/admin/soirees`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+await page.locator('.adm-soiree', { hasText: 'À garder' }).locator('.adm-soiree-effacer').click();
+await page.waitForTimeout(300);
+await page.getByRole('button', { name: 'Annuler' }).click();
+await page.waitForTimeout(600);
+(await state()).soirees.length === 1 && (await page.locator('.adm-alerte').count()) === 0
+  ? ok('annuler referme la demande sans rien effacer')
+  : bad('annuler a effacé quelque chose');
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
 await browser.close();
 console.log('\n' + (failures.length === 0
   ? '[32mTout est vert.[0m'

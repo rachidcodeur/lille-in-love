@@ -1,17 +1,23 @@
 import Link from 'next/link';
 import { PublierSoiree } from '@/components/admin/PublierSoiree';
 import { formatDate, formatDateTime } from '@/lib/libelles';
-import { listerSoirees, type SoireeRow } from '@/lib/soirees';
+import { ceQuElleporte, listerSoirees, type SoireeRow } from '@/lib/soirees';
+import { SupprimerSoiree } from '@/components/admin/SupprimerSoiree';
 
 export const dynamic = 'force-dynamic';
 
 /** Noter une soirée à venir, et retrouver celles déjà enregistrées. */
 export default async function SoireesPage() {
   let soirees: SoireeRow[] = [];
+  let charges: Record<string, { participants: number; matchs: number }> = {};
   let indisponible: string | null = null;
 
   try {
     soirees = await listerSoirees();
+    // Ce que chaque soirée emporterait : compté ici pour que la demande de
+    // confirmation sache quoi annoncer, sans aller-retour au moment du clic.
+    const comptes = await Promise.all(soirees.map((s) => ceQuElleporte(s.id)));
+    charges = Object.fromEntries(soirees.map((s, i) => [s.id, comptes[i]]));
   } catch (cause) {
     indisponible = cause instanceof Error ? cause.message : String(cause);
   }
@@ -50,7 +56,15 @@ export default async function SoireesPage() {
               ) : (
                 soirees.map((s) => (
                   <div className="adm-soiree" key={s.id}>
-                    <p className="adm-soiree-nom">{s.nom}</p>
+                    <div className="adm-soiree-tete">
+                      <p className="adm-soiree-nom">{s.nom}</p>
+                      <SupprimerSoiree
+                        soireeId={s.id}
+                        nom={s.nom}
+                        participants={charges[s.id]?.participants ?? 0}
+                        matchs={charges[s.id]?.matchs ?? 0}
+                      />
+                    </div>
                     <p className="adm-soiree-infos">
                       {formatDate(s.date_soiree)}
                       {s.heure && ` à ${s.heure.slice(0, 5).replace(':', 'h')}`} · {s.lieu} ·{' '}
@@ -58,6 +72,8 @@ export default async function SoireesPage() {
                     </p>
                     <p className="adm-hint" style={{ margin: '8px 0 0' }}>
                       Enregistrée {formatDateTime(s.publiee_at)}
+                      {(charges[s.id]?.participants ?? 0) > 0 &&
+                        ` · ${charges[s.id].participants} participants`}
                     </p>
                     <Link href={`/admin/soirees/${s.id}`} className="adm-btn" style={{ marginTop: 12 }}>
                       Crush Time{s.crush_actif ? ' · en cours' : ''}
