@@ -35,6 +35,14 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
 - **« Mes matchs » est en haut à droite**, pas en bas : c'est la récompense du
   jeu, elle doit se voir sans être cherchée, et le bas de l'écran disparaît
   sous le pouce et les barres du navigateur.
+- **Le panneau montre deux listes** : les matchs, et **les likes en attente**.
+  Un like est un choix qui attend, un match est un choix rendu ; les
+  confondre ferait croire à une réciprocité qui n'existe pas. On ne voit que
+  **ses propres** likes — qui vous a choisi reste invisible tant que ce n'est
+  pas réciproque.
+- **Un match donne les trois photos** et les coordonnées. Un like en attente
+  ne donne ni l'un ni l'autre : c'est maintenant qu'on décide si l'on écrit,
+  et un seul visage ne suffit pas.
 - **La photo de tête** est celle rangée en position 1 dans le back-office,
   réordonnable par glissé-déposé. Elle décide à peu près seule du sort d'un
   profil.

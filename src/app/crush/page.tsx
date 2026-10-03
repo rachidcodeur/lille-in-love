@@ -3,6 +3,7 @@ import {
   finPrevue,
   manches,
   matchsDe,
+  mesLikes,
   monLike,
   profilsPour,
   soireeActive,
@@ -40,7 +41,11 @@ export default async function CrushPage({ searchParams }: Props) {
     );
   }
 
-  const [rounds, matchs] = await Promise.all([manches(moi.soiree_id), matchsDe(moi)]);
+  const [rounds, matchs, likes] = await Promise.all([
+    manches(moi.soiree_id),
+    matchsDe(moi),
+    mesLikes(moi),
+  ]);
   const manche = rounds.find(estOuverte) ?? null;
   // Celui d'après : savoir qu'il reste un tour, et à quelle heure, change
   // la façon dont on dépense son unique like.
@@ -59,7 +64,7 @@ export default async function CrushPage({ searchParams }: Props) {
           <p className="cr-marque">Lille in Love</p>
           <p className="cr-moi">{moi.first_name}</p>
         </div>
-        <CrushMatchs matchs={matchs} />
+        <CrushMatchs matchs={matchs} likes={likes} />
       </header>
 
       {manche ? (

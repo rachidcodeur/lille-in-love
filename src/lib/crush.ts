@@ -347,6 +347,12 @@ export type Profil = {
   /** De quoi se retrouver. Jamais avant le match — sinon le jeu n'en est plus un. */
   email?: string;
   instagram?: string | null;
+  /** Toutes ses photos, dans l'ordre. Réservé aux matchs, comme le contact. */
+  photos?: string[];
+  /** Pour un like : la manche où on l'a donné. */
+  manche?: number;
+  /** Pour un like : est-il devenu un match ? */
+  match?: boolean;
 };
 
 /** Les participants qu'une personne peut voir, avec leur photo. */
@@ -395,8 +401,11 @@ async function habiller(
 
   const infos = new Map((membres ?? []).map((m) => [m.id, m]));
   const premiere = new Map<string, string>();
+  const toutes = new Map<string, string[]>();
   for (const photo of [...(photos ?? [])].sort((a, b) => a.position - b.position)) {
-    if (!premiere.has(photo.member_id)) premiere.set(photo.member_id, lienPhoto(photo.id, 'crush'));
+    const lien = lienPhoto(photo.id, 'crush');
+    if (!premiere.has(photo.member_id)) premiere.set(photo.member_id, lien);
+    toutes.set(photo.member_id, [...(toutes.get(photo.member_id) ?? []), lien]);
   }
 
   return participants.map((p) => ({
@@ -411,6 +420,7 @@ async function habiller(
       ? {
           email: p.email,
           instagram: p.member_id ? (infos.get(p.member_id)?.instagram ?? null) : null,
+          photos: p.member_id ? (toutes.get(p.member_id) ?? []) : [],
         }
       : {}),
   }));
@@ -498,6 +508,66 @@ export async function monLike(moi: Participant, mancheId: string): Promise<strin
     .eq('de_id', moi.id)
     .maybeSingle();
   return data?.vers_id ?? null;
+}
+
+/**
+ * Mes likes, dans l'ordre où je les ai donnés.
+ *
+ * Un like n'est pas un match : c'est un choix qui attend. Le voir évite de
+ * se demander toute la soirée si le geste a été pris en compte — et de
+ * revenir liker la même personne.
+ *
+ * Seuls les miens : qui m'a choisi reste invisible tant que ce n'est pas
+ * réciproque, c'est le sel du jeu et la tranquillité de tout le monde.
+ */
+export async function mesLikes(moi: Participant): Promise<Profil[]> {
+  const db = supabaseAdmin();
+  const toutes = await manches(moi.soiree_id);
+  if (toutes.length === 0) return [];
+
+  const parManche = new Map(toutes.map((m) => [m.id, m.numero]));
+  const { data: likes } = await db
+    .from('lil_crush_likes')
+    .select('round_id, vers_id, created_at')
+    .in(
+      'round_id',
+      toutes.map((m) => m.id),
+    )
+    .eq('de_id', moi.id)
+    .order('created_at', { ascending: true });
+
+  if (!likes?.length) return [];
+
+  const { data: gens } = await db
+    .from('lil_crush_participants')
+    .select('*')
+    .in(
+      'id',
+      likes.map((l) => l.vers_id),
+    );
+
+  const { data: matchs } = await db
+    .from('lil_crush_matches')
+    .select('a_id, b_id')
+    .or(`a_id.eq.${moi.id},b_id.eq.${moi.id}`);
+  const matches = new Set(
+    (matchs ?? []).map((m) => (m.a_id === moi.id ? m.b_id : m.a_id)),
+  );
+
+  const profils = await habiller((gens ?? []) as Participant[]);
+  const parId = new Map(profils.map((p) => [p.id, p]));
+
+  const sortie: Profil[] = [];
+  for (const like of likes) {
+    const profil = parId.get(like.vers_id);
+    if (!profil) continue;
+    sortie.push({
+      ...profil,
+      manche: parManche.get(like.round_id),
+      match: matches.has(like.vers_id),
+    });
+  }
+  return sortie;
 }
 
 /** Mes matchs, avec de quoi se retrouver après la soirée. */

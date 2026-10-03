@@ -2061,6 +2061,24 @@ s.crushMatches.length === 0
   ? ok('aucun match tant que l’autre n’a pas choisi')
   : bad('match créé à sens unique');
 
+// --- Un like qui attend encore -------------------------------------
+await tel.locator('.cr-matchs-onglet').click();
+await tel.waitForTimeout(600);
+const attente = await tel.locator('.cr-matchs-corps').innerText();
+attente.includes('Pas encore de match') &&
+attente.includes('like') &&
+attente.includes('Samir') &&
+attente.includes('1er crush time')
+  ? ok('un like sans retour s’affiche en attente, jamais présenté comme un match')
+  : bad('le like en attente est absent ou mal nommé', attente.replace(/\n+/g, ' | '));
+
+// Le contact ne doit pas fuiter par la liste des likes.
+!attente.includes('samir@soiree.test')
+  ? ok('et un like en attente ne donne pas les coordonnées')
+  : bad('un like en attente livre le contact');
+await tel.locator('.cr-fermer').click();
+await tel.waitForTimeout(300);
+
 // --- Un second like est refusé -------------------------------------
 await tel.locator('.cr-carte', { hasText: 'Thomas' }).click();
 await tel.waitForTimeout(500);
@@ -2109,6 +2127,18 @@ s.crushMatches.length === 1
 s.crushMatches[0].a_id < s.crushMatches[0].b_id
   ? ok('la paire est rangée : deux clics simultanés ne peuvent pas la dédoubler')
   : bad('paire non ordonnée');
+
+// --- Un like n'est pas un match ------------------------------------
+// Celui qui a choisi mais n'a pas encore été choisi doit voir son like en
+// attente, et surtout ne pas le prendre pour un match.
+await tel.locator('.cr-matchs-onglet').click();
+await tel.waitForTimeout(600);
+const panneau = await tel.locator('.cr-matchs-corps').innerText();
+panneau.includes('match') && panneau.includes('Samir')
+  ? ok('le panneau montre le match une fois qu’il est fait')
+  : bad('match absent du panneau', panneau.replace(/\n+/g, ' | '));
+await tel.locator('.cr-fermer').click();
+await tel.waitForTimeout(300);
 
 // --- Le contact, seulement après le match --------------------------
 await tel2.getByRole('button', { name: 'Continuer' }).click();

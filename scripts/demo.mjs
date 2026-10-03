@@ -116,7 +116,9 @@ const poser = async (table, corps) =>
   })).json();
 
 async function remplir() {
-  const fixtures = ['photo-1.png', 'photo-2.png'].map((nom) =>
+  // Trois chacun : c'est le maximum, et c'est ce que montre une fiche de
+  // match — autant voir la mise en page complète.
+  const fixtures = ['photo-1.png', 'photo-2.png', 'photo-1.png'].map((nom) =>
     readFileSync(join(RACINE, 'tests/e2e/fixtures', nom)),
   );
 
