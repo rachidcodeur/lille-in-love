@@ -199,6 +199,15 @@ relue.status === 304
   ? ok('et redemandée, elle répond « inchangée » sans renvoyer l’image')
   : bad('pas de 304 sur une photo inchangée', String(relue.status));
 
+// Réduite : une vignette doit peser moins que l'original qu'elle montre.
+const [reduite, entiere] = await Promise.all([
+  fetch(`${BASE}${adressePhoto}`).then((r) => r.arrayBuffer()),
+  fetch(`${BASE}${adressePhoto.split('?')[0]}`).then((r) => r.arrayBuffer()),
+]);
+reduite.byteLength < entiere.byteLength
+  ? ok(`la vignette est réduite (${reduite.byteLength} contre ${entiere.byteLength} octets)`)
+  : bad('la vignette pèse autant que l’original', `${reduite.byteLength} / ${entiere.byteLength}`);
+
 await page.locator('.adm-row').first().click();
 await page.waitForLoadState('networkidle');
 
@@ -1681,8 +1690,10 @@ const enTete = (await state()).photos
   .filter((p) => p.member_id === garance.id)
   .sort((a, b) => a.position - b.position)[0];
 
-vignetteListe === `/admin/photo/${enTete.id}`
-  ? ok('la liste suit : c’est la photo choisie qui sert de vignette')
+// La liste demande une version réduite : une pastille de quarante pixels
+// n'a pas besoin des trois cents kilo-octets de l'original.
+vignetteListe === `/admin/photo/${enTete.id}?t=vignette`
+  ? ok('la liste suit l’ordre, et demande une vignette, pas l’original')
   : bad('la vignette ne suit pas l’ordre', String(vignetteListe));
 
 // --- Une photo qui n'est pas à soi --------------------------------

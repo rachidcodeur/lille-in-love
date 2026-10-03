@@ -1,7 +1,6 @@
-import { createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
-import { env } from '@/lib/env';
 import { participantConnecte } from '@/lib/crush-session';
+import { estUneTaille, servirPhoto } from '@/lib/photos';
 import { supabaseAdmin } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
@@ -24,53 +23,23 @@ export async function GET(
   const moi = await participantConnecte();
   if (!moi) return new NextResponse(null, { status: 404 });
 
-  const db = supabaseAdmin();
-  const { data: photo } = await db
-    .from('lil_photos')
-    .select('member_id, storage_path, mime_type, size_bytes, created_at')
-    .eq('id', id)
-    .maybeSingle();
-
-  if (!photo) return new NextResponse(null, { status: 404 });
-
-  const { data: proprietaire } = await db
-    .from('lil_crush_participants')
-    .select('id')
-    .eq('soiree_id', moi.soiree_id)
-    .eq('member_id', photo.member_id)
-    .is('retire_at', null)
-    .maybeSingle();
-
-  if (!proprietaire) return new NextResponse(null, { status: 404 });
-
-  const empreinte = createHash('sha1')
-    .update(`${photo.storage_path}|${photo.size_bytes ?? ''}|${photo.created_at ?? ''}`)
-    .digest('hex')
-    .slice(0, 20);
-  const etag = `"${empreinte}"`;
-
-  const entetes = {
-    'Cache-Control': 'private, max-age=86400, must-revalidate',
-    Vary: 'Cookie',
-    ETag: etag,
-  };
-
-  if (requete.headers.get('if-none-match') === etag) {
-    return new NextResponse(null, { status: 304, headers: entetes });
-  }
-
-  const { data: fichier, error } = await db.storage
-    .from(env.storageBucket())
-    .download(photo.storage_path);
-
-  if (error || !fichier) return new NextResponse(null, { status: 404 });
-
-  const octets = Buffer.from(await fichier.arrayBuffer());
-  return new NextResponse(octets, {
-    headers: {
-      ...entetes,
-      'Content-Type': photo.mime_type ?? fichier.type ?? 'application/octet-stream',
-      'Content-Length': String(octets.length),
+  const demandee = new URL(requete.url).searchParams.get('t');
+  return servirPhoto({
+    requete,
+    photoId: id,
+    taille: estUneTaille(demandee) ? demandee : 'carte',
+    // Le cache est par espace : deux soirées n'ont pas les mêmes ayants droit.
+    espace: `crush:${moi.soiree_id}`,
+    autorise: async (memberId) => {
+      if (!memberId) return false;
+      const { data } = await supabaseAdmin()
+        .from('lil_crush_participants')
+        .select('id')
+        .eq('soiree_id', moi.soiree_id)
+        .eq('member_id', memberId)
+        .is('retire_at', null)
+        .maybeSingle();
+      return Boolean(data);
     },
   });
 }

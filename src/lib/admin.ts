@@ -316,11 +316,17 @@ export async function getEmailLog(memberId: string): Promise<EmailLogRow[]> {
  * passe par src/app/admin/photo/[id], qui vérifie l'accès, va chercher le
  * fichier dans le bucket privé, et laisse le navigateur le garder un jour.
  */
-export function lienPhoto(photoId: string, espace: 'admin' | 'crush' = 'admin'): string {
+export function lienPhoto(
+  photoId: string,
+  espace: 'admin' | 'crush' = 'admin',
+  taille?: 'vignette' | 'carte' | 'pleine',
+): string {
   // Deux portes pour le même fichier, parce que l'autorisation n'est pas la
   // même : le back-office demande le code d'accès, le crush time demande
-  // d'être de la soirée.
-  return `/${espace}/photo/${photoId}`;
+  // d'être de la soirée. La taille, elle, dit ce qu'on en fait : demander
+  // l'original pour une pastille de quarante pixels fait descendre trois
+  // cents kilo-octets pour rien, cent quarante fois de suite.
+  return `/${espace}/photo/${photoId}${taille ? `?t=${taille}` : ''}`;
 }
 
 /**
@@ -345,7 +351,9 @@ export async function vignettes(memberIds: string[]): Promise<Map<string, string
   const parMembre = new Map<string, string>();
   for (const photo of data ?? []) {
     // La liste est triée par position : la première vue est la bonne.
-    if (!parMembre.has(photo.member_id)) parMembre.set(photo.member_id, lienPhoto(photo.id));
+    if (!parMembre.has(photo.member_id)) {
+      parMembre.set(photo.member_id, lienPhoto(photo.id, 'admin', 'vignette'));
+    }
   }
   return parMembre;
 }

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { PublierSoiree } from '@/components/admin/PublierSoiree';
 import { formatDate, formatDateTime } from '@/lib/libelles';
-import { ceQuElleporte, listerSoirees, type SoireeRow } from '@/lib/soirees';
+import { cheptel, listerSoirees, type SoireeRow } from '@/lib/soirees';
 import { SupprimerSoiree } from '@/components/admin/SupprimerSoiree';
 
 export const dynamic = 'force-dynamic';
@@ -16,8 +16,7 @@ export default async function SoireesPage() {
     soirees = await listerSoirees();
     // Ce que chaque soirée emporterait : compté ici pour que la demande de
     // confirmation sache quoi annoncer, sans aller-retour au moment du clic.
-    const comptes = await Promise.all(soirees.map((s) => ceQuElleporte(s.id)));
-    charges = Object.fromEntries(soirees.map((s, i) => [s.id, comptes[i]]));
+    charges = await cheptel(soirees.map((s) => s.id));
   } catch (cause) {
     indisponible = cause instanceof Error ? cause.message : String(cause);
   }

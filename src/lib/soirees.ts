@@ -98,6 +98,33 @@ export async function getSoiree(id: string): Promise<SoireeRow | null> {
 export type CeQuEllePorte = { participants: number; matchs: number };
 
 /**
+ * Ce que portent toutes les soirées, en deux requêtes.
+ *
+ * Une par soirée faisait deux allers-retours chacune : sur une liste qui
+ * s'allonge, c'est la page entière qui ralentit pour afficher deux nombres.
+ */
+export async function cheptel(
+  soireeIds: string[],
+): Promise<Record<string, CeQuEllePorte>> {
+  const vide = Object.fromEntries(soireeIds.map((id) => [id, { participants: 0, matchs: 0 }]));
+  if (soireeIds.length === 0) return vide;
+
+  const db = supabaseAdmin();
+  const [participants, matchs] = await Promise.all([
+    db.from('lil_crush_participants').select('soiree_id').in('soiree_id', soireeIds),
+    db.from('lil_crush_matches').select('soiree_id').in('soiree_id', soireeIds),
+  ]);
+
+  for (const ligne of participants.data ?? []) {
+    if (vide[ligne.soiree_id]) vide[ligne.soiree_id].participants += 1;
+  }
+  for (const ligne of matchs.data ?? []) {
+    if (vide[ligne.soiree_id]) vide[ligne.soiree_id].matchs += 1;
+  }
+  return vide;
+}
+
+/**
  * Compter avant d'effacer.
  *
  * Supprimer une soirée fait tomber en cascade ses participants, leurs likes

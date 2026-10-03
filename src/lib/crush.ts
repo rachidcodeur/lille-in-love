@@ -403,7 +403,7 @@ async function habiller(
   const premiere = new Map<string, string>();
   const toutes = new Map<string, string[]>();
   for (const photo of [...(photos ?? [])].sort((a, b) => a.position - b.position)) {
-    const lien = lienPhoto(photo.id, 'crush');
+    const lien = lienPhoto(photo.id, 'crush', 'carte');
     if (!premiere.has(photo.member_id)) premiere.set(photo.member_id, lien);
     toutes.set(photo.member_id, [...(toutes.get(photo.member_id) ?? []), lien]);
   }
@@ -610,7 +610,9 @@ export async function participants(soireeId: string): Promise<LigneParticipant[]
 
   const premiere = new Map<string, string>();
   for (const photo of [...(photos ?? [])].sort((a, b) => a.position - b.position)) {
-    if (!premiere.has(photo.member_id)) premiere.set(photo.member_id, lienPhoto(photo.id));
+    if (!premiere.has(photo.member_id)) {
+      premiere.set(photo.member_id, lienPhoto(photo.id, 'admin', 'vignette'));
+    }
   }
 
   return gens.map((p) => ({

@@ -153,3 +153,22 @@ Inès : entre comme Inès, choisis Samir, et le match se fait sous tes yeux.
 
 `npm run dev`, lui, parle au vrai Supabase : un import de test y créerait
 de vraies lignes.
+
+## Les photos
+
+Servies par `/admin/photo/<id>` et `/crush/photo/<id>`, **réduites à la
+taille qu'on en fait** — `?t=vignette` (192 px), `?t=carte` (760 px), sinon
+pleine (1600 px) — et **gardées en mémoire** après le premier passage. Une
+photo ne change jamais : la deuxième demande ne touche ni la base ni le
+stockage.
+
+Avant cela, une pastille de quarante pixels faisait descendre les trois
+cents kilo-octets de l'original, cent quarante fois de suite, avec deux
+allers-retours vers Supabase chacune. Sur une photo de 815 Ko mesurée :
+vignette **moins de 1 Ko**, carte **8 Ko**, pleine **120 Ko** ; et 18 ms au
+second passage.
+
+`sharp` fait le travail. Il arrivait avec Next en dépendance facultative :
+il est désormais déclaré, pour qu'un `npm ci` sur l'hébergeur ne l'oublie
+pas. S'il manquait malgré tout, les routes renvoient l'original plutôt que
+rien.
