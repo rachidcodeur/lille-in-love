@@ -961,6 +961,49 @@ await page.goto(`${BASE}/admin?q=personnequinexistepas`, { waitUntil: 'networkid
   ? ok('une recherche vide le dit clairement')
   : bad('message de recherche vide absent');
 
+// --- Les accents ----------------------------------------------------
+// Une base de prénoms français s'était rendue à moitié introuvable :
+// « ilike » ne sait pas les ignorer, la recherche se fait donc en mémoire.
+const [accentuee] = await (
+  await fetch(`${FAKE}/rest/v1/lil_members`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({
+      first_name: 'Solène',
+      last_name: 'Vasseur',
+      email: 'solene.v@example.com',
+      gender: 'femme',
+      city: 'Tourcoing',
+      status: 'nouveau',
+      consent_at: new Date().toISOString(),
+    }),
+  })
+).json();
+void accentuee;
+
+await page.goto(`${BASE}/admin?q=Solene`, { waitUntil: 'networkidle' });
+(await page.locator('.adm-row-name').allInnerTexts()).some((t) => t.includes('Solène'))
+  ? ok('taper « Solene » trouve « Solène »')
+  : bad('la recherche reste sensible aux accents');
+
+await page.goto(`${BASE}/admin?q=Solenne`, { waitUntil: 'networkidle' });
+((await page.locator('.adm-empty').innerText().catch(() => '')) || '').includes('Solène')
+  ? ok('et une lettre de trop propose le bon nom au lieu d’un écran vide')
+  : bad('aucune suggestion proposée', await page.locator('.adm-empty').innerText().catch(() => ''));
+
+// --- Une recherche bridée par un filtre oublié ----------------------
+await page.goto(`${BASE}/admin?q=Solene&groupe=C`, { waitUntil: 'networkidle' });
+const vide = (await page.locator('.adm-empty').innerText().catch(() => '')) || '';
+vide.includes('groupe C') && vide.includes('dans toutes les candidatures')
+  ? ok('un filtre oublié est nommé, avec le moyen de chercher partout')
+  : bad('l’écran vide n’explique pas ce qui restreint', vide.replace(/\n+/g, ' | '));
+
+// L'export doit emporter exactement ce que la liste affiche, accents compris.
+const csvAccent = (await (await fetch(`${BASE}/api/admin/export?q=Solene`)).text()).trim().split('\n');
+csvAccent.length === 2 && csvAccent[1].includes('Solène')
+  ? ok('l’export suit la même recherche, accents compris')
+  : bad('export en désaccord avec la liste', String(csvAccent.length - 1));
+
 /* ---------------------------------------------------------------- */
 section('11 ter. Le groupe G et le filtre sur l’orientation');
 

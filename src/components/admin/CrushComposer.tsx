@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
+import { sansAccent } from '@/lib/groupes';
 import { Icone } from './Icones';
 
 export type Candidat = {
@@ -63,12 +64,13 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
   }, [candidats]);
 
   const visibles = useMemo(() => {
-    const terme = recherche.trim().toLowerCase();
+    // Sans accents : personne ne tape « Solène » quand il cherche Solène.
+    const terme = sansAccent(recherche.trim());
     return candidats.filter((c) => {
       // Aucune case cochée veut dire « tous les groupes ».
       if (groupes.size > 0 && !groupes.has(c.soiree_group ?? 'aucun')) return false;
       if (!terme) return true;
-      return `${c.first_name} ${c.last_name} ${c.city ?? ''}`.toLowerCase().includes(terme);
+      return sansAccent(`${c.first_name} ${c.last_name} ${c.city ?? ''}`).includes(terme);
     });
   }, [candidats, groupes, recherche]);
 

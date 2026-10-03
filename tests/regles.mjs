@@ -22,7 +22,7 @@ const section = (l) => console.log('\n\x1b[1m' + l + '\x1b[0m');
 const sortie = mkdtempSync(join(tmpdir(), 'lil-regles-'));
 execFileSync(
   'npx',
-  ['tsc', 'src/lib/crush-regles.ts', 'src/lib/csv.ts',
+  ['tsc', 'src/lib/crush-regles.ts', 'src/lib/csv.ts', 'src/lib/groupes.ts',
    '--outDir', sortie, '--target', 'ES2022', '--module', 'esnext',
    '--moduleResolution', 'bundler', '--strict'],
   { stdio: 'inherit' },
@@ -33,6 +33,7 @@ writeFileSync(join(sortie, 'package.json'), '{ "type": "module" }');
 
 const { peutVoir, age } = await import(join(sortie, 'crush-regles.js'));
 const { lireCsv, colonne } = await import(join(sortie, 'csv.js'));
+const { trouve, presque, sansAccent } = await import(join(sortie, 'groupes.js'));
 
 const gens = {
   femmeHetero: { id: '1', gender: 'femme', orientation: 'hetero' },
@@ -99,7 +100,64 @@ commeSexeOppose
   : bad('la règle ne redonne pas « le sexe opposé » sur une soirée hétéro');
 
 /* ---------------------------------------------------------------- */
-section('2. L’âge affiché');
+section('2. Chercher quelqu’un');
+
+const fiche = (first_name, last_name = '', city = null, email = 'x@y.fr') => ({
+  id: first_name,
+  status: 'nouveau',
+  first_name,
+  last_name,
+  email,
+  city,
+  soiree_group: null,
+  gender: 'femme',
+  orientation: 'hetero',
+  age: 30,
+});
+
+const base = [
+  fiche('Solène', 'Vasseur', 'Lille'),
+  fiche('Anthony', 'Dubois', 'Roubaix'),
+  fiche('Inès', 'Berthier', 'Tourcoing'),
+  fiche('Gaëtan', 'Branchu', 'Lens'),
+  fiche('Marius', 'Leroy', 'Lille'),
+];
+
+trouve(base[0], 'Solene') && trouve(base[2], 'ines') && trouve(base[3], 'gaetan')
+  ? ok('on trouve « Solène » en tapant « Solene » : les accents ne comptent plus')
+  : bad('la recherche reste sensible aux accents');
+
+trouve(base[0], 'Solène') && trouve(base[1], 'DUBOIS') && trouve(base[4], 'lille')
+  ? ok('et toujours par le nom, la ville, ou avec les accents')
+  : bad('recherche ordinaire cassée');
+
+!trouve(base[4], 'Thomas')
+  ? ok('ce qui ne correspond pas ne correspond toujours pas')
+  : bad('la recherche ramène n’importe qui');
+
+// Le cas qui a déclenché tout ça : une lettre d'écart, et un écran vide.
+presque(base, 'Antony').includes('Anthony')
+  ? ok('« Antony » propose « Anthony » : une lettre d’écart, pas un silence')
+  : bad('aucune suggestion pour une lettre manquante', JSON.stringify(presque(base, 'Antony')));
+
+presque(base, 'Solenne').includes('Solène')
+  ? ok('et « Solenne » propose « Solène »')
+  : bad('suggestion manquante', JSON.stringify(presque(base, 'Solenne')));
+
+presque(base, 'Marius').length === 0
+  ? ok('rien n’est proposé quand la recherche trouve déjà')
+  : bad('suggestions inutiles', JSON.stringify(presque(base, 'Marius')));
+
+presque(base, 'Zoé').length === 0 && presque(base, 'ab').length === 0
+  ? ok('et rien de farfelu : deux lettres ou un nom étranger ne proposent rien')
+  : bad('suggestions farfelues', JSON.stringify(presque(base, 'Zoé')));
+
+sansAccent('Mélodie Gaëtan Inès') === 'melodie gaetan ines'
+  ? ok('la normalisation retire les accents sans toucher au reste')
+  : bad('normalisation inattendue', sansAccent('Mélodie Gaëtan Inès'));
+
+/* ---------------------------------------------------------------- */
+section('3. L’âge affiché');
 
 age('1994-03-02', new Date('2026-10-01').getTime()) === 32
   ? ok('un anniversaire déjà passé compte')
@@ -114,7 +172,7 @@ age(null) === null && age('pas une date') === null
   : bad('une date illisible produit un âge');
 
 /* ---------------------------------------------------------------- */
-section('3. Le CSV de la billetterie');
+section('4. Le CSV de la billetterie');
 
 const virgules = lireCsv('Email,Prénom\nmarie@exemple.fr,Marie\njean@exemple.fr,Jean\n');
 virgules.length === 2 && virgules[0]['Email'] === 'marie@exemple.fr'

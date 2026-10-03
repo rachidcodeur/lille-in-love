@@ -216,16 +216,84 @@ export function correspond(fiche: FicheFiltrable, filtres: Filtres): boolean {
 }
 
 /**
+ * Un texte ramené à ce qu'on tape vraiment.
+ *
+ * Sans accents et en minuscules : personne ne compose « Solène » au clavier
+ * quand il cherche quelqu'un, et chercher « Solene » ne doit pas revenir
+ * bredouille. Une base entière de prénoms français s'était rendue
+ * introuvable à cause de ça.
+ */
+export function sansAccent(texte: string): string {
+  return texte
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+}
+
+/**
  * La fiche répond-elle à la recherche ?
  *
- * Prénom, nom, email et ville, sans distinction de casse. Les accents, eux,
- * comptent : la base fait la même lecture, et il vaut mieux deux endroits qui
- * disent la même chose qu'un compteur en désaccord avec la liste.
+ * Prénom, nom, email et ville, sans distinction de casse ni d'accent.
  */
-function trouve(fiche: FicheFiltrable, terme: string): boolean {
-  const aiguille = terme.toLowerCase();
+export function trouve(fiche: FicheFiltrable, terme: string): boolean {
+  const aiguille = sansAccent(terme);
   return [fiche.first_name, fiche.last_name, fiche.email, fiche.city].some((champ) =>
-    (champ ?? '').toLowerCase().includes(aiguille),
+    sansAccent(champ ?? '').includes(aiguille),
+  );
+}
+
+/**
+ * Distance entre deux mots : combien de lettres il faudrait changer.
+ *
+ * « Antony » et « Anthony » n'en sont qu'à une, et quelqu'un qui cherche le
+ * premier veut manifestement le second. On ne s'en sert pas pour filtrer —
+ * ce serait ramener n'importe qui — mais pour proposer, quand la recherche
+ * ne donne rien.
+ */
+function distance(a: string, b: string): number {
+  const precedente = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i += 1) {
+    let coinHautGauche = precedente[0];
+    precedente[0] = i;
+    for (let j = 1; j <= b.length; j += 1) {
+      const gardee = precedente[j];
+      precedente[j] = Math.min(
+        precedente[j] + 1,
+        precedente[j - 1] + 1,
+        coinHautGauche + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+      coinHautGauche = gardee;
+    }
+  }
+  return precedente[b.length];
+}
+
+/** Les quelques noms qui ressemblent à ce qu'on vient de taper. */
+export function presque(
+  fiches: FicheFiltrable[],
+  terme: string,
+  combien = 3,
+): string[] {
+  const aiguille = sansAccent(terme.trim());
+  if (aiguille.length < 3) return [];
+
+  const candidats: { nom: string; ecart: number }[] = [];
+  for (const fiche of fiches) {
+    for (const champ of [fiche.first_name, fiche.last_name]) {
+      const mot = sansAccent(champ ?? '');
+      if (!mot || mot.includes(aiguille)) continue;
+      // Une lettre d'écart pour un prénom court, deux au-delà : plus large,
+      // on proposerait Thomas à qui cherche Marius.
+      const ecart = distance(aiguille, mot);
+      if (ecart <= (aiguille.length > 5 ? 2 : 1)) {
+        candidats.push({ nom: champ ?? '', ecart });
+      }
+    }
+  }
+
+  return [...new Set(candidats.sort((a, b) => a.ecart - b.ecart).map((c) => c.nom))].slice(
+    0,
+    combien,
   );
 }
 

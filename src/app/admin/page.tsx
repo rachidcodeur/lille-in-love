@@ -8,12 +8,15 @@ import {
   filtresActifs,
   lien,
   parseFiltres,
+  presque,
   resume,
+  trouve,
 } from '@/lib/groupes';
 import { GroupePicker } from '@/components/admin/GroupePicker';
 import { Icone } from '@/components/admin/Icones';
 import { PanneauFiltres } from '@/components/admin/PanneauFiltres';
 import { Vignette } from '@/components/admin/Vignette';
+import { FILTRES_PAR_DEFAUT } from '@/lib/groupes';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +32,13 @@ export default async function AdminListPage({ searchParams }: Props) {
   let fiches: Awaited<ReturnType<typeof facettes>>;
 
   try {
-    [members, fiches] = await Promise.all([listMembers(filtres, LIMITE_AFFICHEE), facettes()]);
+    // Les facettes d'abord : c'est sur elles que se fait la recherche, pour
+    // qu'elle ignore les accents — ce que « ilike » ne sait pas faire.
+    fiches = await facettes();
+    const idsTrouves = filtres.recherche
+      ? fiches.filter((fiche) => trouve(fiche, filtres.recherche)).map((fiche) => fiche.id)
+      : undefined;
+    members = await listMembers(filtres, LIMITE_AFFICHEE, idsTrouves);
   } catch (cause) {
     // Presque toujours une clé Supabase absente ou fausse : on le dit
     // franchement plutôt que d'afficher une liste vide trompeuse.
@@ -74,6 +83,10 @@ export default async function AdminListPage({ searchParams }: Props) {
   // Les reprises de l'ancien site, dans ce qui est affiché : le nombre que
   // l'intertitre annonce.
   const anciennes = members.filter((member) => member.legacy).length;
+
+  // Ce qui restreint encore la recherche, et les noms qui lui ressemblent.
+  const autresCriteres = resume({ ...filtres, recherche: '' });
+  const suggestions = filtres.recherche ? presque(fiches, filtres.recherche) : [];
 
   // Une vignette par fiche : c'est le premier repère quand on parcourt la
   // liste. Une seule requête pour toute la page — une par ligne faisait
@@ -155,12 +168,44 @@ export default async function AdminListPage({ searchParams }: Props) {
         <div className="adm-empty">
           <p>Aucune candidature ici.</p>
           <p className="adm-hint">
-            {filtres.recherche
-              ? `Rien ne correspond à « ${filtres.recherche} ». Essaie un prénom, un bout de nom, ou une adresse.`
-              : aDesFiltres
-                ? 'Aucune fiche ne réunit ces critères. Élargis, ou remets tout à zéro.'
-                : 'Personne ne s’est encore inscrit.'}
+            {filtres.recherche ? (
+              <>
+                Rien ne correspond à « {filtres.recherche} »
+                {/* Chercher avec un filtre de groupe oublié donne un écran
+                    vide inexplicable : on dit ce qui restreint encore. */}
+                {autresCriteres.length > 0 && <> parmi {autresCriteres.join(' · ')}</>}.
+              </>
+            ) : aDesFiltres ? (
+              'Aucune fiche ne réunit ces critères. Élargis, ou remets tout à zéro.'
+            ) : (
+              'Personne ne s’est encore inscrit.'
+            )}
           </p>
+
+          {/* « Antony » quand la base dit « Anthony » : une lettre d'écart,
+              et un écran vide qui ne l'explique pas. */}
+          {suggestions.length > 0 && (
+            <p className="adm-hint">
+              Peut-être{' '}
+              {suggestions.map((nom, index) => (
+                <span key={nom}>
+                  {index > 0 && ', '}
+                  <Link href={lien('/admin', filtres, { recherche: nom })}>
+                    <strong>{nom}</strong>
+                  </Link>
+                </span>
+              ))}{' '}
+              ?
+            </p>
+          )}
+
+          {filtres.recherche && autresCriteres.length > 0 && (
+            <p className="adm-hint">
+              <Link href={lien('/admin', FILTRES_PAR_DEFAUT, { recherche: filtres.recherche })}>
+                Chercher « {filtres.recherche} » dans toutes les candidatures
+              </Link>
+            </p>
+          )}
         </div>
       ) : (
         <div className="adm-list">

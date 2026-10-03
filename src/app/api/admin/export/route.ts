@@ -1,6 +1,6 @@
-import { isAdminAllowed, membersForExport } from '@/lib/admin';
+import { facettes, isAdminAllowed, membersForExport } from '@/lib/admin';
 import { versCsv } from '@/lib/export-csv';
-import { correspond, nomFichier, parseFiltres } from '@/lib/groupes';
+import { correspond, nomFichier, parseFiltres, trouve } from '@/lib/groupes';
 import { STATUS_ORDER } from '@/lib/libelles';
 
 export const runtime = 'nodejs';
@@ -22,7 +22,13 @@ export async function GET(request: Request) {
   const filtres = parseFiltres(params, STATUS_ORDER);
 
   try {
-    const membres = await membersForExport(filtres);
+    // La recherche se fait en mémoire pour ignorer les accents : l'export
+    // doit emporter exactement ce que la liste affiche.
+    const fiches = await facettes();
+    const idsTrouves = filtres.recherche
+      ? fiches.filter((fiche) => trouve(fiche, filtres.recherche)).map((fiche) => fiche.id)
+      : undefined;
+    const membres = await membersForExport(filtres, idsTrouves);
 
     // Ceinture et bretelles : on revérifie en mémoire ce que la base a filtré.
     // Une fiche de trop dans un export ne se remarque que chez le destinataire.

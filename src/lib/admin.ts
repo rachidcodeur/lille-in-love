@@ -114,7 +114,16 @@ export type EmailLogRow = {
   soiree_nom?: string | null;
 };
 
-/** Applique les filtres de la liste à une requête sur la vue de travail. */
+/**
+ * Applique les filtres de la liste à une requête sur la vue de travail.
+ *
+ * La recherche fait exception : « ilike » ne sait pas ignorer les accents,
+ * et une base de prénoms français s'y rendrait à moitié introuvable. Elle se
+ * fait donc en mémoire, sur la lecture légère qui sert déjà aux compteurs,
+ * et on ne transmet ici que les identifiants retenus. Un seul endroit décide
+ * de ce qui correspond, donc la liste et les compteurs ne peuvent plus se
+ * contredire.
+ */
 function filtrer<Q extends {
   eq(colonne: string, valeur: string): Q;
   in(colonne: string, valeurs: string[]): Q;
@@ -122,18 +131,14 @@ function filtrer<Q extends {
   or(conditions: string): Q;
   gte(colonne: string, valeur: number): Q;
   lte(colonne: string, valeur: number): Q;
-}>(query: Q, filtres: Filtres): Q {
+}>(query: Q, filtres: Filtres, idsRecherche?: string[]): Q {
   // La corbeille ne se mêle jamais aux listes : ni dans les fiches, ni dans
   // les compteurs, ni dans l'export.
   let q = query.is('deleted_at', null);
 
-  // Prénom, nom, email, ville. Le terme a déjà été débarrassé des caractères
-  // qui ont un sens pour PostgREST : il ne peut plus élargir le filtre.
   if (filtres.recherche) {
-    const motif = `*${filtres.recherche}*`;
-    q = q.or(
-      `first_name.ilike.${motif},last_name.ilike.${motif},email.ilike.${motif},city.ilike.${motif}`,
-    );
+    // Une liste vide ne doit rien ramener, et non tout ramener.
+    q = q.in('id', idsRecherche ?? []);
   }
 
   if (filtres.statut !== 'tous') q = q.eq('status', filtres.statut);
@@ -171,7 +176,11 @@ function colonneAbsente(error: { code?: string; message?: string }): boolean {
   return error.code === '42703' || /does not exist/i.test(error.message ?? '');
 }
 
-export async function listMembers(filtres: Filtres, limite = 300): Promise<MemberSummary[]> {
+export async function listMembers(
+  filtres: Filtres,
+  limite = 300,
+  idsRecherche?: string[],
+): Promise<MemberSummary[]> {
   // « * » plutôt qu'une liste de colonnes : la vue peut ne pas encore avoir
   // celles de supabase/04_signalement.sql, et une liste explicite ferait
   // échouer toute la page pour une colonne manquante.
@@ -182,7 +191,11 @@ export async function listMembers(filtres: Filtres, limite = 300): Promise<Membe
   const construire = (avecAnciennes: boolean) => {
     const base = supabaseAdmin().from('lil_members_overview').select('*');
     const triee = avecAnciennes ? base.order('legacy', { ascending: true }) : base;
-    return filtrer(triee.order('created_at', { ascending: false }).limit(limite), filtres);
+    return filtrer(
+      triee.order('created_at', { ascending: false }).limit(limite),
+      filtres,
+      idsRecherche,
+    );
   };
 
   const { data, error } = await construire(true);
@@ -203,7 +216,10 @@ export async function listMembers(filtres: Filtres, limite = 300): Promise<Membe
  * Rangées comme l'équipe les lit : groupe, puis femmes et hommes, puis âge.
  * Pas de limite de page ici — un export tronqué ne se voit pas.
  */
-export async function membersForExport(filtres: Filtres): Promise<MemberDetail[]> {
+export async function membersForExport(
+  filtres: Filtres,
+  idsRecherche?: string[],
+): Promise<MemberDetail[]> {
   const query = supabaseAdmin()
     .from('lil_members_overview')
     .select('*')
@@ -213,7 +229,7 @@ export async function membersForExport(filtres: Filtres): Promise<MemberDetail[]
     .order('created_at', { ascending: true })
     .limit(5000);
 
-  const { data, error } = await filtrer(query, filtres);
+  const { data, error } = await filtrer(query, filtres, idsRecherche);
   if (error) throw new Error(error.message);
   return (data ?? []) as MemberDetail[];
 }

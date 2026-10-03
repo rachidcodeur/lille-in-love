@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { BRAND } from '@/lib/brand';
+import { sansAccent } from '@/lib/groupes';
 import { Icone } from './Icones';
 
 type Manche = {
@@ -95,11 +96,10 @@ export function CrushPilotage({
     }
   }
 
-  const terme = recherche.trim().toLowerCase();
+  const terme = sansAccent(recherche.trim());
   const visibles = terme
     ? gens.filter(
-        (p) =>
-          p.first_name.toLowerCase().includes(terme) || p.email.toLowerCase().includes(terme),
+        (p) => sansAccent(p.first_name).includes(terme) || sansAccent(p.email).includes(terme),
       )
     : gens;
 
