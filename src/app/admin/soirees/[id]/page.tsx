@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { CrushImport } from '@/components/admin/CrushImport';
+import { CrushComposer, type Candidat } from '@/components/admin/CrushComposer';
 import { CrushPilotage } from '@/components/admin/CrushPilotage';
 import { ActiverCrush } from '@/components/admin/ActiverCrush';
 import { manches, participants } from '@/lib/crush';
+import { facettes, vignettes } from '@/lib/admin';
 import { getSoiree } from '@/lib/soirees';
 import { formatDate } from '@/lib/libelles';
 
@@ -20,10 +21,36 @@ export default async function CrushPage({ params }: Props) {
 
   let gens: Awaited<ReturnType<typeof participants>> = [];
   let rounds: Awaited<ReturnType<typeof manches>> = [];
+  let candidats: Candidat[] = [];
   let indisponible: string | null = null;
 
   try {
+    const fiches = await facettes();
     [gens, rounds] = await Promise.all([participants(id), manches(id)]);
+
+    // Qui est déjà de la soirée, pour le montrer sans permettre de le
+    // recocher. Le rapprochement se fait sur l'email : c'est lui qui a servi
+    // à inscrire, que ce soit par la liste ou par la billetterie.
+    const inscrits = new Set(gens.map((p) => String(p.email).toLowerCase()));
+    const apercus = await vignettes(fiches.map((f) => f.id));
+
+    // Sans genre renseigné, personne ne les verrait et ils ne verraient
+    // personne : les proposer serait proposer une place vide.
+    candidats = fiches
+      .filter((f): f is typeof f & { gender: 'femme' | 'homme' } =>
+        f.gender === 'femme' || f.gender === 'homme',
+      )
+      .map((f) => ({
+        id: f.id,
+        first_name: f.first_name,
+        last_name: f.last_name,
+        gender: f.gender,
+        age: f.age,
+        city: f.city,
+        soiree_group: f.soiree_group,
+        photo: apercus.get(f.id) ?? null,
+        deja: inscrits.has(String(f.email).toLowerCase()),
+      }));
   } catch (cause) {
     indisponible = cause instanceof Error ? cause.message : String(cause);
   }
@@ -52,9 +79,14 @@ export default async function CrushPage({ params }: Props) {
       ) : !cree ? (
         <div className="adm-card">
           <div className="adm-card-head">
-            <p className="adm-card-title">Importer la billetterie</p>
+            <p className="adm-card-title">Composer la soirée</p>
           </div>
-          <CrushImport soireeId={id} date={soiree.date_soiree} />
+          <CrushComposer
+            soireeId={id}
+            date={soiree.date_soiree}
+            candidats={candidats}
+            manchesPosees={rounds.length > 0}
+          />
         </div>
       ) : (
         <>
@@ -65,6 +97,19 @@ export default async function CrushPage({ params }: Props) {
             participants={gens.filter((p) => !p.retire_at).length}
           />
           <CrushPilotage manches={rounds} gens={gens} />
+
+          <details className="adm-card adm-ajout">
+            <summary>
+              <span className="adm-card-title">Ajouter des participants</span>
+              <span className="adm-hint">Un billet acheté à la dernière minute</span>
+            </summary>
+            <CrushComposer
+              soireeId={id}
+              date={soiree.date_soiree}
+              candidats={candidats}
+              manchesPosees={rounds.length > 0}
+            />
+          </details>
         </>
       )}
     </main>

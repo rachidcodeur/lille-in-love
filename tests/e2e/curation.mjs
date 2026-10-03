@@ -1608,6 +1608,132 @@ intrusion.status >= 400
 
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
+/* ---------------------------------------------------------------- */
+section('17. Composer une soirée');
+
+const invites = [
+  ['Inès', 'femme', 'C'],
+  ['Camille', 'femme', 'A'],
+  ['Samir', 'homme', 'A'],
+  ['Thomas', 'homme', 'B'],
+];
+const fiches = await (
+  await fetch(`${FAKE}/rest/v1/lil_members`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify(
+      invites.map(([prenom, genre, groupe]) => ({
+        first_name: prenom,
+        last_name: 'Invité',
+        email: `${prenom.toLowerCase()}.invite@example.com`,
+        gender: genre,
+        orientation: 'hetero',
+        city: 'Lille',
+        birth_date: '1994-01-01',
+        soiree_group: groupe,
+        status: 'valide',
+        consent_at: new Date().toISOString(),
+      })),
+    ),
+  })
+).json();
+
+const [soireeC] = await (
+  await fetch(`${FAKE}/rest/v1/lil_soirees`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({
+      nom: 'Soirée à composer',
+      age_min: 26,
+      age_max: 36,
+      date_soiree: '2026-10-18',
+      lieu: 'Un lieu, Lille',
+      publiee_at: new Date().toISOString(),
+    }),
+  })
+).json();
+
+await page.goto(`${BASE}/admin/soirees/${soireeC.id}`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+
+(await page.locator('.adm-choix-ligne').count()) === invites.length
+  ? ok('les candidatures s’offrent à être cochées')
+  : bad('liste à cocher incomplète', String(await page.locator('.adm-choix-ligne').count()));
+
+// --- Le filtre par groupe ------------------------------------------
+await page.getByRole('button', { name: /^A 2$/ }).click();
+await page.waitForTimeout(300);
+(await page.locator('.adm-choix-ligne').count()) === 2
+  ? ok('le filtre par groupe restreint la liste')
+  : bad('le filtre de groupe ne filtre pas', String(await page.locator('.adm-choix-ligne').count()));
+
+// « Tout cocher » ne doit prendre que ce que le filtre laisse voir.
+await page.getByRole('button', { name: 'Tout cocher' }).click();
+await page.waitForTimeout(300);
+(await page.locator('.adm-choix-pied strong').innerText()) === '2'
+  ? ok('« tout cocher » s’arrête à ce que le filtre montre')
+  : bad('tout cocher déborde du filtre', await page.locator('.adm-choix-pied').innerText());
+
+// --- L'équilibre, sous les yeux -------------------------------------
+await page.getByRole('button', { name: /^Toutes 4$/ }).click();
+await page.waitForTimeout(300);
+await page.locator('.adm-choix-ligne', { hasText: 'Inès' }).locator('input').check();
+
+(await page.locator('.adm-choix-pied').innerText()).includes('2 femmes · 1 homme')
+  ? ok('le compte femmes / hommes suit chaque case cochée')
+  : bad('équilibre non affiché', await page.locator('.adm-choix-pied').innerText());
+
+// --- Créer -----------------------------------------------------------
+await page.getByRole('button', { name: 'Créer le crush time' }).click();
+await page.waitForTimeout(1800);
+
+s = await state();
+const inscrits = s.crushParticipants.filter((p) => p.soiree_id === soireeC.id);
+inscrits.length === 3
+  ? ok('les 3 personnes cochées sont inscrites à la soirée')
+  : bad('inscriptions inattendues', String(inscrits.length));
+
+inscrits.every((p) => p.member_id && p.gender && p.jeton)
+  ? ok('chacune arrive avec son profil et son jeton d’accès')
+  : bad('participant incomplet', JSON.stringify(inscrits[0]));
+
+new Set(inscrits.map((p) => p.jeton)).size === inscrits.length
+  ? ok('les jetons sont tous différents')
+  : bad('deux participants partagent un jeton');
+
+s.crushRounds.filter((r) => r.soiree_id === soireeC.id).length === 3
+  ? ok('les trois manches sont posées')
+  : bad('manches manquantes');
+
+// --- Ajouter après coup ---------------------------------------------
+await page.waitForTimeout(400);
+(await page.locator('.adm-ajout').count()) === 1
+  ? ok('on peut encore ajouter quelqu’un après la création')
+  : bad('pas de porte pour un billet de dernière minute');
+
+await page.locator('.adm-ajout summary').click();
+await page.waitForTimeout(400);
+(await page.locator('.adm-choix-ligne[data-deja]').count()) === 3
+  ? ok('celles déjà de la soirée sont montrées, mais pas recochables')
+  : bad('les inscrites ne sont pas signalées', String(await page.locator('.adm-choix-ligne[data-deja]').count()));
+
+const jetonsAvant = new Map(inscrits.map((p) => [p.email, p.jeton]));
+await page.locator('.adm-choix-ligne:not([data-deja])').first().locator('input').check();
+await page.getByRole('button', { name: 'Ajouter à la soirée' }).click();
+await page.waitForTimeout(1800);
+
+s = await state();
+const apresAjout = s.crushParticipants.filter((p) => p.soiree_id === soireeC.id);
+apresAjout.length === 4
+  ? ok('la quatrième personne rejoint la soirée')
+  : bad('ajout raté', String(apresAjout.length));
+
+apresAjout.every((p) => !jetonsAvant.has(p.email) || jetonsAvant.get(p.email) === p.jeton)
+  ? ok('et les jetons déjà distribués ne changent pas — les liens envoyés restent valables')
+  : bad('un jeton a changé : le lien déjà envoyé ne marche plus');
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
 await browser.close();
 console.log('\n' + (failures.length === 0
   ? '[32mTout est vert.[0m'

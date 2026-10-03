@@ -30,6 +30,24 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
   profil.
 - Un like se confirme avant d'être écrit, puisqu'il ne se reprend pas.
 
+## Composer la soirée
+
+Deux portes, depuis l'onglet Soirées :
+
+- **Cocher dans la liste** — le cas courant. On connaît ces gens, on les a
+  triés en groupes, on sait qui on veut voir ensemble. Recherche, filtre par
+  groupe, « tout cocher » limité à ce que le filtre montre.
+- **Importer un CSV** — quand c'est la billetterie qui fait foi. Seule
+  l'adresse email est nécessaire ; le reste vient de la candidature.
+
+Dans les deux cas, **le compte femmes / hommes reste sous les yeux**. Une
+soirée à trente hommes et cinq femmes ne se rattrape pas sur place, et c'est
+en cochant qu'on peut encore l'éviter.
+
+On peut ajouter quelqu'un après coup, pour un billet de dernière minute.
+**Réinscrire quelqu'un ne change pas son jeton** : le lien déjà envoyé doit
+continuer de fonctionner.
+
 ## Entrer
 
 Lien personnel envoyé avant la soirée, **ou** email + code à quatre chiffres

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { isAdminAllowed } from '@/lib/admin';
 import {
   activerCrushTime,
+  composerCrushTime,
   creerCrushTime,
   fermerManche,
   nouveauCode,
@@ -23,12 +24,19 @@ export const dynamic = 'force-dynamic';
  * explicite valent mieux que six adresses à retenir.
  */
 const schema = z.discriminatedUnion('action', [
+  // Les heures ne sont posées qu'à la création : un ajout de dernière
+  // minute ne doit pas réécrire une manche déjà ouverte.
   z.object({
     action: z.literal('importer'),
     soireeId: z.string().uuid(),
     csv: z.string().min(1, 'Le fichier est vide.'),
-    // Les heures annoncées des manches, au format « 2026-10-18T20:00 ».
-    heures: z.array(z.string().min(10)).min(1).max(9),
+    heures: z.array(z.string().min(10)).max(9).optional(),
+  }),
+  z.object({
+    action: z.literal('composer'),
+    soireeId: z.string().uuid(),
+    memberIds: z.array(z.string().uuid()).min(1, 'Coche au moins une personne.').max(500),
+    heures: z.array(z.string().min(10)).max(9).optional(),
   }),
   z.object({
     action: z.literal('activer'),
@@ -43,6 +51,9 @@ const schema = z.discriminatedUnion('action', [
   z.object({ action: z.literal('retirer'), participantId: z.string().uuid() }),
   z.object({ action: z.literal('remettre'), participantId: z.string().uuid() }),
 ]);
+
+/** « 2026-10-18T20:00 » tel que l'écrit un champ de formulaire. */
+const enIso = (heures?: string[]) => (heures ?? []).map((h) => new Date(h).toISOString());
 
 export async function POST(request: Request) {
   if (!(await isAdminAllowed())) {
@@ -64,7 +75,15 @@ export async function POST(request: Request) {
         const bilan = await creerCrushTime({
           soireeId: commande.soireeId,
           csv: commande.csv,
-          heures: commande.heures.map((h) => new Date(h).toISOString()),
+          heures: enIso(commande.heures),
+        });
+        return NextResponse.json({ ok: true, bilan });
+      }
+      case 'composer': {
+        const bilan = await composerCrushTime({
+          soireeId: commande.soireeId,
+          memberIds: commande.memberIds,
+          heures: enIso(commande.heures),
         });
         return NextResponse.json({ ok: true, bilan });
       }

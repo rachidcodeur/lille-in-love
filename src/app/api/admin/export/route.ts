@@ -29,6 +29,7 @@ export async function GET(request: Request) {
     const retenus = membres.filter((m) =>
       correspond(
         {
+          id: m.id,
           status: m.status,
           soiree_group: m.soiree_group,
           gender: m.gender,

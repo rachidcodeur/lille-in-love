@@ -2268,3 +2268,162 @@
   letter-spacing: 0.04em;
   padding: 6px 4px;
 }
+
+/* --- Composer la soirée ---------------------------------------------- */
+
+/* Deux portes, et une seule ouverte à la fois. */
+.adm-portes {
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  margin: 0 0 20px;
+  background: var(--cream);
+  border-radius: 999px;
+  width: fit-content;
+}
+
+.adm-portes button {
+  border: 0;
+  background: transparent;
+  padding: 9px 18px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  cursor: pointer;
+  transition: background 150ms ease, color 150ms ease;
+}
+
+.adm-portes button[data-on='true'] {
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+.adm-choix-barre {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.adm-choix {
+  display: flex;
+  flex-direction: column;
+  max-height: 460px;
+  overflow-y: auto;
+  border-top: 1px solid var(--cream);
+}
+
+.adm-choix-ligne {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 9px 6px;
+  border-bottom: 1px solid var(--cream);
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.adm-choix-ligne:hover {
+  background: var(--cream);
+}
+
+/* Déjà de la soirée : on le montre pour que la liste reste complète, mais
+   il n'y a rien à y faire. */
+.adm-choix-ligne[data-deja] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.adm-choix-ligne input[type='checkbox'] {
+  width: 19px;
+  height: 19px;
+  flex: none;
+  accent-color: var(--gold-deep);
+  cursor: inherit;
+}
+
+.adm-choix-ligne .adm-avatar {
+  width: 38px;
+  height: 38px;
+  flex: none;
+}
+
+.adm-choix-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.adm-choix-nom {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.adm-choix-meta {
+  margin: 2px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-muted);
+}
+
+.adm-choix-groupe {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--sand);
+  color: var(--gold-deep);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* Le compte ne doit jamais quitter l'écran pendant qu'on coche. */
+.adm-choix-pied {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  background: var(--white);
+}
+
+.adm-choix-compte {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--ink);
+}
+
+.adm-choix-compte strong {
+  font-size: 19px;
+}
+
+/* L'ajout de dernière minute reste replié : ce n'est pas le geste du soir. */
+.adm-ajout summary {
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.adm-ajout summary .adm-hint {
+  margin: 0;
+}
+
+.adm-ajout[open] summary {
+  margin-bottom: 20px;
+}

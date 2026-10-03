@@ -367,9 +367,36 @@ async function traiter(req, res) {
     if (req.method === 'POST') {
       const incoming = Array.isArray(body) ? body : [body];
       const isUpsert = prefer.includes('resolution=merge-duplicates');
+      const ignoreDoublons = prefer.includes('resolution=ignore-duplicates');
+      // « on_conflict=soiree_id,email » : les colonnes qui font la clé.
+      const surConflit = (params.get('on_conflict') ?? '').split(',').filter(Boolean);
       const created = [];
 
+      /** La ligne déjà présente qui porte les mêmes valeurs de clé. */
+      const memeCle = (item) =>
+        surConflit.length > 0 &&
+        tables[table].find((existante) =>
+          surConflit.every(
+            (colonne) =>
+              String(existante[colonne] ?? '').toLowerCase() ===
+              String(item[colonne] ?? '').toLowerCase(),
+          ),
+        );
+
       for (const item of incoming) {
+        if (ignoreDoublons || isUpsert) {
+          const deja = memeCle(item);
+          if (deja) {
+            // « ignore-duplicates » n'écrit rien et ne renvoie rien : c'est
+            // ce qui permet de compter ce qui a vraiment été ajouté.
+            if (isUpsert) {
+              Object.assign(deja, item, { updated_at: new Date().toISOString() });
+              created.push(deja);
+            }
+            continue;
+          }
+        }
+
         if (table === 'lil_emails' && !isUpsert && violatesEmailUnique(item)) {
           return json(res, 409, {
             code: '23505',

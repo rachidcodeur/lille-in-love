@@ -162,6 +162,7 @@ export function nomFichier(filtres: Filtres): string {
    ==================================================================== */
 
 export type FicheFiltrable = {
+  id: string;
   status: string;
   first_name: string;
   last_name: string;

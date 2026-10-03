@@ -28,10 +28,10 @@ export type Participant = {
 
 export type BilanImport = {
   attendus: number;
+  ajoutes: number;
   rapproches: number;
   inconnus: { email: string; first_name: string }[];
   incomplets: { email: string; first_name: string }[];
-  doublons: number;
   manches: number;
 };
 
@@ -40,21 +40,137 @@ const jeton = () => randomBytes(16).toString('base64url');
 /** Quatre chiffres : il doit se dire à voix haute, au fond d'une salle. */
 export const nouveauCode = () => String(randomInt(1000, 10000));
 
+type Candidat = {
+  id?: string | null;
+  email: string;
+  first_name?: string | null;
+  birth_date?: string | null;
+  gender?: Genre | null;
+  orientation?: Orientation | null;
+};
+
 /**
- * Importer les acheteurs de billets, et ouvrir le crush time.
+ * Inscrire des gens à une soirée.
  *
- * Le CSV de la billetterie ne porte guère plus que des adresses. Tout le
- * reste — la photo, le prénom, l'âge, l'orientation — est déjà chez nous :
- * on rapproche sur l'email, et une personne qui a rempli le questionnaire
+ * Le cœur commun aux deux portes : cocher dans la liste, ou importer le
+ * fichier de la billetterie. Dans les deux cas on ne garde que des adresses,
+ * et tout le reste — photo, prénom, âge, orientation — vient de la
+ * candidature, qu'on retrouve par l'email.
+ *
+ * Réinscrire quelqu'un ne fait rien : son jeton ne doit pas changer, sinon
+ * le lien qu'il a déjà reçu cesse de fonctionner.
+ */
+async function inscrire(soireeId: string, candidats: Candidat[]): Promise<number> {
+  if (candidats.length === 0) return 0;
+
+  const db = supabaseAdmin();
+  const lignes = candidats.map((c) => ({
+    soiree_id: soireeId,
+    member_id: c.id ?? null,
+    email: c.email,
+    first_name: c.first_name || c.email.split('@')[0],
+    birth_date: c.birth_date ?? null,
+    gender: c.gender ?? null,
+    orientation: c.orientation ?? null,
+    jeton: jeton(),
+  }));
+
+  const { data, error } = await db
+    .from('lil_crush_participants')
+    .upsert(lignes, { onConflict: 'soiree_id,email', ignoreDuplicates: true })
+    .select('id');
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).length;
+}
+
+/**
+ * Les manches, posées une fois pour toutes.
+ *
+ * On n'y revient pas à chaque ajout de participant : réécrire les heures
+ * effacerait l'ouverture déjà faite d'une manche en cours.
+ */
+async function poserManches(soireeId: string, heures: string[]): Promise<number> {
+  if (heures.length === 0) return 0;
+  const db = supabaseAdmin();
+
+  const { data: existantes } = await db
+    .from('lil_crush_rounds')
+    .select('id')
+    .eq('soiree_id', soireeId);
+  if (existantes?.length) return 0;
+
+  const { error } = await db.from('lil_crush_rounds').insert(
+    heures.map((prevu_a, index) => ({ soiree_id: soireeId, numero: index + 1, prevu_a })),
+  );
+  if (error) throw new Error(error.message);
+  return heures.length;
+}
+
+/** Ce que la soirée compte, une fois l'opération faite. */
+async function bilan(
+  soireeId: string,
+  attendus: number,
+  ajoutes: number,
+  manches: number,
+): Promise<BilanImport> {
+  const { data } = await supabaseAdmin()
+    .from('lil_crush_participants')
+    .select('email, first_name, member_id, gender')
+    .eq('soiree_id', soireeId)
+    .is('retire_at', null);
+
+  const lignes = data ?? [];
+  return {
+    attendus,
+    ajoutes,
+    rapproches: lignes.filter((p) => p.member_id).length,
+    inconnus: lignes
+      .filter((p) => !p.member_id)
+      .map((p) => ({ email: String(p.email), first_name: p.first_name })),
+    incomplets: lignes
+      .filter((p) => p.member_id && !p.gender)
+      .map((p) => ({ email: String(p.email), first_name: p.first_name })),
+    manches,
+  };
+}
+
+/**
+ * Composer la soirée en cochant dans la liste des candidatures.
+ *
+ * C'est la porte de tous les jours : on connaît ces gens, on les a triés en
+ * groupes, et on sait qui on veut voir ensemble.
+ */
+export async function composerCrushTime(options: {
+  soireeId: string;
+  memberIds: string[];
+  heures?: string[];
+}): Promise<BilanImport> {
+  const { data: membres, error } = await supabaseAdmin()
+    .from('lil_members')
+    .select('id, email, first_name, birth_date, gender, orientation')
+    .in('id', options.memberIds);
+  if (error) throw new Error(error.message);
+
+  const candidats = (membres ?? []).map((m) => ({ ...m, email: String(m.email).toLowerCase() }));
+  const ajoutes = await inscrire(options.soireeId, candidats as Candidat[]);
+  const manches = await poserManches(options.soireeId, options.heures ?? []);
+
+  return bilan(options.soireeId, options.memberIds.length, ajoutes, manches);
+}
+
+/**
+ * Composer la soirée à partir du fichier de la billetterie.
+ *
+ * Le CSV ne porte guère plus que des adresses, et c'est suffisant : on
+ * rapproche sur l'email, et une personne qui a rempli le questionnaire
  * arrive avec son profil complet sans rien ressaisir.
  */
 export async function creerCrushTime(options: {
   soireeId: string;
   csv: string;
-  /** Les heures annoncées des manches, au format ISO. */
-  heures: string[];
+  heures?: string[];
 }): Promise<BilanImport> {
-  const db = supabaseAdmin();
   const lignes = lireCsv(options.csv);
 
   // Une adresse peut revenir : deux billets achetés d'un même compte.
@@ -72,70 +188,30 @@ export async function creerCrushTime(options: {
     throw new Error('Aucune adresse email trouvée dans ce fichier.');
   }
 
-  // Les candidatures correspondantes, en une requête.
-  const { data: membres, error } = await db
+  const { data: membres, error } = await supabaseAdmin()
     .from('lil_members')
     .select('id, email, first_name, birth_date, gender, orientation')
     .in('email', attendus);
   if (error) throw new Error(error.message);
 
-  const parEmail = new Map(
-    (membres ?? []).map((m) => [String(m.email).toLowerCase(), m]),
-  );
+  const parEmail = new Map((membres ?? []).map((m) => [String(m.email).toLowerCase(), m]));
 
-  const aEcrire = attendus.map((email) => {
+  const candidats: Candidat[] = attendus.map((email) => {
     const membre = parEmail.get(email);
     return {
-      soiree_id: options.soireeId,
-      member_id: membre?.id ?? null,
+      id: membre?.id ?? null,
       email,
-      first_name: membre?.first_name ?? emails.get(email) ?? 'Invité',
+      first_name: membre?.first_name ?? emails.get(email) ?? null,
       birth_date: membre?.birth_date ?? null,
-      gender: membre?.gender ?? null,
-      orientation: membre?.orientation ?? null,
-      jeton: jeton(),
+      gender: (membre?.gender as Genre | undefined) ?? null,
+      orientation: (membre?.orientation as Orientation | undefined) ?? null,
     };
   });
 
-  // « ignore-duplicates » : relancer l'import après un achat de dernière
-  // minute doit ajouter les nouveaux sans redistribuer les jetons déjà
-  // envoyés — un lien qui change est un participant qui ne peut plus entrer.
-  const { error: ecriture } = await db
-    .from('lil_crush_participants')
-    .upsert(aEcrire, { onConflict: 'soiree_id,email', ignoreDuplicates: true });
-  if (ecriture) throw new Error(ecriture.message);
+  const ajoutes = await inscrire(options.soireeId, candidats);
+  const manches = await poserManches(options.soireeId, options.heures ?? []);
 
-  // Les manches, et le code de la salle.
-  const manches = options.heures.map((prevu_a, index) => ({
-    soiree_id: options.soireeId,
-    numero: index + 1,
-    prevu_a,
-  }));
-  if (manches.length > 0) {
-    const { error: e } = await db
-      .from('lil_crush_rounds')
-      .upsert(manches, { onConflict: 'soiree_id,numero' });
-    if (e) throw new Error(e.message);
-  }
-
-  const { data: enBase } = await db
-    .from('lil_crush_participants')
-    .select('email, first_name, member_id, gender')
-    .eq('soiree_id', options.soireeId);
-
-  const lignesEnBase = enBase ?? [];
-  return {
-    attendus: attendus.length,
-    rapproches: lignesEnBase.filter((p) => p.member_id).length,
-    inconnus: lignesEnBase
-      .filter((p) => !p.member_id)
-      .map((p) => ({ email: String(p.email), first_name: p.first_name })),
-    incomplets: lignesEnBase
-      .filter((p) => p.member_id && !p.gender)
-      .map((p) => ({ email: String(p.email), first_name: p.first_name })),
-    doublons: lignes.length - attendus.length,
-    manches: manches.length,
-  };
+  return bilan(options.soireeId, attendus.length, ajoutes, manches);
 }
 
 /* ====================================================================

@@ -1,0 +1,323 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useMemo, useState } from 'react';
+import { Icone } from './Icones';
+
+export type Candidat = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  gender: 'femme' | 'homme';
+  age: number | null;
+  city: string | null;
+  soiree_group: string | null;
+  photo: string | null;
+  /** Déjà inscrit à cette soirée : on le montre, on ne le recoche pas. */
+  deja: boolean;
+};
+
+type Props = {
+  soireeId: string;
+  /** La date de la soirée, pour proposer des heures qui tombent juste. */
+  date: string;
+  candidats: Candidat[];
+  /** Les manches existent déjà : on ne redemande pas les heures. */
+  manchesPosees: boolean;
+};
+
+const GROUPES = ['A', 'B', 'C', 'G'] as const;
+
+/**
+ * Composer la soirée.
+ *
+ * Deux portes, parce qu'il y a deux situations. On coche dans la liste quand
+ * on connaît les gens — c'est le cas courant, on les a triés en groupes et
+ * on sait qui on veut voir ensemble. On importe le fichier de la billetterie
+ * quand c'est elle qui fait foi.
+ *
+ * Dans les deux cas, le compte femmes / hommes reste sous les yeux : une
+ * soirée à trente hommes et cinq femmes ne se rattrape pas sur place, et
+ * c'est en cochant qu'on peut encore l'éviter.
+ */
+export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Props) {
+  const router = useRouter();
+  const [porte, setPorte] = useState<'liste' | 'csv'>('liste');
+  const [choisis, setChoisis] = useState<Set<string>>(new Set());
+  const [recherche, setRecherche] = useState('');
+  const [groupe, setGroupe] = useState<string>('tous');
+  const [csv, setCsv] = useState<string | null>(null);
+  const [nomFichier, setNomFichier] = useState('');
+  const [heures, setHeures] = useState([`${date}T20:00`, `${date}T22:00`, `${date}T00:00`]);
+  const [busy, setBusy] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  const parGroupe = useMemo(() => {
+    const compte: Record<string, number> = { tous: candidats.length, aucun: 0 };
+    for (const c of candidats) {
+      const cle = c.soiree_group ?? 'aucun';
+      compte[cle] = (compte[cle] ?? 0) + 1;
+    }
+    return compte;
+  }, [candidats]);
+
+  const visibles = useMemo(() => {
+    const terme = recherche.trim().toLowerCase();
+    return candidats.filter((c) => {
+      if (groupe === 'aucun' && c.soiree_group) return false;
+      if (groupe !== 'tous' && groupe !== 'aucun' && c.soiree_group !== groupe) return false;
+      if (!terme) return true;
+      return `${c.first_name} ${c.last_name} ${c.city ?? ''}`.toLowerCase().includes(terme);
+    });
+  }, [candidats, groupe, recherche]);
+
+  const retenus = candidats.filter((c) => choisis.has(c.id));
+  const femmes = retenus.filter((c) => c.gender === 'femme').length;
+  const hommes = retenus.length - femmes;
+  const dejaLa = candidats.filter((c) => c.deja).length;
+
+  function basculer(id: string) {
+    setChoisis((avant) => {
+      const suite = new Set(avant);
+      if (suite.has(id)) suite.delete(id);
+      else suite.add(id);
+      return suite;
+    });
+  }
+
+  /** Cocher ou décocher d'un coup ce que le filtre laisse voir. */
+  function toutBasculer() {
+    const cochables = visibles.filter((c) => !c.deja).map((c) => c.id);
+    const toutCoche = cochables.every((id) => choisis.has(id));
+    setChoisis((avant) => {
+      const suite = new Set(avant);
+      for (const id of cochables) {
+        if (toutCoche) suite.delete(id);
+        else suite.add(id);
+      }
+      return suite;
+    });
+  }
+
+  async function envoyer() {
+    setBusy(true);
+    setErreur(null);
+
+    const corps =
+      porte === 'liste'
+        ? { action: 'composer', soireeId, memberIds: [...choisis] }
+        : { action: 'importer', soireeId, csv };
+
+    const r = await fetch('/api/admin/crush', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...corps, ...(manchesPosees ? {} : { heures }) }),
+    }).catch(() => null);
+
+    const res = (await r?.json().catch(() => null)) as { error?: string } | null;
+    if (!r?.ok) setErreur(res?.error ?? 'L’opération a échoué.');
+    else {
+      setChoisis(new Set());
+      setCsv(null);
+      setNomFichier('');
+      router.refresh();
+    }
+    setBusy(false);
+  }
+
+  const pret = porte === 'liste' ? choisis.size > 0 : Boolean(csv);
+
+  return (
+    <div>
+      <div className="adm-portes" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={porte === 'liste'}
+          data-on={porte === 'liste'}
+          onClick={() => setPorte('liste')}
+        >
+          Cocher dans la liste
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={porte === 'csv'}
+          data-on={porte === 'csv'}
+          onClick={() => setPorte('csv')}
+        >
+          Importer un CSV
+        </button>
+      </div>
+
+      {porte === 'liste' ? (
+        <>
+          <div className="adm-recherche" style={{ margin: '0 0 14px' }}>
+            <span className="adm-recherche-loupe" aria-hidden="true">
+              <Icone nom="loupe" taille={18} />
+            </span>
+            <input
+              type="search"
+              value={recherche}
+              onChange={(e) => setRecherche(e.target.value)}
+              placeholder="Chercher un prénom, un nom, une ville…"
+              aria-label="Chercher une candidature"
+            />
+          </div>
+
+          <nav className="adm-filters" aria-label="Groupe" style={{ marginBottom: 14 }}>
+            <button type="button" className="adm-filter" data-on={groupe === 'tous'} onClick={() => setGroupe('tous')}>
+              Toutes <b>{parGroupe.tous}</b>
+            </button>
+            {GROUPES.map((lettre) => (
+              <button
+                key={lettre}
+                type="button"
+                className="adm-filter"
+                data-on={groupe === lettre}
+                onClick={() => setGroupe(lettre)}
+              >
+                {lettre} <b>{parGroupe[lettre] ?? 0}</b>
+              </button>
+            ))}
+            <button type="button" className="adm-filter" data-on={groupe === 'aucun'} onClick={() => setGroupe('aucun')}>
+              Sans groupe <b>{parGroupe.aucun ?? 0}</b>
+            </button>
+          </nav>
+
+          <div className="adm-choix-barre">
+            <button type="button" className="adm-btn" onClick={toutBasculer} disabled={visibles.length === 0}>
+              {visibles.filter((c) => !c.deja).every((c) => choisis.has(c.id)) && visibles.some((c) => !c.deja)
+                ? 'Tout décocher'
+                : 'Tout cocher'}
+            </button>
+            <span className="adm-hint" style={{ margin: 0 }}>
+              {visibles.length} affichée{visibles.length > 1 ? 's' : ''}
+            </span>
+          </div>
+
+          <div className="adm-choix">
+            {visibles.map((c) => (
+              <label className="adm-choix-ligne" key={c.id} data-deja={c.deja || undefined}>
+                <input
+                  type="checkbox"
+                  checked={c.deja || choisis.has(c.id)}
+                  disabled={c.deja}
+                  onChange={() => basculer(c.id)}
+                />
+                {c.photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img className="adm-avatar" src={c.photo} alt="" loading="lazy" />
+                ) : (
+                  <div className="adm-avatar adm-avatar-empty" aria-hidden="true">
+                    {c.first_name.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+                <div className="adm-choix-main">
+                  <p className="adm-choix-nom">
+                    {c.first_name} {c.last_name}
+                    {c.deja && <span className="adm-tag">déjà dans la soirée</span>}
+                  </p>
+                  <p className="adm-choix-meta">
+                    {[c.gender === 'femme' ? 'Femme' : 'Homme', c.age ? `${c.age} ans` : null, c.city]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                </div>
+                {c.soiree_group && <span className="adm-choix-groupe">{c.soiree_group}</span>}
+              </label>
+            ))}
+
+            {visibles.length === 0 && (
+              <p className="adm-hint" style={{ margin: 0 }}>
+                Aucune candidature ne correspond.
+              </p>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <label className="adm-depot" data-rempli={Boolean(csv)}>
+            <input
+              type="file"
+              accept=".csv,text/csv,text/plain"
+              onChange={async (e) => {
+                const fichier = e.target.files?.[0];
+                if (!fichier) return;
+                setErreur(null);
+                setNomFichier(fichier.name);
+                setCsv(await fichier.text());
+              }}
+            />
+            <span>{nomFichier || 'Choisir le fichier de la billetterie (.csv)'}</span>
+          </label>
+          <p className="adm-hint">
+            Seule l’adresse email est nécessaire. Le fichier peut venir d’Excel ou de la
+            billetterie, avec virgules ou points-virgules. Tout le reste — photo, prénom, âge — est
+            retrouvé dans les candidatures.
+          </p>
+        </>
+      )}
+
+      {!manchesPosees && (
+        <>
+          <div className="adm-form-grille" style={{ marginTop: 20 }}>
+            {heures.map((heure, index) => (
+              <div className="adm-champ" key={index}>
+                <label htmlFor={`manche-${index}`}>Crush time {index + 1}</label>
+                <input
+                  id={`manche-${index}`}
+                  className="lil-input"
+                  type="datetime-local"
+                  value={heure}
+                  onChange={(e) =>
+                    setHeures((avant) => avant.map((h, i) => (i === index ? e.target.value : h)))
+                  }
+                />
+              </div>
+            ))}
+          </div>
+          <p className="adm-hint">
+            Ces heures sont celles qu’on annonce. L’ouverture reste un geste : rien ne part sans que
+            tu appuies.
+          </p>
+        </>
+      )}
+
+      {/* Le compte reste sous les yeux pendant qu'on coche : une soirée à
+          trente hommes et cinq femmes ne se rattrape pas sur place. */}
+      <div className="adm-choix-pied">
+        <p className="adm-choix-compte">
+          {porte === 'liste' ? (
+            <>
+              <strong>{retenus.length}</strong> personne{retenus.length > 1 ? 's' : ''}
+              {retenus.length > 0 && (
+                <>
+                  {' '}
+                  · {femmes} femme{femmes > 1 ? 's' : ''} · {hommes} homme{hommes > 1 ? 's' : ''}
+                </>
+              )}
+              {dejaLa > 0 && <span className="adm-hint"> · {dejaLa} déjà dans la soirée</span>}
+            </>
+          ) : (
+            <span className="adm-hint">Les adresses du fichier seront rapprochées des candidatures.</span>
+          )}
+        </p>
+
+        <button type="button" className="adm-btn adm-btn-yes" disabled={!pret || busy} onClick={envoyer}>
+          {busy
+            ? 'Enregistrement…'
+            : manchesPosees
+              ? 'Ajouter à la soirée'
+              : 'Créer le crush time'}
+        </button>
+      </div>
+
+      {erreur && (
+        <div className="adm-feedback" data-kind="ko" style={{ marginTop: 14 }}>
+          {erreur}
+        </div>
+      )}
+    </div>
+  );
+}
