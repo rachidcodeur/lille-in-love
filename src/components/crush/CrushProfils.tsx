@@ -15,6 +15,20 @@ import type { Profil } from '@/lib/crush';
  * Un seul like par crush time, sans retour en arrière. Un geste qui ne se
  * reprend pas se confirme : la carte s'ouvre, on lit le nom, on appuie.
  */
+/**
+ * Une présentation ramenée à ce qui se lit debout.
+ *
+ * Les candidatures contiennent parfois dix lignes. Personne ne les lit au
+ * milieu d'une soirée, et une carte qui s'allonge repousse le bouton hors
+ * de l'écran. On coupe au mot, pas au caractère.
+ */
+function court(texte: string, max = 140): string {
+  if (texte.length <= max) return texte;
+  const coupe = texte.slice(0, max);
+  const dernierEspace = coupe.lastIndexOf(' ');
+  return `${coupe.slice(0, dernierEspace > 60 ? dernierEspace : max).trimEnd()}…`;
+}
+
 export function CrushProfils({
   numero,
   profils,
@@ -78,37 +92,65 @@ export function CrushProfils({
       </div>
 
       <div className="cr-grille">
-        {profils.map((profil) => (
-          <button
-            type="button"
-            className="cr-carte"
-            key={profil.id}
-            data-choisi={profil.id === dejaLike || undefined}
-            onClick={() => setOuvert(profil)}
-          >
-            {profil.photo ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={profil.photo} alt="" loading="lazy" decoding="async" />
-            ) : (
-              <span className="cr-carte-vide" aria-hidden="true">
-                {profil.first_name.slice(0, 1).toUpperCase()}
-              </span>
-            )}
+        {profils.map((profil) => {
+          const estChoisi = profil.id === dejaLike;
+          const aMatche = dejaMatche.has(profil.id);
 
-            <span className="cr-carte-pied">
-              <span className="cr-carte-nom">
-                {profil.first_name}
-                {profil.age ? ` · ${profil.age}` : ''}
-              </span>
-              {dejaMatche.has(profil.id) && <span className="cr-carte-match">Match</span>}
-              {profil.id === dejaLike && !dejaMatche.has(profil.id) && (
-                <span className="cr-carte-coeur" aria-label="Ton choix">
+          return (
+            // Deux boutons côte à côte plutôt qu'un bouton dans un bouton :
+            // la carte ouvre le profil, le cœur choisit. Imbriqués, aucun
+            // navigateur ne saurait lequel on vient de toucher.
+            <div className="cr-carte" key={profil.id} data-choisi={estChoisi || undefined}>
+              <button
+                type="button"
+                className="cr-carte-ouvrir"
+                onClick={() => setOuvert(profil)}
+                aria-label={`Voir le profil de ${profil.first_name}`}
+              >
+                {profil.photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={profil.photo} alt="" loading="lazy" decoding="async" />
+                ) : (
+                  <span className="cr-carte-vide" aria-hidden="true">
+                    {profil.first_name.slice(0, 1).toUpperCase()}
+                  </span>
+                )}
+
+                <span className="cr-carte-pied">
+                  <span className="cr-carte-nom">
+                    {profil.first_name}
+                    {profil.age ? ` · ${profil.age}` : ''}
+                  </span>
+                  {aMatche && <span className="cr-carte-match">Match</span>}
+                </span>
+              </button>
+
+              {/* Le cœur se touche sans ouvrir le profil : on reconnaît un
+                  visage, on choisit, c'est tout. La confirmation reste —
+                  elle protège d'un geste qui ne se reprend pas. */}
+              {aMatche ? (
+                <span className="cr-coeur-carte" data-etat="match" aria-label="Vous avez matché">
                   ♥
                 </span>
+              ) : estChoisi ? (
+                <span className="cr-coeur-carte" data-etat="choisi" aria-label="Ton choix">
+                  ♥
+                </span>
+              ) : (
+                !dejaLike && (
+                  <button
+                    type="button"
+                    className="cr-coeur-carte"
+                    aria-label={`Choisir ${profil.first_name}`}
+                    onClick={() => setAConfirmer(profil)}
+                  >
+                    ♡
+                  </button>
+                )
               )}
-            </span>
-          </button>
-        ))}
+            </div>
+          );
+        })}
       </div>
 
       {profils.length === 0 && (
@@ -132,8 +174,12 @@ export function CrushProfils({
               {ouvert.first_name}
               {ouvert.age ? <span> · {ouvert.age} ans</span> : null}
             </h2>
-            {ouvert.profession && <p className="cr-fiche-metier">{ouvert.profession}</p>}
-            {ouvert.about && <p className="cr-fiche-mot">{ouvert.about}</p>}
+            {(ouvert.profession || ouvert.city) && (
+              <p className="cr-fiche-metier">
+                {[ouvert.profession, ouvert.city].filter(Boolean).join(' · ')}
+              </p>
+            )}
+            {ouvert.about && <p className="cr-fiche-mot">{court(ouvert.about)}</p>}
 
             {dejaMatche.has(ouvert.id) ? (
               <p className="cr-fiche-etat">Vous avez matché.</p>

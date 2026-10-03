@@ -49,8 +49,11 @@ export default async function CrushPage({ searchParams }: Props) {
   return (
     <main className="cr-main">
       <header className="cr-entete">
-        <p className="cr-marque">Lille in Love</p>
-        <p className="cr-moi">{moi.first_name}</p>
+        <div>
+          <p className="cr-marque">Lille in Love</p>
+          <p className="cr-moi">{moi.first_name}</p>
+        </div>
+        <CrushMatchs matchs={matchs} />
       </header>
 
       {manche ? (
@@ -69,8 +72,6 @@ export default async function CrushPage({ searchParams }: Props) {
           }))}
         />
       )}
-
-      <CrushMatchs matchs={matchs} />
     </main>
   );
 }

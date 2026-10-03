@@ -1850,6 +1850,28 @@ const [soireeCrush] = await (
   })
 ).json();
 
+// Samir est rattaché à une candidature : c'est elle qui porte sa ville et
+// sa présentation, et c'est le cas courant.
+const [ficheSamir] = await (
+  await fetch(`${FAKE}/rest/v1/lil_members`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({
+      first_name: 'Samir',
+      last_name: 'Crush',
+      email: 'samir@soiree.test',
+      gender: 'homme',
+      orientation: 'hetero',
+      city: 'Roubaix',
+      profession: 'Chef de projet',
+      about:
+        'Une présentation volontairement très longue, qui dépasse de loin ce qu’on lit debout au milieu d’une soirée bruyante, et qui doit donc se faire couper quelque part avant la fin de cette phrase interminable.',
+      status: 'valide',
+      consent_at: new Date().toISOString(),
+    }),
+  })
+).json();
+
 const salle = [
   ['Inès', 'femme', 'ines'],
   ['Salomé', 'femme', 'salome'],
@@ -1863,7 +1885,7 @@ const presents = await (
     body: JSON.stringify(
       salle.map(([prenom, genre, jeton]) => ({
         soiree_id: soireeCrush.id,
-        member_id: null,
+        member_id: prenom === 'Samir' ? ficheSamir.id : null,
         email: `${jeton}@soiree.test`,
         first_name: prenom,
         gender: genre,
@@ -1920,6 +1942,35 @@ JSON.stringify(vus.sort()) === JSON.stringify(['Samir', 'Thomas'])
 (await tel.locator('.cr-grille').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length)) === 2
   ? ok('les profils s’affichent deux par rangée')
   : bad('la grille n’a pas deux colonnes');
+
+// --- Ce que montre le profil ouvert --------------------------------
+await tel.locator('.cr-carte', { hasText: 'Samir' }).locator('.cr-carte-ouvrir').click();
+await tel.waitForTimeout(500);
+const fichePubliee = await tel.locator('.cr-fiche').innerText();
+fichePubliee.includes('Chef de projet') && fichePubliee.includes('Roubaix')
+  ? ok('le profil ouvert donne le métier et la ville')
+  : bad('métier ou ville absents', fichePubliee.replace(/\n+/g, ' | '));
+
+const presentation = await tel.locator('.cr-fiche-mot').innerText();
+presentation.length <= 145 && presentation.endsWith('…')
+  ? ok('une longue présentation est coupée : personne ne lit dix lignes debout')
+  : bad('présentation non raccourcie', `${presentation.length} caractères`);
+await tel.locator('.cr-fermer').click();
+await tel.waitForTimeout(400);
+
+// --- Le cœur de la carte, sans ouvrir le profil --------------------
+(await tel.locator('.cr-matchs-onglet').count()) === 1 &&
+(await tel.locator('.cr-entete .cr-matchs-onglet').count()) === 1
+  ? ok('« Mes matchs » est en haut, dans l’en-tête')
+  : bad('le bouton des matchs n’est pas dans l’en-tête');
+
+await tel.locator('.cr-carte', { hasText: 'Samir' }).locator('.cr-coeur-carte').click();
+await tel.waitForTimeout(500);
+(await tel.locator('.cr-confirme').count()) === 1 && (await tel.locator('.cr-fiche-mot').count()) === 0
+  ? ok('le cœur de la carte mène droit à la confirmation, sans passer par le profil')
+  : bad('le cœur de la carte n’ouvre pas la confirmation');
+await tel.getByRole('button', { name: 'Revenir' }).click();
+await tel.waitForTimeout(300);
 
 // --- Liker, avec confirmation --------------------------------------
 await tel.locator('.cr-carte', { hasText: 'Samir' }).click();

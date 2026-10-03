@@ -25,6 +25,15 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
 - **La page crush time affiche 2 profils par rangée.** Pas un par un façon
   pile de cartes : dans une salle, on cherche la personne à qui on vient de
   parler, et une grille se parcourt.
+- **Un cœur en haut à droite de chaque carte** : on reconnaît un visage et on
+  choisit, sans ouvrir la fiche. La confirmation reste, puisque le geste ne
+  se reprend pas.
+- **Le profil ouvert** donne prénom, âge, métier, ville, et une présentation
+  **coupée vers 140 caractères** — personne ne lit dix lignes debout, et une
+  fiche qui s'allonge repousse le bouton hors de l'écran.
+- **« Mes matchs » est en haut à droite**, pas en bas : c'est la récompense du
+  jeu, elle doit se voir sans être cherchée, et le bas de l'écran disparaît
+  sous le pouce et les barres du navigateur.
 - **La photo de tête** est celle rangée en position 1 dans le back-office,
   réordonnable par glissé-déposé. Elle décide à peu près seule du sort d'un
   profil.

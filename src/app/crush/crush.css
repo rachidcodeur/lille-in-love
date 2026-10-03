@@ -27,7 +27,8 @@
 .cr-main {
   max-width: 560px;
   margin: 0 auto;
-  padding: 18px 16px 110px;
+  /* Plus de barre en bas : la marge basse n'a plus à la contourner. */
+  padding: 18px 16px 40px;
 }
 
 .cr-centre {
@@ -40,10 +41,14 @@
 
 .cr-entete {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 22px;
+}
+
+.cr-entete .cr-moi {
+  margin-top: 3px;
 }
 
 .cr-marque,
@@ -186,15 +191,21 @@
 
 .cr-carte {
   position: relative;
-  border: 0;
-  padding: 0;
   border-radius: 18px;
   overflow: hidden;
   background: var(--carte);
   aspect-ratio: 3 / 4;
-  cursor: pointer;
+}
+
+.cr-carte-ouvrir {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
   display: block;
   width: 100%;
+  height: 100%;
+  cursor: pointer;
 }
 
 .cr-carte img {
@@ -219,6 +230,40 @@
   outline-offset: -2px;
 }
 
+/* Le cœur, en haut à droite : on reconnaît un visage et on choisit, sans
+   avoir à ouvrir la fiche. Assez grand pour un pouce, posé sur un disque
+   sombre pour rester lisible sur une photo claire. */
+.cr-coeur-carte {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(10, 7, 6, 0.62);
+  backdrop-filter: blur(4px);
+  /* Sur une photo très claire, le disque seul se perdrait. */
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+  color: #fff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.cr-coeur-carte:active {
+  transform: scale(0.92);
+}
+
+.cr-coeur-carte[data-etat='choisi'],
+.cr-coeur-carte[data-etat='match'] {
+  background: var(--rouge);
+  cursor: default;
+}
+
 .cr-carte-pied {
   position: absolute;
   left: 0;
@@ -237,11 +282,6 @@
   font-size: 14.5px;
   font-weight: 650;
   color: #fff;
-}
-
-.cr-carte-coeur {
-  color: var(--rouge);
-  font-size: 17px;
 }
 
 .cr-carte-match {
@@ -402,66 +442,78 @@
   font-variant-numeric: lining-nums tabular-nums;
 }
 
-/* --- Les matchs, toujours à portée de pouce -------------------------- */
-
-.cr-matchs {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 40;
-  background: var(--nuit-2);
-  border-top: 1px solid #332a28;
-  max-height: 80dvh;
-  overflow-y: auto;
-  padding-bottom: env(safe-area-inset-bottom);
-}
+/* --- Les matchs, en haut à droite ------------------------------------ */
 
 .cr-matchs-onglet {
   font: inherit;
-  width: 100%;
-  max-width: 560px;
-  margin: 0 auto;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 17px;
-  background: transparent;
-  border: 0;
+  gap: 8px;
+  padding: 10px 15px;
+  border-radius: 999px;
+  border: 1px solid #3a302d;
+  background: var(--nuit-2);
   color: var(--creme);
   font-size: 15px;
-  font-weight: 600;
+  font-weight: 650;
   cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Dès qu'il y a quelque chose dedans, ça se voit de loin. */
+.cr-matchs-onglet[data-pleins] {
+  border-color: var(--rouge);
+  background: rgba(224, 101, 122, 0.14);
+}
+
+.cr-matchs-coeur {
+  color: var(--rouge);
+  font-size: 17px;
 }
 
 .cr-matchs-onglet b {
-  background: var(--rouge);
-  color: #fff;
+  background: #3a302d;
+  color: var(--creme);
   border-radius: 999px;
   min-width: 24px;
   padding: 2px 8px;
-  font-size: 13px;
+  font-size: 13.5px;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.cr-matchs-onglet[data-pleins] b {
+  background: var(--rouge);
+  color: #fff;
+}
+
+/* Au plus étroit, « Mes matchs » s'efface : le cœur et le compte suffisent. */
+@media (max-width: 359px) {
+  .cr-matchs-mot {
+    display: none;
+  }
 }
 
 .cr-matchs-corps {
-  max-width: 560px;
-  margin: 0 auto;
-  padding: 0 16px 22px;
+  text-align: left;
+}
+
+.cr-matchs-corps .cr-fiche-nom {
+  margin-top: 0;
+  text-align: center;
 }
 
 .cr-match-ligne {
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 12px 0;
+  padding: 14px 0;
   border-top: 1px solid #2c2422;
 }
 
 .cr-match-ligne img,
 .cr-match-ligne .cr-carte-vide {
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   flex: none;
   border-radius: 14px;
   object-fit: cover;
@@ -474,8 +526,14 @@
   font-weight: 650;
 }
 
+.cr-match-ville {
+  margin: 1px 0 0;
+  font-size: 13px;
+  color: var(--creme-doux);
+}
+
 .cr-match-contact {
-  margin: 2px 0 0;
+  margin: 3px 0 0;
   font-size: 13.5px;
   color: var(--or);
   word-break: break-all;

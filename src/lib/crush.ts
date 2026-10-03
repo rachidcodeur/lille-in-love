@@ -337,6 +337,7 @@ export type Profil = {
   age: number | null;
   photo: string | null;
   profession: string | null;
+  city: string | null;
   about: string | null;
   /** De quoi se retrouver. Jamais avant le match — sinon le jeu n'en est plus un. */
   email?: string;
@@ -372,9 +373,15 @@ async function habiller(
 
   const [{ data: membres }, { data: photos }] = await Promise.all([
     ids.length
-      ? db.from('lil_members').select('id, profession, about, instagram').in('id', ids)
+      ? db.from('lil_members').select('id, profession, city, about, instagram').in('id', ids)
       : Promise.resolve({
-          data: [] as { id: string; profession: string; about: string; instagram: string | null }[],
+          data: [] as {
+            id: string;
+            profession: string;
+            city: string | null;
+            about: string;
+            instagram: string | null;
+          }[],
         }),
     ids.length
       ? db.from('lil_photos').select('id, member_id, position').in('member_id', ids)
@@ -393,6 +400,7 @@ async function habiller(
     age: age(p.birth_date),
     photo: p.member_id ? (premiere.get(p.member_id) ?? null) : null,
     profession: p.member_id ? (infos.get(p.member_id)?.profession ?? null) : null,
+    city: p.member_id ? (infos.get(p.member_id)?.city ?? null) : null,
     about: p.member_id ? (infos.get(p.member_id)?.about ?? null) : null,
     ...(options.contact
       ? {
