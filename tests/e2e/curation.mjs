@@ -709,7 +709,8 @@ await page.waitForTimeout(400);
   ? ok('l’icône ouvre le panneau de droite')
   : bad('le panneau ne s’ouvre pas');
 
-await page.selectOption('.adm-panneau select[name="groupe"]', 'C');
+// Des cases, plus une liste déroulante : on en coche autant qu'on veut.
+await page.locator('.adm-tri-cases label[data-groupe="C"] input').check();
 await page.selectOption('.adm-panneau select[name="genre"]', 'femme');
 await page.fill('.adm-panneau input[name="ageMin"]', '27');
 await page.fill('.adm-panneau input[name="ageMax"]', '35');
@@ -735,11 +736,21 @@ await page.waitForTimeout(400);
   ? ok('le panneau compte la sélection en cours')
   : bad('compteur du panneau', await page.locator('.adm-btn-appliquer').innerText().catch(() => ''));
 
-await page.selectOption('.adm-panneau select[name="groupe"]', 'tous');
-await page.waitForTimeout(300);
+// Cocher un second groupe élargit la sélection au lieu de la remplacer :
+// c'est tout l'intérêt des cases.
+await page.locator('.adm-tri-cases label[data-groupe="A"] input').check();
+await page.waitForTimeout(400);
 ((await page.locator('.adm-btn-appliquer').innerText().catch(() => '')) || '').includes('Voir 3 fiches')
-  ? ok('changer un critère recompte aussitôt, sans valider')
-  : bad('compteur figé', await page.locator('.adm-btn-appliquer').innerText().catch(() => ''));
+  ? ok('cocher un second groupe ajoute ses fiches au lieu de remplacer')
+  : bad('la seconde case ne cumule pas', await page.locator('.adm-btn-appliquer').innerText().catch(() => ''));
+
+// Et décocher tout ramène tout le monde, sans case « tous » à chercher.
+await page.locator('.adm-tri-cases input:checked').first().uncheck();
+await page.locator('.adm-tri-cases input:checked').first().uncheck();
+await page.waitForTimeout(400);
+((await page.locator('.adm-btn-appliquer').innerText().catch(() => '')) || '').includes('Voir 3 fiches')
+  ? ok('aucune case cochée vaut « tous les groupes »')
+  : bad('tout décocher ne rend pas tout le monde', await page.locator('.adm-btn-appliquer').innerText().catch(() => ''));
 
 // L'export vit dans le panneau et part du même formulaire : il emporte donc
 // les critères affichés, y compris celui qu'on vient de changer.
@@ -1661,11 +1672,21 @@ await page.waitForTimeout(600);
   : bad('liste à cocher incomplète', String(await page.locator('.adm-choix-ligne').count()));
 
 // --- Le filtre par groupe ------------------------------------------
-await page.getByRole('button', { name: /^A 2$/ }).click();
+await page.locator('.adm-tri-cases label[data-groupe="A"] input').check();
 await page.waitForTimeout(300);
 (await page.locator('.adm-choix-ligne').count()) === 2
   ? ok('le filtre par groupe restreint la liste')
   : bad('le filtre de groupe ne filtre pas', String(await page.locator('.adm-choix-ligne').count()));
+
+// Deux groupes à la fois : c'est le propre des cases.
+await page.locator('.adm-tri-cases label[data-groupe="C"] input').check();
+await page.waitForTimeout(300);
+(await page.locator('.adm-choix-ligne').count()) === 3
+  ? ok('cocher un second groupe élargit la liste')
+  : bad('les groupes ne se cumulent pas', String(await page.locator('.adm-choix-ligne').count()));
+
+await page.locator('.adm-tri-cases label[data-groupe="C"] input').uncheck();
+await page.waitForTimeout(300);
 
 // « Tout cocher » ne doit prendre que ce que le filtre laisse voir.
 await page.getByRole('button', { name: 'Tout cocher' }).click();
@@ -1675,7 +1696,7 @@ await page.waitForTimeout(300);
   : bad('tout cocher déborde du filtre', await page.locator('.adm-choix-pied').innerText());
 
 // --- L'équilibre, sous les yeux -------------------------------------
-await page.getByRole('button', { name: /^Toutes 4$/ }).click();
+await page.locator('.adm-tri-cases label[data-groupe="A"] input').uncheck();
 await page.waitForTimeout(300);
 await page.locator('.adm-choix-ligne', { hasText: 'Inès' }).locator('input').check();
 

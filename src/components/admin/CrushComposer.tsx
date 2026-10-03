@@ -45,7 +45,7 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
   const [porte, setPorte] = useState<'liste' | 'csv'>('liste');
   const [choisis, setChoisis] = useState<Set<string>>(new Set());
   const [recherche, setRecherche] = useState('');
-  const [groupe, setGroupe] = useState<string>('tous');
+  const [groupes, setGroupes] = useState<Set<string>>(new Set());
   const [csv, setCsv] = useState<string | null>(null);
   const [nomFichier, setNomFichier] = useState('');
   const [heures, setHeures] = useState([`${date}T20:00`, `${date}T22:00`, `${date}T00:00`]);
@@ -53,7 +53,7 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
   const [erreur, setErreur] = useState<string | null>(null);
 
   const parGroupe = useMemo(() => {
-    const compte: Record<string, number> = { tous: candidats.length, aucun: 0 };
+    const compte: Record<string, number> = { aucun: 0 };
     for (const c of candidats) {
       const cle = c.soiree_group ?? 'aucun';
       compte[cle] = (compte[cle] ?? 0) + 1;
@@ -64,12 +64,12 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
   const visibles = useMemo(() => {
     const terme = recherche.trim().toLowerCase();
     return candidats.filter((c) => {
-      if (groupe === 'aucun' && c.soiree_group) return false;
-      if (groupe !== 'tous' && groupe !== 'aucun' && c.soiree_group !== groupe) return false;
+      // Aucune case cochée veut dire « tous les groupes ».
+      if (groupes.size > 0 && !groupes.has(c.soiree_group ?? 'aucun')) return false;
       if (!terme) return true;
       return `${c.first_name} ${c.last_name} ${c.city ?? ''}`.toLowerCase().includes(terme);
     });
-  }, [candidats, groupe, recherche]);
+  }, [candidats, groupes, recherche]);
 
   const retenus = candidats.filter((c) => choisis.has(c.id));
   const femmes = retenus.filter((c) => c.gender === 'femme').length;
@@ -165,25 +165,29 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
             />
           </div>
 
-          <nav className="adm-filters" aria-label="Groupe" style={{ marginBottom: 14 }}>
-            <button type="button" className="adm-filter" data-on={groupe === 'tous'} onClick={() => setGroupe('tous')}>
-              Toutes <b>{parGroupe.tous}</b>
-            </button>
-            {GROUPES.map((lettre) => (
-              <button
-                key={lettre}
-                type="button"
-                className="adm-filter"
-                data-on={groupe === lettre}
-                onClick={() => setGroupe(lettre)}
-              >
-                {lettre} <b>{parGroupe[lettre] ?? 0}</b>
-              </button>
+          {/* Plusieurs groupes à la fois : on compose rarement une soirée
+              avec un seul. Aucune case cochée = tout le monde. */}
+          <fieldset className="adm-tri-cases" style={{ marginBottom: 16 }}>
+            <legend>Groupes</legend>
+            {[...GROUPES, 'aucun'].map((choix) => (
+              <label key={choix} data-groupe={choix} data-on={groupes.has(choix)}>
+                <input
+                  type="checkbox"
+                  checked={groupes.has(choix)}
+                  onChange={() =>
+                    setGroupes((avant) => {
+                      const suite = new Set(avant);
+                      if (suite.has(choix)) suite.delete(choix);
+                      else suite.add(choix);
+                      return suite;
+                    })
+                  }
+                />
+                <span>{choix === 'aucun' ? 'Sans groupe' : choix}</span>
+                <b>{parGroupe[choix] ?? 0}</b>
+              </label>
             ))}
-            <button type="button" className="adm-filter" data-on={groupe === 'aucun'} onClick={() => setGroupe('aucun')}>
-              Sans groupe <b>{parGroupe.aucun ?? 0}</b>
-            </button>
-          </nav>
+          </fieldset>
 
           <div className="adm-choix-barre">
             <button type="button" className="adm-btn" onClick={toutBasculer} disabled={visibles.length === 0}>

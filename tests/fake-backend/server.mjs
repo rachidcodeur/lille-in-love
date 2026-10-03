@@ -97,6 +97,10 @@ function applyFilters(rows, params) {
           if (operateur === 'neq') return actuel !== undefined && actuel !== null && String(actuel) !== v;
           if (operateur === 'eq') return String(actuel) === v;
           if (operateur === 'ilike') return ilike(actuel, v);
+          if (operateur === 'in') {
+            const liste = v.replace(/^\(|\)$/g, '').split(',').map((x) => x.replace(/^"|"$/g, ''));
+            return liste.includes(String(actuel));
+          }
           throw new Error(`opérateur non géré dans or : ${condition}`);
         }),
       );

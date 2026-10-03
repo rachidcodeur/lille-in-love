@@ -2427,3 +2427,67 @@
 .adm-ajout[open] summary {
   margin-bottom: 20px;
 }
+
+/* --- Un filtre à cocher, plutôt qu'une liste déroulante ---------------- */
+
+/* On compose rarement une soirée avec un seul groupe. Une liste déroulante
+   n'en montre qu'un à la fois et n'en laisse choisir qu'un ; des cases
+   montrent tout, avec leur compte, et se combinent. */
+.adm-tri-cases {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.adm-tri-cases legend {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  padding: 0;
+  margin-bottom: 9px;
+}
+
+.adm-tri-cases label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px 8px 11px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--white);
+  font-size: 14px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+
+.adm-tri-cases label:hover {
+  border-color: var(--gold-soft);
+}
+
+.adm-tri-cases label[data-on='true'] {
+  border-color: var(--gold);
+  background: var(--sand);
+  color: var(--ink);
+}
+
+.adm-tri-cases input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--gold-deep);
+  cursor: inherit;
+}
+
+.adm-tri-cases b {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.adm-tri-cases label[data-on='true'] b {
+  color: var(--gold-deep);
+}

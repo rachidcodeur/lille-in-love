@@ -35,8 +35,9 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
 Deux portes, depuis l'onglet Soirées :
 
 - **Cocher dans la liste** — le cas courant. On connaît ces gens, on les a
-  triés en groupes, on sait qui on veut voir ensemble. Recherche, filtre par
-  groupe, « tout cocher » limité à ce que le filtre montre.
+  triés en groupes, on sait qui on veut voir ensemble. Recherche, cases à
+  cocher par groupe — **plusieurs à la fois**, aucune cochée valant « tous »
+  — et « tout cocher » limité à ce que le filtre montre.
 - **Importer un CSV** — quand c'est la billetterie qui fait foi. Seule
   l'adresse email est nécessaire ; le reste vient de la candidature.
 

@@ -6,10 +6,10 @@ import {
   GENRE_CHOIX,
   GENRE_LABELS,
   GROUPE_CHOIX,
-  GROUPE_LABELS,
   ORIENTATION_CHOIX,
   ORIENTATION_LABELS,
   compter,
+  compterGroupes,
   correspond,
   type FicheFiltrable,
   type Filtres,
@@ -48,10 +48,16 @@ export function PanneauFiltres({ filtres, fiches, criteres }: Props) {
   const bouton = useRef<HTMLButtonElement>(null);
   const panneau = useRef<HTMLDivElement>(null);
 
-  const parGroupe = useMemo(
-    () => compter(fiches, brouillon, 'groupe', GROUPE_CHOIX),
-    [fiches, brouillon],
-  );
+  const parGroupe = useMemo(() => compterGroupes(fiches, brouillon), [fiches, brouillon]);
+
+  /** Cocher ou décocher un groupe, sans toucher aux autres. */
+  const basculerGroupe = (choix: string) =>
+    setBrouillon((avant) => ({
+      ...avant,
+      groupes: avant.groupes.includes(choix)
+        ? avant.groupes.filter((g) => g !== choix)
+        : [...avant.groupes, choix],
+    }));
   const parGenre = useMemo(
     () => compter(fiches, brouillon, 'genre', GENRE_CHOIX),
     [fiches, brouillon],
@@ -149,20 +155,33 @@ export function PanneauFiltres({ filtres, fiches, criteres }: Props) {
                 <input type="hidden" name="statut" value={filtres.statut} />
               )}
 
-              <label className="adm-tri-champ">
-                <span>Groupe</span>
-                <select
-                  name="groupe"
-                  value={brouillon.groupe}
-                  onChange={(e) => setBrouillon({ ...brouillon, groupe: e.target.value })}
-                >
-                  {GROUPE_CHOIX.map((choix) => (
-                    <option key={choix} value={choix}>
-                      {GROUPE_LABELS[choix]} ({parGroupe[choix] ?? 0})
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {/* Des cases, pas une liste déroulante : on compose souvent une
+                  soirée avec deux groupes à la fois, et il faut les voir tous
+                  avec leur compte pour choisir. Aucune cochée = tous. */}
+              <fieldset className="adm-tri-cases">
+                <legend>Groupes</legend>
+                {GROUPE_CHOIX.map((choix) => (
+                  <label
+                    key={choix}
+                    data-groupe={choix}
+                    data-on={brouillon.groupes.includes(choix)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={brouillon.groupes.includes(choix)}
+                      onChange={() => basculerGroupe(choix)}
+                    />
+                    <span>{choix === 'aucun' ? 'Sans groupe' : choix}</span>
+                    <b>{parGroupe[choix] ?? 0}</b>
+                  </label>
+                ))}
+              </fieldset>
+
+              {/* Le formulaire part en GET : la sélection voyage en un seul
+                  paramètre, « groupe=A,C ». */}
+              {brouillon.groupes.length > 0 && (
+                <input type="hidden" name="groupe" value={brouillon.groupes.join(',')} />
+              )}
 
               <label className="adm-tri-champ">
                 <span>Qui</span>

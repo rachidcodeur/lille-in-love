@@ -65,7 +65,7 @@ export default async function AdminListPage({ searchParams }: Props) {
   // Ce que porte la pastille de l'icône : les critères posés en dehors du
   // statut, qui a ses propres boutons juste à côté.
   const criteres = [
-    filtres.groupe !== 'tous',
+    filtres.groupes.length > 0,
     filtres.genre !== 'tous',
     filtres.orientation !== 'tous',
     filtres.ageMin !== null || filtres.ageMax !== null,
@@ -100,7 +100,9 @@ export default async function AdminListPage({ searchParams }: Props) {
         {/* Les critères en cours survivent à une recherche : on cherche
             « Dupont » parmi les femmes du groupe C, pas dans toute la base. */}
         {filtres.statut !== 'tous' && <input type="hidden" name="statut" value={filtres.statut} />}
-        {filtres.groupe !== 'tous' && <input type="hidden" name="groupe" value={filtres.groupe} />}
+        {filtres.groupes.length > 0 && (
+          <input type="hidden" name="groupe" value={filtres.groupes.join(',')} />
+        )}
         {filtres.genre !== 'tous' && <input type="hidden" name="genre" value={filtres.genre} />}
         {filtres.orientation !== 'tous' && (
           <input type="hidden" name="orientation" value={filtres.orientation} />

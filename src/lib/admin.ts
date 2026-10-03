@@ -117,6 +117,7 @@ export type EmailLogRow = {
 /** Applique les filtres de la liste à une requête sur la vue de travail. */
 function filtrer<Q extends {
   eq(colonne: string, valeur: string): Q;
+  in(colonne: string, valeurs: string[]): Q;
   is(colonne: string, valeur: null): Q;
   or(conditions: string): Q;
   gte(colonne: string, valeur: number): Q;
@@ -137,8 +138,17 @@ function filtrer<Q extends {
 
   if (filtres.statut !== 'tous') q = q.eq('status', filtres.statut);
 
-  if (filtres.groupe === 'aucun') q = q.is('soiree_group', null);
-  else if (filtres.groupe !== 'tous') q = q.eq('soiree_group', filtres.groupe);
+  // Plusieurs groupes à la fois, « sans groupe » compris. Les trois cas sont
+  // séparés parce que « in » ne sait pas tester un vide : en SQL, null n'est
+  // égal à rien, pas même à lui-même.
+  if (filtres.groupes.length > 0) {
+    const lettres = filtres.groupes.filter((g) => g !== 'aucun');
+    const sansGroupe = filtres.groupes.includes('aucun');
+
+    if (sansGroupe && lettres.length === 0) q = q.is('soiree_group', null);
+    else if (!sansGroupe) q = q.in('soiree_group', lettres);
+    else q = q.or(`soiree_group.in.(${lettres.join(',')}),soiree_group.is.null`);
+  }
 
   if (filtres.genre !== 'tous') q = q.eq('gender', filtres.genre);
 

@@ -13,18 +13,10 @@
 export const GROUPES = ['A', 'B', 'C', 'G'] as const;
 export type Groupe = (typeof GROUPES)[number];
 
-export const GROUPE_CHOIX = ['tous', ...GROUPES, 'aucun'] as const;
+/** Les cases qu'on peut cocher. Aucune cochée vaut « tous les groupes ». */
+export const GROUPE_CHOIX = [...GROUPES, 'aucun'] as const;
 export const GENRE_CHOIX = ['tous', 'femme', 'homme'] as const;
 export const ORIENTATION_CHOIX = ['tous', 'gay', 'autre'] as const;
-
-export const GROUPE_LABELS: Record<string, string> = {
-  tous: 'Tous les groupes',
-  A: 'Groupe A',
-  B: 'Groupe B',
-  C: 'Groupe C',
-  G: 'Groupe G',
-  aucun: 'Sans groupe',
-};
 
 export const GENRE_LABELS: Record<string, string> = {
   tous: 'Femmes et hommes',
@@ -44,7 +36,12 @@ export type Filtres = {
   /** Ce qu'on cherche : un prénom, un bout de nom, un email, une ville. */
   recherche: string;
   statut: string;
-  groupe: string;
+  /**
+   * Les groupes retenus. Vide = tous, parce qu'on compose souvent une soirée
+   * avec deux groupes à la fois et qu'un choix unique obligeait à exporter
+   * deux fois.
+   */
+  groupes: string[];
   genre: string;
   orientation: string;
   ageMin: number | null;
@@ -54,7 +51,7 @@ export type Filtres = {
 export const FILTRES_PAR_DEFAUT: Filtres = {
   recherche: '',
   statut: 'tous',
-  groupe: 'tous',
+  groupes: [],
   genre: 'tous',
   orientation: 'tous',
   ageMin: null,
@@ -92,7 +89,12 @@ export function parseFiltres(params: ParamsBruts, statutsConnus: readonly string
     // une virgule ou une parenthèse casserait le filtre construit plus loin.
     recherche: (premier(params.q) ?? '').replace(/[(),*"'\\%]/g, ' ').trim().slice(0, 60),
     statut: parmi(params.statut, statutsConnus, 'tous'),
-    groupe: parmi(params.groupe, GROUPE_CHOIX, 'tous'),
+    // « groupe=A,C ». Une ancienne URL à valeur unique se lit sans rien
+    // changer, et « tous » veut dire la même chose que rien.
+    groupes: (premier(params.groupe) ?? '')
+      .split(',')
+      .map((v) => v.trim())
+      .filter((v) => (GROUPE_CHOIX as readonly string[]).includes(v)),
     genre: parmi(params.genre, GENRE_CHOIX, 'tous'),
     orientation: parmi(params.orientation, ORIENTATION_CHOIX, 'tous'),
     ageMin,
@@ -106,7 +108,7 @@ export function versParams(filtres: Filtres, remplace: Partial<Filtres> = {}): U
   const params = new URLSearchParams();
   if (f.recherche) params.set('q', f.recherche);
   if (f.statut !== 'tous') params.set('statut', f.statut);
-  if (f.groupe !== 'tous') params.set('groupe', f.groupe);
+  if (f.groupes.length > 0) params.set('groupe', f.groupes.join(','));
   if (f.genre !== 'tous') params.set('genre', f.genre);
   if (f.orientation !== 'tous') params.set('orientation', f.orientation);
   if (f.ageMin !== null) params.set('ageMin', String(f.ageMin));
@@ -132,8 +134,14 @@ export function resume(filtres: Filtres): string[] {
   if (filtres.orientation !== 'tous') {
     morceaux.push(filtres.orientation === 'gay' ? 'gays' : 'hors gays');
   }
-  if (filtres.groupe === 'aucun') morceaux.push('sans groupe');
-  else if (filtres.groupe !== 'tous') morceaux.push(`groupe ${filtres.groupe}`);
+  if (filtres.groupes.length > 0) {
+    const noms = filtres.groupes.map((g) => (g === 'aucun' ? 'sans groupe' : g));
+    morceaux.push(
+      filtres.groupes.length === 1 && filtres.groupes[0] === 'aucun'
+        ? 'sans groupe'
+        : `groupe${filtres.groupes.length > 1 ? 's' : ''} ${noms.join(' et ')}`,
+    );
+  }
   if (filtres.ageMin !== null && filtres.ageMax !== null) {
     morceaux.push(`${filtres.ageMin}–${filtres.ageMax} ans`);
   } else if (filtres.ageMin !== null) {
@@ -149,7 +157,9 @@ export function nomFichier(filtres: Filtres): string {
   const bouts = ['candidatures'];
   if (filtres.genre !== 'tous') bouts.push(filtres.genre === 'femme' ? 'femmes' : 'hommes');
   if (filtres.orientation !== 'tous') bouts.push(filtres.orientation);
-  if (filtres.groupe !== 'tous') bouts.push(filtres.groupe === 'aucun' ? 'sans-groupe' : filtres.groupe);
+  if (filtres.groupes.length > 0) {
+    bouts.push(filtres.groupes.map((g) => (g === 'aucun' ? 'sans-groupe' : g)).join('-'));
+  }
   if (filtres.statut !== 'tous') bouts.push(filtres.statut);
   if (filtres.ageMin !== null || filtres.ageMax !== null) {
     bouts.push(`${filtres.ageMin ?? ''}-${filtres.ageMax ?? ''}`);
@@ -185,10 +195,11 @@ export function correspond(fiche: FicheFiltrable, filtres: Filtres): boolean {
   if (filtres.recherche && !trouve(fiche, filtres.recherche)) return false;
   if (filtres.statut !== 'tous' && fiche.status !== filtres.statut) return false;
 
-  if (filtres.groupe === 'aucun') {
-    if (fiche.soiree_group) return false;
-  } else if (filtres.groupe !== 'tous' && fiche.soiree_group !== filtres.groupe) {
-    return false;
+  // Aucune case cochée veut dire « tous les groupes » : on ne force
+  // personne à tout cocher pour voir tout le monde.
+  if (filtres.groupes.length > 0) {
+    const sien = fiche.soiree_group ?? 'aucun';
+    if (!filtres.groupes.includes(sien)) return false;
   }
 
   if (filtres.genre !== 'tous' && fiche.gender !== filtres.genre) return false;
@@ -222,13 +233,33 @@ function trouve(fiche: FicheFiltrable, terme: string): boolean {
 export function compter(
   fiches: FicheFiltrable[],
   filtres: Filtres,
-  champ: 'statut' | 'groupe' | 'genre' | 'orientation',
+  champ: 'statut' | 'genre' | 'orientation',
   valeurs: readonly string[],
 ): Record<string, number> {
   const comptes: Record<string, number> = {};
   for (const valeur of valeurs) {
     comptes[valeur] = fiches.filter((fiche) =>
       correspond(fiche, { ...filtres, [champ]: valeur }),
+    ).length;
+  }
+  return comptes;
+}
+
+/**
+ * Combien de fiches porterait chaque groupe, les autres filtres tenus.
+ *
+ * À part des autres compteurs : une case se compte seule, comme si elle
+ * était la seule cochée — sinon cocher A ferait tomber le compte de B à
+ * zéro, et on ne saurait plus ce qu'on gagnerait en le cochant aussi.
+ */
+export function compterGroupes(
+  fiches: FicheFiltrable[],
+  filtres: Filtres,
+): Record<string, number> {
+  const comptes: Record<string, number> = {};
+  for (const valeur of GROUPE_CHOIX) {
+    comptes[valeur] = fiches.filter((fiche) =>
+      correspond(fiche, { ...filtres, groupes: [valeur] }),
     ).length;
   }
   return comptes;
