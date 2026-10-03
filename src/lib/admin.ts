@@ -321,8 +321,15 @@ export async function vignettes(memberIds: string[]): Promise<Map<string, string
   return parMembre;
 }
 
-/** Les photos d'une candidature, dans l'ordre où elles ont été déposées. */
-export async function photosDe(memberId: string): Promise<string[]> {
+export type PhotoRangee = { id: string; url: string };
+
+/**
+ * Les photos d'une candidature, dans l'ordre choisi.
+ *
+ * L'identifiant voyage avec l'adresse : c'est lui qui sert à les ranger, et
+ * la position 1 décide de ce qu'on voit partout ailleurs.
+ */
+export async function photosDe(memberId: string): Promise<PhotoRangee[]> {
   const { data, error } = await supabaseAdmin()
     .from('lil_photos')
     .select('id')
@@ -330,7 +337,23 @@ export async function photosDe(memberId: string): Promise<string[]> {
     .order('position', { ascending: true });
 
   if (error) throw new Error(error.message);
-  return (data ?? []).map((photo) => lienPhoto(photo.id));
+  return (data ?? []).map((photo) => ({ id: photo.id, url: lienPhoto(photo.id) }));
+}
+
+/**
+ * Ranger les photos d'une candidature.
+ *
+ * Passe par une fonction de la base plutôt que par trois mises à jour :
+ * échanger deux positions traverse forcément un état où deux photos se
+ * disputent la même place, et seule une transaction peut l'autoriser sans
+ * laisser de trace si quoi que ce soit échoue.
+ */
+export async function rangerPhotos(memberId: string, ordre: string[]): Promise<void> {
+  const { error } = await supabaseAdmin().rpc('lil_ranger_photos', {
+    p_member: memberId,
+    p_ordre: ordre,
+  });
+  if (error) throw new Error(error.message);
 }
 
 /** Le premier curateur actif — l'accès étant libre, les votes lui sont attribués. */

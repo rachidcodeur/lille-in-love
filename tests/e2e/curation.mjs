@@ -1459,6 +1459,155 @@ s.members.filter((m) => !m.deleted_at).length === 3
 
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
+/* ---------------------------------------------------------------- */
+section('16. Ranger les photos d’une candidature');
+
+// La première photo part partout : dans la liste, et sur le profil que
+// verront les participants pendant le crush time. Il faut pouvoir choisir
+// laquelle c'est.
+const [garance] = await (
+  await fetch(`${FAKE}/rest/v1/lil_members`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({
+      first_name: 'Garance',
+      last_name: 'Photo',
+      email: 'garance@example.com',
+      gender: 'femme',
+      status: 'nouveau',
+      consent_at: new Date().toISOString(),
+    }),
+  })
+).json();
+
+const fixtures = ['photo-1.png', 'photo-2.png', 'photo-1.png'];
+const posees = [];
+for (const [index, nom] of fixtures.entries()) {
+  const chemin = `candidatures/${garance.id}/${index + 1}.png`;
+  await fetch(`${FAKE}/storage/v1/object/lil-photos/${chemin}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'image/png' },
+    body: readFileSync(fixture(nom)),
+  });
+  const [photo] = await (
+    await fetch(`${FAKE}/rest/v1/lil_photos`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify({
+        member_id: garance.id,
+        storage_path: chemin,
+        position: index + 1,
+        mime_type: 'image/png',
+      }),
+    })
+  ).json();
+  posees.push(photo.id);
+}
+
+const positions = async () => {
+  const s = await state();
+  return s.photos
+    .filter((p) => p.member_id === garance.id)
+    .sort((a, b) => a.position - b.position)
+    .map((p) => posees.indexOf(p.id) + 1);
+};
+
+/** Attendre que la base ait vraiment rangé, plutôt que de compter en ms. */
+const attendreOrdre = async (attendu) => {
+  for (let essai = 0; essai < 40; essai += 1) {
+    if (JSON.stringify(await positions()) === JSON.stringify(attendu)) return true;
+    await page.waitForTimeout(150);
+  }
+  return false;
+};
+
+/** Ce que donne « amener la troisième en tête » sur l'ordre actuel. */
+const troisiemeDevant = (avant) => [avant[2], avant[0], avant[1]];
+
+await page.goto(`${BASE}/admin/${garance.id}`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+
+(await page.locator('.adm-photo-case').count()) === 3
+  ? ok('les trois photos sont rangeables')
+  : bad('cases de photo manquantes', String(await page.locator('.adm-photo-case').count()));
+
+(await page.locator('.adm-photo-case[data-rang="premiere"] .adm-photo-rang').innerText())
+  .toLowerCase()
+  .includes('profil')
+  ? ok('la première porte sa marque : c’est elle qu’on verra au crush time')
+  : bad('la photo de profil n’est pas signalée');
+
+// --- Le bouton, celui qui marche au doigt -------------------------
+// Chaque étape part de l'ordre qu'elle trouve : sans cela, un échec en
+// entraînerait un autre et on chercherait deux défauts là où il n'y en a
+// qu'un.
+const avantBouton = await positions();
+await page.locator('.adm-photo-case').nth(2).locator('.adm-photo-premier').click();
+
+(await attendreOrdre(troisiemeDevant(avantBouton)))
+  ? ok('« Mettre en premier » amène la troisième photo en tête')
+  : bad('ordre inattendu après le bouton', JSON.stringify(await positions()));
+
+// --- Le glissé-déposé ---------------------------------------------
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+const avantGlisse = await positions();
+
+// Deux vérifications, parce qu'un navigateur piloté ne sait pas déclencher
+// un vrai glissé HTML5 à la souris : d'abord que la case est réellement
+// attrapable, ensuite que la séquence d'événements range bien les photos.
+const cases = page.locator('.adm-photo-case');
+(await cases.nth(2).getAttribute('draggable')) === 'true' &&
+(await cases.nth(2).locator('img').getAttribute('draggable')) === 'false'
+  ? ok('la case s’attrape, et l’image ne vole pas le geste')
+  : bad('la case n’est pas déplaçable');
+
+await page.evaluate(() => {
+  const toutes = document.querySelectorAll('.adm-photo-case');
+  // Un seul DataTransfer traverse la séquence, comme dans un vrai glissé :
+  // c'est lui qui porte le rang de la case attrapée.
+  const dt = new DataTransfer();
+  const evenement = (nom) =>
+    new DragEvent(nom, { dataTransfer: dt, bubbles: true, cancelable: true });
+  toutes[2].dispatchEvent(evenement('dragstart'));
+  toutes[0].dispatchEvent(evenement('dragover'));
+  toutes[0].dispatchEvent(evenement('drop'));
+  toutes[2].dispatchEvent(evenement('dragend'));
+});
+
+(await attendreOrdre(troisiemeDevant(avantGlisse)))
+  ? ok('glisser la dernière sur la première les range aussi')
+  : bad('ordre inattendu après le glissé', JSON.stringify(await positions()));
+
+// --- Ce que la liste affiche --------------------------------------
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+const vignetteListe = await page
+  .locator('.adm-row', { hasText: 'Garance' })
+  .locator('.adm-avatar')
+  .getAttribute('src');
+
+// Quelle qu'elle soit, la vignette doit être celle qui occupe la position 1.
+const enTete = (await state()).photos
+  .filter((p) => p.member_id === garance.id)
+  .sort((a, b) => a.position - b.position)[0];
+
+vignetteListe === `/admin/photo/${enTete.id}`
+  ? ok('la liste suit : c’est la photo choisie qui sert de vignette')
+  : bad('la vignette ne suit pas l’ordre', String(vignetteListe));
+
+// --- Une photo qui n'est pas à soi --------------------------------
+const intrusion = await fetch(`${BASE}/api/admin/photos`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ memberId: garance.id, ordre: [posees[0], '11111111-2222-4333-8444-555555555555'] }),
+});
+intrusion.status >= 400
+  ? ok('une photo qui n’appartient pas à la candidature est refusée')
+  : bad('on peut déplacer la photo de quelqu’un d’autre', String(intrusion.status));
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
 await browser.close();
 console.log('\n' + (failures.length === 0
   ? '[32mTout est vert.[0m'

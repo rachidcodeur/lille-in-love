@@ -2178,3 +2178,93 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* --- Ranger les photos ---------------------------------------------- */
+
+/* Chaque photo devient un objet qu'on peut attraper. Le curseur le dit
+   avant le premier essai — un glissé-déposé qu'on ne devine pas n'existe
+   pas. */
+.adm-photo-case {
+  position: relative;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.adm-photo-case[draggable='true'] {
+  cursor: grab;
+}
+
+.adm-photo-case[draggable='true']:active {
+  cursor: grabbing;
+}
+
+/* Celle qu'on déplace s'efface, pour qu'on voie où elle va atterrir. */
+.adm-photo-case[data-attrapee] {
+  opacity: 0.35;
+}
+
+/* La première porte un filet doré : c'est elle qui part partout, et on doit
+   le voir sans lire. */
+.adm-photo-case[data-rang='premiere'] {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+
+.adm-photo-rang,
+.adm-photo-premier {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  right: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 7px 10px;
+  border-radius: 999px;
+  text-align: center;
+  border: 0;
+}
+
+.adm-photo-rang {
+  background: var(--gold);
+  color: var(--white);
+}
+
+.adm-photo-premier {
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--ink);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 150ms ease;
+  box-shadow: var(--shadow-sm);
+}
+
+/* Visible au survol, et toujours au doigt : sur un écran tactile il n'y a
+   pas de survol, et c'est là que le bouton remplace le glissé. */
+.adm-photo-case:hover .adm-photo-premier,
+.adm-photo-premier:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .adm-photo-premier {
+    opacity: 1;
+  }
+}
+
+.adm-photo-strip .adm-photo-case {
+  flex: 1;
+  min-width: 0;
+}
+
+.adm-photo-strip .adm-photo-case .adm-photo {
+  aspect-ratio: 1 / 1;
+}
+
+/* Au format carré, « Mettre en premier » déborderait : on raccourcit. */
+.adm-photo-strip .adm-photo-premier {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 6px 4px;
+}

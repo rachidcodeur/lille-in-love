@@ -326,6 +326,23 @@ async function traiter(req, res) {
     }
   }
 
+  /* ---------------- Fonctions de la base ---------------- */
+  if (path === '/rest/v1/rpc/lil_ranger_photos' && req.method === 'POST') {
+    const { p_member, p_ordre } = body ?? {};
+    // Comme la vraie : elle refuse une photo qui n'est pas à cette
+    // candidature, sinon on déplacerait celle de quelqu'un d'autre.
+    const siennes = tables.lil_photos.filter((p) => p.member_id === p_member);
+    if ((p_ordre ?? []).some((id) => !siennes.some((p) => p.id === id))) {
+      return json(res, 400, { message: 'Une des photos n’appartient pas à cette candidature.' });
+    }
+    (p_ordre ?? []).forEach((id, index) => {
+      const photo = tables.lil_photos.find((p) => p.id === id);
+      if (photo) photo.position = index + 1;
+    });
+    record({ what: 'rpc:lil_ranger_photos', id: p_member, ordre: p_ordre });
+    return json(res, 200, null);
+  }
+
   /* ---------------- PostgREST ---------------- */
   if (path.startsWith('/rest/v1/')) {
     const table = path.replace('/rest/v1/', '');

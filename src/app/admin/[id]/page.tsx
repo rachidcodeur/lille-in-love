@@ -140,7 +140,7 @@ export default async function FichePage({ params }: Props) {
         {photos[0] ? (
           <Vignette
             className="adm-avatar adm-avatar-hero"
-            src={photos[0]}
+            src={photos[0].url}
             initiale={member.first_name.slice(0, 1).toUpperCase()}
           />
         ) : (
@@ -187,7 +187,7 @@ export default async function FichePage({ params }: Props) {
               <p className="adm-card-title">Photos</p>
               <span className="adm-card-aside">{photos.length} / 3</span>
             </div>
-            <PhotoGallery photos={photos} firstName={member.first_name} />
+            <PhotoGallery photos={photos} firstName={member.first_name} memberId={member.id} />
           </div>
 
           <div className="adm-card">
