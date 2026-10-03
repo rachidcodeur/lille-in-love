@@ -22,6 +22,12 @@ export const BRAND = {
 
   /** L'espace de curation. Il vit sur le sous-domaine, pas sur le site. */
   adminUrl: 'https://app.in-love.fr',
+  /**
+   * Le domaine du crush time. Vide en local et en préproduction : les liens
+   * se construisent alors sur l'adresse qu'on a sous les yeux, ce qui les
+   * rend cliquables partout sans réglage.
+   */
+  crushUrl: process.env.NEXT_PUBLIC_CRUSH_URL ?? '',
 
   /**
    * Le pixel Meta des campagnes publicitaires.

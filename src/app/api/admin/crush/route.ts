@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { isAdminAllowed } from '@/lib/admin';
 import {
   activerCrushTime,
+  ajouterUnePersonne,
   composerCrushTime,
   creerCrushTime,
   fermerManche,
@@ -45,6 +46,20 @@ const schema = z.discriminatedUnion('action', [
       .string()
       .regex(/^\d{4}$/, 'Le code tient en quatre chiffres')
       .optional(),
+  }),
+  z.object({
+    action: z.literal('ajouter'),
+    soireeId: z.string().uuid(),
+    email: z.string().trim().email('Cette adresse ne ressemble pas à une adresse email.'),
+    prenom: z.string().trim().min(1, 'Il faut un prénom.').max(60),
+    // Sans genre, la personne ne verrait personne et ne serait vue de
+    // personne : c'est le seul champ vraiment obligatoire.
+    genre: z.enum(['femme', 'homme']),
+    naissance: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional()
+      .or(z.literal('').transform(() => undefined)),
   }),
   z.object({ action: z.literal('ouvrir'), mancheId: z.string().uuid() }),
   z.object({ action: z.literal('fermer'), mancheId: z.string().uuid() }),
@@ -91,6 +106,16 @@ export async function POST(request: Request) {
         const code = commande.code ?? nouveauCode();
         await activerCrushTime(commande.soireeId, code);
         return NextResponse.json({ ok: true, code });
+      }
+      case 'ajouter': {
+        const bilan = await ajouterUnePersonne({
+          soireeId: commande.soireeId,
+          email: commande.email,
+          first_name: commande.prenom,
+          gender: commande.genre,
+          birth_date: commande.naissance ?? null,
+        });
+        return NextResponse.json({ ok: true, bilan });
       }
       case 'ouvrir':
         await ouvrirManche(commande.mancheId);

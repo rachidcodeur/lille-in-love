@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { BRAND } from '@/lib/brand';
 import { Icone } from './Icones';
 
 type Manche = {
@@ -20,6 +21,7 @@ type Personne = {
   gender: 'femme' | 'homme' | null;
   retire_at: string | null;
   member_id: string | null;
+  jeton: string;
 };
 
 async function commander(corps: Record<string, unknown>): Promise<string | null> {
@@ -54,6 +56,7 @@ export function CrushPilotage({
   const router = useRouter();
   const [occupe, setOccupe] = useState<string | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
+  const [copie, setCopie] = useState<string | null>(null);
   const [recherche, setRecherche] = useState('');
 
   async function agir(cle: string, corps: Record<string, unknown>) {
@@ -75,6 +78,22 @@ export function CrushPilotage({
   // Seule la manche suivante porte le bouton franc. Trois boutons également
   // engageants, c'est une invitation à ouvrir le troisième crush time à 20h.
   const prochaine = manches.find((m) => !m.ouvert_at);
+
+  // Le lien personnel de chacun. En production il porte le domaine du crush
+  // time ; ailleurs, l'adresse qu'on a sous les yeux — un lien de maquette
+  // doit rester cliquable depuis la maquette.
+  const racine = BRAND.crushUrl || (typeof window === 'undefined' ? '' : window.location.origin);
+  const lienDe = (p: Personne) => `${racine}/crush/c/${p.jeton}`;
+
+  async function copier(texte: string, quoi: string) {
+    try {
+      await navigator.clipboard.writeText(texte);
+      setCopie(quoi);
+      setTimeout(() => setCopie(null), 2000);
+    } catch {
+      setErreur('Le navigateur a refusé le presse-papiers. Sélectionne le texte à la main.');
+    }
+  }
 
   const terme = recherche.trim().toLowerCase();
   const visibles = terme
@@ -109,6 +128,24 @@ export function CrushPilotage({
           </div>
         )}
 
+        <div className="adm-choix-barre">
+          <button
+            type="button"
+            className="adm-btn"
+            onClick={() =>
+              copier(
+                presents.map((p) => `${p.first_name} <${p.email}> ${lienDe(p)}`).join('\n'),
+                'tous',
+              )
+            }
+          >
+            {copie === 'tous' ? '✓ Copiés' : `Copier les ${presents.length} liens`}
+          </button>
+          <span className="adm-hint" style={{ margin: 0 }}>
+            Un lien par personne, à envoyer avant la soirée.
+          </span>
+        </div>
+
         <div className="adm-recherche" style={{ margin: '0 0 16px' }}>
           <span className="adm-recherche-loupe" aria-hidden="true">
             <Icone nom="loupe" taille={18} />
@@ -142,6 +179,17 @@ export function CrushPilotage({
                 </p>
                 <p className="adm-present-mail">{p.email}</p>
               </div>
+
+              {!p.retire_at && (
+                <button
+                  type="button"
+                  className="adm-btn"
+                  title={lienDe(p)}
+                  onClick={() => copier(lienDe(p), p.id)}
+                >
+                  {copie === p.id ? '✓' : 'Lien'}
+                </button>
+              )}
 
               <button
                 type="button"

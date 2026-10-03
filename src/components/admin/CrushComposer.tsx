@@ -42,13 +42,14 @@ const GROUPES = ['A', 'B', 'C', 'G'] as const;
  */
 export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Props) {
   const router = useRouter();
-  const [porte, setPorte] = useState<'liste' | 'csv'>('liste');
+  const [porte, setPorte] = useState<'liste' | 'csv' | 'main'>('liste');
   const [choisis, setChoisis] = useState<Set<string>>(new Set());
   const [recherche, setRecherche] = useState('');
   const [groupes, setGroupes] = useState<Set<string>>(new Set());
   const [csv, setCsv] = useState<string | null>(null);
   const [nomFichier, setNomFichier] = useState('');
   const [heures, setHeures] = useState([`${date}T20:00`, `${date}T22:00`, `${date}T00:00`]);
+  const [main, setMain] = useState({ email: '', prenom: '', genre: '', naissance: '' });
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
@@ -106,7 +107,9 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
     const corps =
       porte === 'liste'
         ? { action: 'composer', soireeId, memberIds: [...choisis] }
-        : { action: 'importer', soireeId, csv };
+        : porte === 'csv'
+          ? { action: 'importer', soireeId, csv }
+          : { action: 'ajouter', soireeId, ...main };
 
     const r = await fetch('/api/admin/crush', {
       method: 'POST',
@@ -120,12 +123,18 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
       setChoisis(new Set());
       setCsv(null);
       setNomFichier('');
+      setMain({ email: '', prenom: '', genre: '', naissance: '' });
       router.refresh();
     }
     setBusy(false);
   }
 
-  const pret = porte === 'liste' ? choisis.size > 0 : Boolean(csv);
+  const pret =
+    porte === 'liste'
+      ? choisis.size > 0
+      : porte === 'csv'
+        ? Boolean(csv)
+        : Boolean(main.email.includes('@') && main.prenom.trim() && main.genre);
 
   return (
     <div>
@@ -147,6 +156,15 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
           onClick={() => setPorte('csv')}
         >
           Importer un CSV
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={porte === 'main'}
+          data-on={porte === 'main'}
+          onClick={() => setPorte('main')}
+        >
+          À la main
         </button>
       </div>
 
@@ -239,7 +257,7 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
             )}
           </div>
         </>
-      ) : (
+      ) : porte === 'csv' ? (
         <>
           <label className="adm-depot" data-rempli={Boolean(csv)}>
             <input
@@ -261,6 +279,64 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
             retrouvé dans les candidatures.
           </p>
         </>
+      ) : null}
+
+      {porte === 'main' && (
+        <div className="adm-form-grille">
+          <div className="adm-champ plein">
+            <label htmlFor="main-email">Adresse email</label>
+            <input
+              id="main-email"
+              className="lil-input"
+              type="email"
+              autoCapitalize="off"
+              placeholder="celle avec laquelle la personne se connectera"
+              value={main.email}
+              onChange={(e) => setMain({ ...main, email: e.target.value })}
+            />
+          </div>
+
+          <div className="adm-champ">
+            <label htmlFor="main-prenom">Prénom</label>
+            <input
+              id="main-prenom"
+              className="lil-input"
+              value={main.prenom}
+              onChange={(e) => setMain({ ...main, prenom: e.target.value })}
+            />
+          </div>
+
+          <div className="adm-champ">
+            <label htmlFor="main-genre">Femme ou homme</label>
+            <select
+              id="main-genre"
+              className="lil-input"
+              value={main.genre}
+              onChange={(e) => setMain({ ...main, genre: e.target.value })}
+            >
+              <option value="">À choisir</option>
+              <option value="femme">Femme</option>
+              <option value="homme">Homme</option>
+            </select>
+          </div>
+
+          <div className="adm-champ">
+            <label htmlFor="main-naissance">Date de naissance (facultatif)</label>
+            <input
+              id="main-naissance"
+              className="lil-input"
+              type="date"
+              value={main.naissance}
+              onChange={(e) => setMain({ ...main, naissance: e.target.value })}
+            />
+          </div>
+
+          <p className="adm-hint plein">
+            Le genre décide de tout : sans lui, la personne ne verrait personne et ne serait vue de
+            personne. Si cette adresse correspond à une candidature, sa photo et ses réponses
+            suivent toutes seules.
+          </p>
+        </div>
       )}
 
       {!manchesPosees && (
@@ -290,9 +366,16 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
 
       {/* Le compte reste sous les yeux pendant qu'on coche : une soirée à
           trente hommes et cinq femmes ne se rattrape pas sur place. */}
-      <div className="adm-choix-pied">
+      {/* Collant seulement sous l'onglet « liste » : c'est là qu'on fait
+          défiler longtemps et que le compte doit rester sous les yeux.
+          Ailleurs il recouvrirait les champs du formulaire. */}
+      <div className="adm-choix-pied" data-collant={porte === 'liste' || undefined}>
         <p className="adm-choix-compte">
-          {porte === 'liste' ? (
+          {porte === 'main' ? (
+            <span className="adm-hint">
+              Une personne qui n’est ni dans la billetterie, ni dans les candidatures.
+            </span>
+          ) : porte === 'liste' ? (
             <>
               <strong>{retenus.length}</strong> personne{retenus.length > 1 ? 's' : ''}
               {retenus.length > 0 && (
@@ -311,9 +394,11 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
         <button type="button" className="adm-btn adm-btn-yes" disabled={!pret || busy} onClick={envoyer}>
           {busy
             ? 'Enregistrement…'
-            : manchesPosees
-              ? 'Ajouter à la soirée'
-              : 'Créer le crush time'}
+            : porte === 'main'
+              ? 'Ajouter cette personne'
+              : manchesPosees
+                ? 'Ajouter à la soirée'
+                : 'Créer le crush time'}
         </button>
       </div>
 

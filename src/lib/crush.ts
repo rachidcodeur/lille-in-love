@@ -160,6 +160,48 @@ export async function composerCrushTime(options: {
 }
 
 /**
+ * Ajouter quelqu'un qui n'est dans aucune liste.
+ *
+ * L'organisateur qui se met lui-même dans sa soirée, un ami de dernière
+ * minute, quelqu'un qui a payé en espèces à la porte : il y a toujours un
+ * cas que ni la billetterie ni les candidatures ne connaissent.
+ *
+ * Le genre est demandé parce qu'il décide de tout : sans lui, la personne
+ * ne verrait personne et ne serait vue de personne. Si l'adresse correspond
+ * à une candidature, le reste — photo, âge, métier — suit tout seul.
+ */
+export async function ajouterUnePersonne(options: {
+  soireeId: string;
+  email: string;
+  first_name: string;
+  gender: Genre;
+  birth_date?: string | null;
+}): Promise<BilanImport> {
+  const email = options.email.trim().toLowerCase();
+
+  const { data: membre } = await supabaseAdmin()
+    .from('lil_members')
+    .select('id, email, first_name, birth_date, gender, orientation')
+    .eq('email', email)
+    .maybeSingle();
+
+  const ajoutes = await inscrire(options.soireeId, [
+    {
+      id: membre?.id ?? null,
+      email,
+      // Ce que la candidature sait prime sur ce qu'on vient de taper : elle
+      // a été remplie par l'intéressé, pas par l'organisateur pressé.
+      first_name: membre?.first_name ?? options.first_name.trim(),
+      birth_date: membre?.birth_date ?? options.birth_date ?? null,
+      gender: (membre?.gender as Genre | undefined) ?? options.gender,
+      orientation: (membre?.orientation as Orientation | undefined) ?? 'hetero',
+    },
+  ]);
+
+  return bilan(options.soireeId, 1, ajoutes, 0);
+}
+
+/**
  * Composer la soirée à partir du fichier de la billetterie.
  *
  * Le CSV ne porte guère plus que des adresses, et c'est suffisant : on

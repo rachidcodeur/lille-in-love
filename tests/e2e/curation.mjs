@@ -1753,6 +1753,35 @@ apresAjout.every((p) => !jetonsAvant.has(p.email) || jetonsAvant.get(p.email) ==
   ? ok('et les jetons déjà distribués ne changent pas — les liens envoyés restent valables')
   : bad('un jeton a changé : le lien déjà envoyé ne marche plus');
 
+// --- Quelqu'un qui n'est dans aucune liste --------------------------
+await page.getByRole('tab', { name: 'À la main' }).click();
+await page.waitForTimeout(300);
+(await page.locator('.adm-depot').count()) === 0
+  ? ok('le dépôt de fichier disparaît sous l’onglet « à la main »')
+  : bad('le volet CSV reste affiché sous un autre onglet');
+
+await page.fill('#main-email', 'organisateur@in-love.fr');
+await page.fill('#main-prenom', 'Rachid');
+await page.selectOption('#main-genre', 'homme');
+await page.getByRole('button', { name: 'Ajouter cette personne' }).click();
+await page.waitForTimeout(1800);
+
+s = await state();
+const ajoutMain = s.crushParticipants.find((p) => p.email === 'organisateur@in-love.fr');
+ajoutMain?.gender === 'homme' && ajoutMain?.first_name === 'Rachid' && ajoutMain?.jeton
+  ? ok('une personne absente de la billetterie et des candidatures peut être ajoutée')
+  : bad('ajout à la main raté', JSON.stringify(ajoutMain));
+
+// --- Son lien personnel, affiché pour qu'on puisse l'envoyer --------
+await page.waitForTimeout(400);
+const lienAffiche = await page
+  .locator('.adm-present', { hasText: 'Rachid' })
+  .locator('button', { hasText: 'Lien' })
+  .getAttribute('title');
+lienAffiche?.endsWith(`/crush/c/${ajoutMain.jeton}`)
+  ? ok('le tableau de bord donne son lien personnel, prêt à envoyer')
+  : bad('lien personnel absent du tableau de bord', String(lienAffiche));
+
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
 /* ---------------------------------------------------------------- */
