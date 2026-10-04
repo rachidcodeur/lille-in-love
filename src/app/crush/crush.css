@@ -14,7 +14,11 @@
   --or-clair: #e4d6b4;
   --creme: #f6f0e4;
   --creme-doux: #cbc0b2;
-  --rouge: #e0657a;
+  /* Le cœur est doré, comme le reste de la marque : ni jaune ni rose.
+     Deux valeurs — la claire pour ce qui s'écrit sur le fond nuit, la
+     pleine pour ce qui se remplit et porte du texte sombre. */
+  --coeur: #e4d6b4;
+  --coeur-plein: #c3b291;
 
   min-height: 100vh;
   min-height: 100dvh;
@@ -97,7 +101,7 @@
 .cr-erreur {
   font-size: 14px;
   line-height: 1.5;
-  color: var(--rouge);
+  color: var(--coeur);
   margin: 14px 0 0;
 }
 
@@ -158,8 +162,8 @@
 }
 
 .cr-coeur {
-  background: var(--rouge);
-  color: #fff;
+  background: var(--coeur-plein);
+  color: #1c130f;
 }
 
 /* --- La règle du jeu, avant tout le reste ---------------------------- */
@@ -173,8 +177,8 @@
   padding: 14px 16px;
   margin-bottom: 20px;
   border-radius: 14px;
-  border: 1px solid rgba(224, 101, 122, 0.4);
-  background: rgba(224, 101, 122, 0.12);
+  border: 1px solid rgba(227, 214, 180, 0.35);
+  background: rgba(227, 214, 180, 0.09);
   font-size: 15px;
   color: var(--creme);
 }
@@ -227,7 +231,7 @@
 }
 
 .cr-regle-coeur {
-  color: var(--rouge);
+  color: var(--coeur);
   font-size: 18px;
   flex: none;
 }
@@ -298,7 +302,7 @@
 }
 
 .cr-carte[data-choisi] {
-  outline: 2px solid var(--rouge);
+  outline: 2px solid var(--coeur-plein);
   outline-offset: -2px;
 }
 
@@ -332,7 +336,8 @@
 
 .cr-coeur-carte[data-etat='choisi'],
 .cr-coeur-carte[data-etat='match'] {
-  background: var(--rouge);
+  background: var(--coeur-plein);
+  color: #1c130f;
   cursor: default;
 }
 
@@ -361,8 +366,8 @@
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  background: var(--rouge);
-  color: #fff;
+  background: var(--coeur-plein);
+  color: #1c130f;
   padding: 3px 8px;
   border-radius: 999px;
 }
@@ -466,7 +471,7 @@
 .cr-match-mot {
   font-family: 'Cormorant Garamond', Georgia, serif;
   font-size: 30px;
-  color: var(--rouge);
+  color: var(--coeur);
   margin: 0 0 16px;
 }
 
@@ -537,12 +542,12 @@
 
 /* Dès qu'il y a quelque chose dedans, ça se voit de loin. */
 .cr-matchs-onglet[data-pleins] {
-  border-color: var(--rouge);
-  background: rgba(224, 101, 122, 0.14);
+  border-color: var(--coeur);
+  background: rgba(227, 214, 180, 0.12);
 }
 
 .cr-matchs-coeur {
-  color: var(--rouge);
+  color: var(--coeur);
   font-size: 17px;
 }
 
@@ -557,8 +562,8 @@
 }
 
 .cr-matchs-onglet[data-pleins] b {
-  background: var(--rouge);
-  color: #fff;
+  background: var(--coeur-plein);
+  color: #1c130f;
 }
 
 /* Au plus étroit, « Mes matchs » s'efface : le cœur et le compte suffisent. */
@@ -633,7 +638,7 @@
 }
 
 .cr-compte[data-urgent] {
-  color: var(--rouge);
+  color: var(--coeur);
 }
 
 .cr-attente-compte {

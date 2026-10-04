@@ -2041,10 +2041,27 @@ enferme.includes('Safari') && enferme.includes('Copier mon lien')
 await gmail.close();
 
 // Le détail qui décide de tout : l'icône doit ouvrir une session valide.
-const manifeste = await (await fetch(`${BASE}/crush/manifeste?t=ines`)).json();
-manifeste.start_url === '/crush/c/ines' && manifeste.scope === '/crush/'
-  ? ok('le manifeste porte le jeton : l’icône n’ouvre pas sur une demande d’email')
+const reponseManifeste = await fetch(`${BASE}/crush/manifeste?t=ines`);
+const manifeste = await reponseManifeste.json();
+manifeste.start_url === `${BASE}/crush/c/ines` && manifeste.scope === '/crush/'
+  ? ok('le manifeste porte le jeton, en adresse absolue : l’icône ouvre une session valide')
   : bad('manifeste inattendu', JSON.stringify(manifeste));
+
+// « no-store » empêchait Safari de garder le manifeste : l'icône s'ouvrait
+// alors sur une page blanche, sans adresse de départ.
+!/no-store/.test(reponseManifeste.headers.get('cache-control') ?? '')
+  ? ok('et Safari a le droit de le garder — sans quoi l’icône s’ouvre sur du vide')
+  : bad('le manifeste est marqué no-store', String(reponseManifeste.headers.get('cache-control')));
+
+manifeste.name === 'Lille in Love' && manifeste.short_name === 'Lille in Love'
+  ? ok('l’application s’appelle Lille in Love sur l’écran d’accueil')
+  : bad('nom inattendu', `${manifeste.name} / ${manifeste.short_name}`);
+
+const tete = await (await fetch(`${BASE}/crush`)).text();
+tete.includes('name="apple-mobile-web-app-capable"') &&
+tete.includes('content="Lille in Love"')
+  ? ok('et iOS reçoit le nom et le plein écran sous la forme qu’il comprend')
+  : bad('balises iOS absentes');
 
 // --- Entrer par le code annoncé dans la salle ----------------------
 const entrer = async (email, code) => {

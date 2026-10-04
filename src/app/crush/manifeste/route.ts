@@ -17,15 +17,24 @@ export const dynamic = 'force-dynamic';
  * fichier statique.
  */
 export async function GET(requete: Request) {
-  const jeton = new URL(requete.url).searchParams.get('t') ?? '';
+  const adresse = new URL(requete.url);
+  const jeton = adresse.searchParams.get('t') ?? '';
   const participant = jeton ? await parLien(jeton) : null;
 
-  const depart = participant ? `/crush/c/${participant.jeton}` : '/crush';
+  // Adresse absolue, construite sur celle qu'on vient de nous demander :
+  // un chemin relatif se résout normalement sans peine, mais pas toujours
+  // depuis un manifeste qui porte lui-même une chaîne de requête — et une
+  // icône qui s'ouvre sur une page blanche ne se rattrape pas un soir de
+  // soirée.
+  const depart = new URL(
+    participant ? `/crush/c/${participant.jeton}` : '/crush',
+    adresse.origin,
+  ).toString();
 
   return NextResponse.json(
     {
-      name: 'Crush Time — Lille in Love',
-      short_name: 'Crush Time',
+      name: 'Lille in Love',
+      short_name: 'Lille in Love',
       description: 'Les profils de la soirée, le temps d’un crush time.',
       start_url: depart,
       // La portée couvre tout ce que voit un participant, et rien d'autre :
@@ -45,8 +54,11 @@ export async function GET(requete: Request) {
     {
       headers: {
         'Content-Type': 'application/manifest+json; charset=utf-8',
-        // Il porte un jeton : aucun cache partagé ne doit le garder.
-        'Cache-Control': 'private, no-store',
+        // « private » suffit à écarter les caches partagés, et il le faut :
+        // ce manifeste porte un jeton. Mais pas « no-store » — Safari doit
+        // pouvoir le garder, sinon l'icône posée sur l'écran d'accueil n'a
+        // plus d'adresse de départ et s'ouvre sur une page blanche.
+        'Cache-Control': 'private, max-age=3600',
       },
     },
   );
