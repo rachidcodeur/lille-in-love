@@ -13,6 +13,7 @@ import { CrushEntree } from '@/components/crush/CrushEntree';
 import { CrushProfils } from '@/components/crush/CrushProfils';
 import { CrushMatchs } from '@/components/crush/CrushMatchs';
 import { CrushAttente } from '@/components/crush/CrushAttente';
+import { Veille } from '@/components/crush/Veille';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,6 +60,10 @@ export default async function CrushPage({ searchParams }: Props) {
 
   return (
     <main className="cr-main">
+      {/* L'écran se remet à jour tout seul quand l'autre rend son like, ou
+          quand un crush time s'ouvre. */}
+      <Veille matchs={matchs.length} manche={manche?.id ?? null} />
+
       <header className="cr-entete">
         <div>
           <p className="cr-marque">Lille in Love</p>

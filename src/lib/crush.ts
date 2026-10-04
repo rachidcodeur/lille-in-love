@@ -346,6 +346,7 @@ export type Profil = {
   about: string | null;
   /** De quoi se retrouver. Jamais avant le match — sinon le jeu n'en est plus un. */
   email?: string;
+  phone?: string | null;
   instagram?: string | null;
   /** Toutes ses photos, dans l'ordre. Réservé aux matchs, comme le contact. */
   photos?: string[];
@@ -384,7 +385,10 @@ async function habiller(
 
   const [{ data: membres }, { data: photos }] = await Promise.all([
     ids.length
-      ? db.from('lil_members').select('id, profession, city, about, instagram').in('id', ids)
+      ? db
+          .from('lil_members')
+          .select('id, profession, city, about, instagram, phone')
+          .in('id', ids)
       : Promise.resolve({
           data: [] as {
             id: string;
@@ -392,6 +396,7 @@ async function habiller(
             city: string | null;
             about: string;
             instagram: string | null;
+            phone: string | null;
           }[],
         }),
     ids.length
@@ -419,6 +424,7 @@ async function habiller(
     ...(options.contact
       ? {
           email: p.email,
+          phone: p.member_id ? (infos.get(p.member_id)?.phone ?? null) : null,
           instagram: p.member_id ? (infos.get(p.member_id)?.instagram ?? null) : null,
           photos: p.member_id ? (toutes.get(p.member_id) ?? []) : [],
         }
@@ -444,15 +450,17 @@ export type ResultatLike =
 export async function liker(moi: Participant, versId: string): Promise<ResultatLike> {
   const db = supabaseAdmin();
 
-  const toutes = await manches(moi.soiree_id);
-  const manche = toutes.find(estOuverte);
+  // Les manches et la personne visée ne dépendent pas l'une de l'autre :
+  // les demander l'une après l'autre coûtait un aller-retour de plus, et
+  // ce geste-là doit être le plus court de l'application.
+  const [toutes, { data: cibleBrute }] = await Promise.all([
+    manches(moi.soiree_id),
+    db.from('lil_crush_participants').select('*').eq('id', versId).maybeSingle(),
+  ]);
+
+  const manche = toutes.find((m) => estOuverte(m));
   if (!manche) return { ok: false, raison: 'Le crush time n’est pas ouvert.' };
 
-  const { data: cibleBrute } = await db
-    .from('lil_crush_participants')
-    .select('*')
-    .eq('id', versId)
-    .maybeSingle();
   const cible = cibleBrute as Participant | null;
   if (!cible || cible.soiree_id !== moi.soiree_id || cible.retire_at || !peutVoir(moi, cible)) {
     return { ok: false, raison: 'Ce profil n’est pas disponible.' };

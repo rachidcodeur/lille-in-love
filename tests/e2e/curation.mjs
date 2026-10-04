@@ -1917,6 +1917,7 @@ const [ficheSamir] = await (
       gender: 'homme',
       orientation: 'hetero',
       city: 'Roubaix',
+      phone: '+33612345678',
       profession: 'Chef de projet',
       about:
         'Une présentation volontairement très longue, qui dépasse de loin ce qu’on lit debout au milieu d’une soirée bruyante, et qui doit donc se faire couper quelque part avant la fin de cette phrase interminable.',
@@ -2058,7 +2059,14 @@ regle.includes('un like à donner')
   : bad('pas de compte à rebours', await tel.locator('.cr-compte').innerText().catch(() => ''));
 
 // --- Liker d'un seul geste, sans confirmation ----------------------
+// Le cœur doit se remplir avant que le serveur ait répondu : une seconde
+// d'écran immobile après un toucher se lit comme un clic raté.
 await tel.locator('.cr-carte', { hasText: 'Samir' }).locator('.cr-coeur-carte').click();
+await tel.waitForTimeout(120);
+(await tel.locator('.cr-carte[data-choisi]').count()) === 1
+  ? ok('le cœur se remplit tout de suite, sans attendre le serveur')
+  : bad('aucune réaction immédiate au toucher');
+
 await jusqua(async () => (await state()).crushLikes.length > 0);
 (await tel.locator('.cr-confirme').count()) === 0
   ? ok('le cœur de la carte choisit tout de suite, sans étape de confirmation')
@@ -2159,6 +2167,24 @@ await tel2.waitForTimeout(600);
 (await tel2.locator('.cr-matchs-corps').innerText()).includes('ines@soiree.test')
   ? ok('l’adresse de la personne n’apparaît qu’une fois le match fait')
   : bad('contact absent de l’onglet matchs');
+
+// Côté Inès, l'écran doit bouger tout seul : c'est l'autre qui vient de
+// faire le match, et personne ne recharge une page au milieu d'une soirée.
+(await jusqua(
+  async () => (await tel.locator('.cr-matchs-onglet b').innerText().catch(() => '0')) === '1',
+  25_000,
+))
+  ? ok('son écran se met à jour seul quand l’autre rend le like')
+  : bad('le match n’apparaît pas sans recharger');
+
+await tel.locator('.cr-matchs-onglet').click();
+await tel.waitForTimeout(600);
+const contacts = await tel.locator('.cr-matchs-corps').innerText();
+contacts.includes('+33612345678') && contacts.includes('samir@soiree.test')
+  ? ok('et le match donne le numéro de téléphone, pas seulement l’adresse')
+  : bad('numéro absent du match', contacts.replace(/\n+/g, ' | '));
+await tel.locator('.cr-fermer').click();
+await tel.waitForTimeout(300);
 
 const htmlProfils = await tel.content();
 !htmlProfils.includes('samir@soiree.test')

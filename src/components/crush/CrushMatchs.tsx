@@ -73,6 +73,13 @@ export function CrushMatchs({ matchs, likes }: { matchs: Profil[]; likes: Profil
                   )}
 
                   <div className="cr-match-contacts">
+                    {/* Le numéro d'abord : c'est par là qu'on s'écrit le
+                        lendemain, pas par l'email. */}
+                    {m.phone && (
+                      <a className="cr-match-contact" href={`tel:${m.phone}`}>
+                        {m.phone}
+                      </a>
+                    )}
                     {m.email && (
                       <a className="cr-match-contact" href={`mailto:${m.email}`}>
                         {m.email}

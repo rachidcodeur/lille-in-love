@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Profil } from '@/lib/crush';
 import { nomManche } from '@/lib/crush-regles';
 import { Compte } from './Compte';
@@ -54,16 +54,31 @@ export function CrushProfils({
 }) {
   const router = useRouter();
   const [ouvert, setOuvert] = useState<Profil | null>(null);
-  const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [nouveauMatch, setNouveauMatch] = useState<Profil | null>(null);
 
+  /**
+   * Le choix, affiché avant que le serveur réponde.
+   *
+   * Écrire un like demande quelques allers-retours ; une seconde d'écran
+   * immobile après un toucher se lit comme un clic raté, et on retouche.
+   * On montre donc le résultat tout de suite, et on le reprend si le
+   * serveur refuse — ce qui n'arrive que s'il y avait vraiment un problème.
+   */
+  const [choixLocal, setChoixLocal] = useState<string | null>(dejaLike);
+  useEffect(() => setChoixLocal(dejaLike), [dejaLike]);
+
   const dejaMatche = new Set(matchs.map((m) => m.id));
-  const choisi = profils.find((p) => p.id === dejaLike) ?? null;
+  const choisi = profils.find((p) => p.id === choixLocal) ?? null;
 
   async function liker(profil: Profil) {
-    setBusy(true);
+    // Le cœur se remplit avant l'aller-retour : c'est ce qui fait la
+    // différence entre « c'est fait » et « est-ce que ça a marché ? ».
+    if (choixLocal) return;
+    setChoixLocal(profil.id);
+    setOuvert(null);
     setErreur(null);
+
     const r = await fetch('/api/crush/liker', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -75,14 +90,16 @@ export function CrushProfils({
       | null;
 
     if (!r?.ok) {
+      // On reprend ce qu'on avait montré : laisser croire à un choix qui
+      // n'existe pas en base ferait attendre un match impossible.
+      setChoixLocal(dejaLike);
       setErreur(res?.error ?? 'Connexion interrompue. Réessaie.');
-      setBusy(false);
       return;
     }
 
-    setOuvert(null);
     if (res?.match) setNouveauMatch(res.match);
-    setBusy(false);
+    // En arrière-plan : le compteur des matchs et la liste des likes se
+    // remettent à jour sans que personne attende devant son écran.
     router.refresh();
   }
 
@@ -124,7 +141,7 @@ export function CrushProfils({
 
       <div className="cr-grille">
         {profils.map((profil) => {
-          const estChoisi = profil.id === dejaLike;
+          const estChoisi = profil.id === choixLocal;
           const aMatche = dejaMatche.has(profil.id);
 
           return (
@@ -168,13 +185,12 @@ export function CrushProfils({
                   ♥
                 </span>
               ) : (
-                !dejaLike && (
+                !choixLocal && (
                   <button
                     type="button"
                     className="cr-coeur-carte"
                     aria-label={`Choisir ${profil.first_name}`}
                     onClick={() => liker(profil)}
-                    disabled={busy}
                   >
                     ♡
                   </button>
@@ -220,13 +236,8 @@ export function CrushProfils({
                 Ton choix de ce crush time est déjà fait.
               </p>
             ) : (
-              <button
-                type="button"
-                className="cr-bouton cr-coeur"
-                disabled={busy}
-                onClick={() => liker(ouvert)}
-              >
-                {busy ? 'Un instant…' : `♥ Je choisis ${ouvert.first_name}`}
+              <button type="button" className="cr-bouton cr-coeur" onClick={() => liker(ouvert)}>
+                ♥ Je choisis {ouvert.first_name}
               </button>
             )}
           </div>

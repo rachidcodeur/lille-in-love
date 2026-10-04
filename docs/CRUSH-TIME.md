@@ -40,9 +40,16 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
   confondre ferait croire à une réciprocité qui n'existe pas. On ne voit que
   **ses propres** likes — qui vous a choisi reste invisible tant que ce n'est
   pas réciproque.
-- **Un match donne les trois photos** et les coordonnées. Un like en attente
-  ne donne ni l'un ni l'autre : c'est maintenant qu'on décide si l'on écrit,
-  et un seul visage ne suffit pas.
+- **Un match donne les trois photos**, le téléphone, l'email et l'Instagram.
+  Un like en attente ne donne rien de tout cela : c'est au match qu'on décide
+  si l'on écrit, et un seul visage ne suffit pas.
+- **Le like se montre avant la réponse du serveur.** Une seconde d'écran
+  immobile après un toucher se lit comme un clic raté, et on retouche. Si le
+  serveur refuse, l'écran reprend ce qu'il avait montré.
+- **L'écran se met à jour seul**, toutes les huit secondes, quand l'autre rend
+  le like ou qu'un crush time s'ouvre. Personne ne recharge une page au
+  milieu d'une soirée. La veille se tait quand l'application n'est pas à
+  l'écran.
 - **La photo de tête** est celle rangée en position 1 dans le back-office,
   réordonnable par glissé-déposé. Elle décide à peu près seule du sort d'un
   profil.
