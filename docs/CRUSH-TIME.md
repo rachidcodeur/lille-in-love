@@ -85,41 +85,36 @@ bien toi ? » — pour rattraper les fautes de frappe.
 ## L'installation et les notifications
 
 Sur iPhone, le web push n'existe **que** pour une application ajoutée à
-l'écran d'accueil. Le parcours d'entrée est donc : **1.** installer l'icône,
-**2.** l'ouvrir, **3.** autoriser les notifications. Chaque étape bloque la
-suivante.
+l'écran d'accueil. Ce n'est pas un réglage : c'est la règle d'Apple. Sans
+installation, pas de notification — pour la moitié de la salle.
 
-Deux pièges connus :
+Le choix a été fait d'essayer l'installation plutôt que le SMS. Le lien
+personnel part donc **par email**, avant la soirée, et la page d'arrivée ne
+montre pas les profils : elle montre comment poser l'icône.
 
-- L'application installée a un **stockage séparé de Safari** : l'icône
-  s'ouvre déconnectée si son adresse de départ ne porte pas le jeton. Filet
-  de secours : email + code à 6 chiffres.
-- Un lien ouvert depuis Gmail arrive dans un **navigateur intégré** où
-  « Ajouter à l'écran d'accueil » n'existe pas. À détecter, et à dire.
+### Les trois pièges, et ce qui les traite
 
-Un **widget** est impossible — réservé aux applications natives. Une icône,
-oui.
+**Le navigateur de Gmail.** Un lien ouvert depuis l'app Gmail s'ouvre dans
+son navigateur intégré, où « Ajouter à l'écran d'accueil » n'existe pas, et
+personne ne le devine. L'écran le détecte, l'explique, et propose de copier
+le lien pour le coller dans Safari. Même chose pour Instagram, Facebook,
+LinkedIn, et pour Chrome ou Firefox sur iOS, qui ne savent pas non plus
+poser d'icône.
 
-Le vrai filet, le soir même, reste l'hôte qui annonce à voix haute.
+**Le stockage séparé.** L'application installée a son propre stockage,
+distinct de Safari : connecté dans Safari puis installé, on ouvre l'icône
+*déconnecté*. Le manifeste est donc servi par `/crush/manifeste?t=<jeton>`
+et son `start_url` porte le jeton — l'icône ouvre une session valide du
+premier coup.
 
-## Le déroulé d'une soirée
+**Le blocage.** Quelqu'un coincé à l'installation est quelqu'un de perdu
+pour la soirée. « Continuer sans installer » est toujours là : le jeu
+marche sans notification, et la veille de huit secondes fait déjà basculer
+l'écran de ceux qui l'ont sous les yeux.
 
-| Heure | |
-| --- | --- |
-| 20h00 | Arrivée, verre, quizz |
-| 20h30 | Règles des mini-jeux, formation des équipes |
-| **21h00** | **1er crush time** |
-| 22h00 | Fin des jeux, temps libre, boîte à défis |
-| **22h30** | **2e crush time** |
-| 23h00 | Événement surprise |
-| **23h45** | **3e crush time** |
-| 00h00 | Fin de l'événement |
+Sur Android, `beforeinstallprompt` donne un vrai bouton : un geste.
 
-Ce sont les heures proposées par défaut à la composition d'une soirée.
-**Pour l'instant, l'hôte ouvre chaque crush time à la main** depuis son
-tableau de bord ; quand tout sera rodé, l'ouverture suivra l'horaire toute
-seule et les boutons disparaîtront. La fermeture, elle, est déjà
-automatique.
+Un **widget** reste impossible — réservé aux applications natives.
 
 ## Le soir
 

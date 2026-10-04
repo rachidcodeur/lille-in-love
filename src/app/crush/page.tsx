@@ -14,6 +14,7 @@ import { CrushProfils } from '@/components/crush/CrushProfils';
 import { CrushMatchs } from '@/components/crush/CrushMatchs';
 import { CrushAttente } from '@/components/crush/CrushAttente';
 import { Veille } from '@/components/crush/Veille';
+import { Installation } from '@/components/crush/Installation';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,9 +61,16 @@ export default async function CrushPage({ searchParams }: Props) {
 
   return (
     <main className="cr-main">
+      {/* Le manifeste porte le jeton : l'icône posée sur l'écran d'accueil
+          ouvre une session valide, et non une demande d'email. */}
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+      <link rel="manifest" href={`/crush/manifeste?t=${moi.jeton}`} />
+
       {/* L'écran se remet à jour tout seul quand l'autre rend son like, ou
           quand un crush time s'ouvre. */}
       <Veille matchs={matchs.length} manche={manche?.id ?? null} />
+
+      <Installation jeton={moi.jeton} prenom={moi.first_name} />
 
       <header className="cr-entete">
         <div>

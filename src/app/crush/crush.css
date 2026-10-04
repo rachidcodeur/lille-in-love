@@ -716,3 +716,103 @@
   text-transform: uppercase;
   color: var(--or);
 }
+
+/* --- Poser l'application sur l'écran d'accueil ------------------------ */
+
+/* Plein écran, et rien d'autre : c'est la seule chose à faire à ce
+   moment-là, et la soirée n'a pas encore commencé pour cette personne. */
+.cr-install {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: var(--nuit);
+  overflow-y: auto;
+  padding: 32px 22px calc(32px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: left;
+}
+
+.cr-install .cr-titre {
+  margin-bottom: 14px;
+}
+
+.cr-etapes {
+  margin: 28px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: etape;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cr-etapes-titre {
+  font-size: 18px;
+  font-weight: 650;
+  margin: 0 0 4px;
+}
+
+/* Des pastilles numérotées : on suit du doigt, on ne relit pas. */
+.cr-etapes li {
+  counter-increment: etape;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 15px 17px 15px 52px;
+  position: relative;
+  border-radius: 14px;
+  background: var(--nuit-2);
+  font-size: 15.5px;
+  line-height: 1.4;
+}
+
+.cr-etapes li::before {
+  content: counter(etape);
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--or);
+  color: #1c130f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Le pictogramme de partage d'iOS, dans le texte : on le cherche sur son
+   écran, il vaut mieux le lui montrer que le lui décrire. */
+.cr-pictogramme {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #3a302d;
+  color: var(--creme);
+  vertical-align: middle;
+}
+
+.cr-install .cr-bouton {
+  margin-top: 18px;
+}
+
+.cr-passer {
+  font: inherit;
+  margin-top: 26px;
+  padding: 12px;
+  background: transparent;
+  border: 0;
+  color: var(--creme-doux);
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  align-self: center;
+}

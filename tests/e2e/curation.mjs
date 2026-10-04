@@ -1987,6 +1987,63 @@ const tel = await browser.newPage({
 });
 tel.on('pageerror', (e) => bad('erreur JS (crush)', e.message));
 
+// --- Poser l'application sur l'écran d'accueil ---------------------
+// C'est le seul moyen de notifier quelqu'un sur iPhone : Apple réserve le
+// push aux applications installées. Et c'est le moment le plus fragile de
+// la soirée, d'où trois vérifications.
+const IPHONE =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 ' +
+  '(KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
+
+/** Comme un participant qui n'installe pas : il doit pouvoir jouer. */
+const passerInstallation = async (page) => {
+  const sortie = page.getByRole('button', { name: 'Continuer sans installer' });
+  if (await sortie.count()) await sortie.click();
+  await page.waitForTimeout(200);
+};
+
+const safari = await browser.newPage({
+  viewport: { width: 390, height: 844 },
+  userAgent: IPHONE,
+  isMobile: true,
+});
+await safari.goto(`${BASE}/crush/c/ines`, { waitUntil: 'networkidle' });
+await safari.waitForTimeout(900);
+const marche = await safari.locator('.cr-install').innerText().catch(() => '');
+marche.includes('Partager') && marche.includes('écran d’accueil')
+  ? ok('sur iPhone, le geste exact est montré — Partager, puis écran d’accueil')
+  : bad('consignes d’installation absentes sur iPhone', marche.replace(/\n+/g, ' | '));
+
+// Toujours une sortie : quelqu'un bloqué ici est perdu pour la soirée.
+await safari.getByRole('button', { name: 'Continuer sans installer' }).click();
+await safari.waitForTimeout(400);
+(await safari.locator('.cr-install').count()) === 0 &&
+(await safari.locator('.cr-carte').count()) > 0
+  ? ok('et « continuer sans installer » laisse jouer quand même')
+  : bad('l’écran d’installation bloque le passage');
+await safari.close();
+
+// Le lien arrive par mail : ouvert depuis Gmail, « Ajouter à l'écran
+// d'accueil » n'existe pas, et personne ne le devine.
+const gmail = await browser.newPage({
+  viewport: { width: 390, height: 844 },
+  userAgent: IPHONE.replace('Safari/604.1', 'GSA/300.0 Mobile/15E148 Safari/604.1'),
+  isMobile: true,
+});
+await gmail.goto(`${BASE}/crush/c/salome`, { waitUntil: 'networkidle' });
+await gmail.waitForTimeout(900);
+const enferme = await gmail.locator('.cr-install').innerText().catch(() => '');
+enferme.includes('Safari') && enferme.includes('Copier mon lien')
+  ? ok('depuis le navigateur de Gmail, on explique comment en sortir')
+  : bad('le navigateur intégré n’est pas détecté', enferme.replace(/\n+/g, ' | '));
+await gmail.close();
+
+// Le détail qui décide de tout : l'icône doit ouvrir une session valide.
+const manifeste = await (await fetch(`${BASE}/crush/manifeste?t=ines`)).json();
+manifeste.start_url === '/crush/c/ines' && manifeste.scope === '/crush/'
+  ? ok('le manifeste porte le jeton : l’icône n’ouvre pas sur une demande d’email')
+  : bad('manifeste inattendu', JSON.stringify(manifeste));
+
 // --- Entrer par le code annoncé dans la salle ----------------------
 await tel.goto(`${BASE}/crush`, { waitUntil: 'networkidle' });
 await tel.fill('#cr-email', 'ines@soiree.test');
@@ -2000,6 +2057,7 @@ await tel.waitForTimeout(900);
 await tel.fill('#cr-code', '4812');
 await tel.getByRole('button', { name: 'Entrer' }).click();
 await tel.waitForTimeout(1800);
+await passerInstallation(tel);
 
 // --- Qui on voit ---------------------------------------------------
 const vus = (await tel.locator('.cr-carte-nom').allInnerTexts()).map((t) => t.split(' ·')[0].trim());
@@ -2127,6 +2185,7 @@ secondLike === 409
 const tel2 = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
 await tel2.goto(`${BASE}/crush/c/samir`, { waitUntil: 'networkidle' });
 await tel2.waitForTimeout(1200);
+await passerInstallation(tel2);
 !tel2.url().includes('/c/samir')
   ? ok('le lien personnel échange son jeton contre une session et disparaît de l’adresse')
   : bad('le jeton reste dans la barre d’adresse', tel2.url());
@@ -2242,6 +2301,7 @@ await fetch(`${FAKE}/rest/v1/lil_crush_rounds?id=eq.${manche1.id}`, {
 });
 await tel.goto(`${BASE}/crush`, { waitUntil: 'networkidle' });
 await tel.waitForTimeout(800);
+await passerInstallation(tel);
 (await tel.locator('.cr-attente').count()) === 1 && (await tel.locator('.cr-carte').count()) === 0
   ? ok('manche fermée : les profils disparaissent, les horaires restent')
   : bad('les profils restent visibles hors manche');
