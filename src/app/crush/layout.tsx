@@ -5,6 +5,10 @@ export const metadata: Metadata = {
   title: 'Crush Time — Lille in Love',
   description: 'Les profils de la soirée, le temps d’un crush time.',
   robots: { index: false, follow: false },
+  // iOS ne lit pas les icônes du manifeste pour l'écran d'accueil : il ne
+  // regarde que celle-ci. Sans elle, l'icône serait une capture floue de
+  // la page.
+  icons: { apple: '/crush-apple-touch.png' },
 };
 
 export const viewport: Viewport = {
@@ -17,14 +21,5 @@ export const viewport: Viewport = {
 };
 
 export default function CrushLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <>
-      {/* iOS ne lit pas les icônes du manifeste pour l'écran d'accueil :
-          il ne regarde que celle-ci. Sans elle, l'icône serait une capture
-          floue de la page. */}
-      {/* eslint-disable-next-line @next/next/no-head-element */}
-      <link rel="apple-touch-icon" href="/crush-apple-touch.png" />
-      <div className="cr-racine">{children}</div>
-    </>
-  );
+  return <div className="cr-racine">{children}</div>;
 }

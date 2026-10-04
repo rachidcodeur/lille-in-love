@@ -84,7 +84,7 @@ export function CrushEntree({
           required
         />
 
-        <label htmlFor="cr-code">Le code de la soirée</label>
+        <label htmlFor="cr-code">Ton code à quatre chiffres</label>
         <input
           id="cr-code"
           // « numeric » plutôt que « tel » : le clavier n'affiche que des
@@ -98,7 +98,10 @@ export function CrushEntree({
           onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
           required
         />
-        <p className="cr-aide">Il est annoncé dans la salle.</p>
+        <p className="cr-aide">
+          Il est dans le mail qu’on t’a envoyé. Si tu ne le retrouves pas, demande-le à
+          l’organisateur.
+        </p>
 
         {erreur && <p className="cr-erreur">{erreur}</p>}
 

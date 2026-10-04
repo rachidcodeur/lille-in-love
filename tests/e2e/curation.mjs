@@ -1938,9 +1938,11 @@ const presents = await (
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
     body: JSON.stringify(
-      salle.map(([prenom, genre, jeton]) => ({
+      salle.map(([prenom, genre, jeton], index) => ({
         soiree_id: soireeCrush.id,
         member_id: prenom === 'Samir' ? ficheSamir.id : null,
+        // Chacun le sien : c'est lui qui dit qui l'on est au bout du QR.
+        code: `100${index}`,
         email: `${jeton}@soiree.test`,
         first_name: prenom,
         gender: genre,
@@ -2045,19 +2047,36 @@ manifeste.start_url === '/crush/c/ines' && manifeste.scope === '/crush/'
   : bad('manifeste inattendu', JSON.stringify(manifeste));
 
 // --- Entrer par le code annoncé dans la salle ----------------------
-await tel.goto(`${BASE}/crush`, { waitUntil: 'networkidle' });
-await tel.fill('#cr-email', 'ines@soiree.test');
-await tel.fill('#cr-code', '1234');
-await tel.getByRole('button', { name: 'Entrer' }).click();
-await tel.waitForTimeout(900);
-(await tel.locator('.cr-erreur').innerText().catch(() => '')).includes('incorrect')
-  ? ok('un mauvais code est refusé, sans dire laquelle des deux moitiés est fausse')
-  : bad('mauvais code accepté');
+const entrer = async (email, code) => {
+  await tel.context().clearCookies();
+  await tel.goto(`${BASE}/crush`, { waitUntil: 'networkidle' });
+  await tel.fill('#cr-email', email);
+  await tel.fill('#cr-code', code);
+  await tel.getByRole('button', { name: 'Entrer' }).click();
+  await tel.waitForTimeout(1300);
+  await passerInstallation(tel);
+  return (await tel.locator('.cr-grille').count()) === 1;
+};
 
-await tel.fill('#cr-code', '4812');
-await tel.getByRole('button', { name: 'Entrer' }).click();
-await tel.waitForTimeout(1800);
-await passerInstallation(tel);
+(await entrer('ines@soiree.test', '1234'))
+  ? bad('un code inventé a ouvert la porte')
+  : ok('un mauvais code est refusé, sans dire laquelle des deux moitiés est fausse');
+
+// Le code du voisin ne doit pas ouvrir la porte : c'est tout l'intérêt
+// d'en donner un à chacun plutôt qu'un seul pour la salle.
+(await entrer('ines@soiree.test', '1001'))
+  ? bad('le code de quelqu’un d’autre a ouvert la porte')
+  : ok('et le code du voisin ne marche pas non plus');
+
+// Celui de la soirée reste le filet de l'hôte, pour qui a perdu son mail.
+(await entrer('ines@soiree.test', '4812'))
+  ? ok('le code de la soirée dépanne encore celui qui ne retrouve pas son message')
+  : bad('le code de secours ne marche plus');
+
+// Et le sien, celui reçu par mail, qui est le chemin normal depuis le QR.
+(await entrer('ines@soiree.test', '1000'))
+  ? ok('son propre code ouvre la porte depuis le QR de la salle')
+  : bad('le code personnel n’ouvre pas');
 
 // --- Qui on voit ---------------------------------------------------
 const vus = (await tel.locator('.cr-carte-nom').allInnerTexts()).map((t) => t.split(' ·')[0].trim());
@@ -2346,15 +2365,30 @@ await faire('lil_crush_matches', [
 await page.goto(`${BASE}/admin/soirees`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(600);
 
-// --- Celle dont le crush time tourne doit se repérer d'un regard ---
+// --- Le QR de la salle ----------------------------------------------
+// Un seul pour tout le monde : cinquante QR personnels coûtent trop cher à
+// imprimer. Scanné avec l'appareil photo, il ouvre Safari — et non le
+// navigateur d'une application de mail, où l'on ne peut rien installer.
 await fetch(`${FAKE}/rest/v1/lil_soirees?id=eq.${soireePleine.id}`, {
   method: 'PATCH',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ crush_actif: true, crush_code: '4812' }),
 });
-await page.reload({ waitUntil: 'networkidle' });
+await page.goto(`${BASE}/admin/soirees/${soireePleine.id}`, { waitUntil: 'networkidle' });
+await jusqua(async () => (await page.locator('.adm-affiche img').count()) === 1);
+const qr = await page.locator('.adm-affiche img').getAttribute('src');
+qr?.startsWith('data:image/png')
+  ? ok('le tableau de bord dessine le QR de la salle, prêt à imprimer')
+  : bad('pas de QR dans le tableau de bord', String(qr).slice(0, 40));
+
+(await page.locator('.adm-affiche').innerText()).includes('/crush')
+  ? ok('et dit où il mène')
+  : bad('adresse du QR absente');
+
+await page.goto(`${BASE}/admin/soirees`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(500);
 
+// --- Celle dont le crush time tourne doit se repérer d'un regard ---
 const vif = page.locator('.adm-soiree', { hasText: 'Vraie soirée' }).locator('.adm-crush-lien');
 (await vif.getAttribute('data-encours')) === 'true' &&
 (await vif.innerText()).includes('en cours') &&

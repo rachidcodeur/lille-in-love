@@ -190,6 +190,9 @@ async function remplir() {
       gender: membre.gender,
       orientation: 'hetero',
       jeton: `demo-${index}`,
+      // Les quatre chiffres reçus par mail : c'est avec eux qu'on entre
+      // depuis le QR de la salle.
+      code: String(1000 + index),
     })),
   );
 
@@ -202,6 +205,7 @@ async function remplir() {
       email: 'inconnu@exemple.fr',
       first_name: 'Hugo',
       jeton: 'demo-inconnu',
+      code: '9999',
     },
   ]);
 
@@ -281,7 +285,8 @@ ${vert('La maquette tourne.')} Rien n'est écrit dans ta vraie base.
 
   ${gras('Crush Time — Inès')}   ${APP}/crush/c/${parPrenom['Inès']?.jeton ?? 'demo-0'}
   ${gras('Crush Time — Samir')}  ${APP}/crush/c/${parPrenom['Samir']?.jeton ?? 'demo-4'}
-  ${gras('Par le code')}         ${APP}/crush  ${gris('(email + 4812)')}
+  ${gras('Par le QR / le code')}  ${APP}/crush
+  ${gris('   inès@exemple.fr + 1000 · samir@exemple.fr + 1004 · secours : 4812')}
 
   ${gris('Le premier crush time est ouvert. Samir a déjà choisi Inès :')}
   ${gris('entre comme Inès, choisis Samir, et le match se fait.')}

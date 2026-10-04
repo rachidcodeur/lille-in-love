@@ -19,6 +19,8 @@ export type Participant = {
   gender: Genre | null;
   orientation: Orientation | null;
   jeton: string;
+  /** Les quatre chiffres reçus par email, qui prouvent qui l'on est. */
+  code?: string | null;
   claimed_at: string | null;
   retire_at: string | null;
 };
@@ -74,6 +76,7 @@ async function inscrire(soireeId: string, candidats: Candidat[]): Promise<number
     gender: c.gender ?? null,
     orientation: c.orientation ?? null,
     jeton: jeton(),
+    code: nouveauCode(),
   }));
 
   const { data, error } = await db
@@ -281,28 +284,72 @@ export async function participantParJeton(jetonRecu: string): Promise<Participan
 }
 
 /**
- * Entrer avec son adresse et le code annoncé dans la salle.
+ * Combien d'essais pour une même adresse, et depuis quand.
  *
- * C'est la porte de secours de ceux qui n'ont pas reçu leur lien, et en
- * pratique la porte principale : rien à attendre, rien à recevoir. Le code
- * seul ne suffit pas — il faut aussi figurer sur la liste des billets.
+ * Quatre chiffres se devinent en dix mille coups. Dix essais par quart
+ * d'heure suffisent largement à quelqu'un qui lit mal son mail, et
+ * ramènent la devinette à plusieurs jours de patience. En mémoire : le
+ * serveur est unique, et une table pour ça serait du bruit.
+ */
+const essais = new Map<string, { nombre: number; depuis: number }>();
+const FENETRE = 15 * 60_000;
+const MAX_ESSAIS = 10;
+
+function tropDEssais(email: string): boolean {
+  const vu = essais.get(email);
+  const maintenant = Date.now();
+
+  if (!vu || maintenant - vu.depuis > FENETRE) {
+    essais.set(email, { nombre: 1, depuis: maintenant });
+    return false;
+  }
+
+  vu.nombre += 1;
+  return vu.nombre > MAX_ESSAIS;
+}
+
+/**
+ * Entrer avec son adresse et son code.
+ *
+ * Le QR de la salle est le même pour tout le monde — cinquante QR
+ * personnels coûtent trop cher à imprimer — alors il mène ici, et c'est le
+ * code reçu par mail qui dit qui l'on est.
+ *
+ * Le code de la soirée reste accepté : c'est le filet de l'hôte pour celui
+ * qui ne retrouve plus son mail au milieu du bruit. À n'annoncer que dans
+ * ce cas, puisqu'il ouvre la porte de n'importe quelle adresse de la liste.
  */
 export async function entrerAvecCode(
   email: string,
   code: string,
 ): Promise<Participant | null> {
+  const adresse = email.trim().toLowerCase();
+  if (tropDEssais(adresse)) return null;
+
   const soiree = await soireeActive();
-  if (!soiree?.crush_code || soiree.crush_code !== code.trim()) return null;
+  if (!soiree) return null;
 
   const { data } = await supabaseAdmin()
     .from('lil_crush_participants')
     .select('*')
     .eq('soiree_id', soiree.id)
-    .eq('email', email.trim().toLowerCase())
+    .eq('email', adresse)
     .is('retire_at', null)
     .maybeSingle();
 
-  return (data as Participant | null) ?? null;
+  const participant = (data as Participant | null) ?? null;
+  if (!participant) return null;
+
+  const propose = code.trim();
+  const sien = (participant.code ?? '').trim();
+  const celuiDeLaSoiree = (soiree.crush_code ?? '').trim();
+
+  const bon = (sien && propose === sien) || (celuiDeLaSoiree && propose === celuiDeLaSoiree);
+  if (!bon) return null;
+
+  // Entrée réussie : on rend ses essais à la personne.
+  essais.delete(adresse);
+  return participant;
 }
 
 /* ====================================================================

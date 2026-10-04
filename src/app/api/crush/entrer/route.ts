@@ -12,11 +12,12 @@ const schema = z.object({
 });
 
 /**
- * Entrer avec son adresse et le code annoncé dans la salle.
+ * Entrer avec son adresse et son code.
  *
- * La porte principale, en pratique : rien à recevoir, rien à attendre, aucun
- * réseau à partager entre cinquante téléphones. Le code seul ne suffit pas —
- * il faut aussi figurer sur la liste des billets.
+ * C'est là qu'arrive le QR de la salle. Scanné avec l'appareil photo, il
+ * ouvre Safari — et non le navigateur d'une application de mail, où l'on ne
+ * peut rien poser sur l'écran d'accueil. Le code reçu par mail dit ensuite
+ * qui l'on est, sans qu'il ait fallu imprimer cinquante QR.
  */
 export async function POST(requete: Request) {
   const lu = schema.safeParse(await requete.json().catch(() => null));
@@ -33,7 +34,7 @@ export async function POST(requete: Request) {
     // Un seul message pour les deux échecs : dire « ce code est bon mais pas
     // cette adresse » apprendrait à qui tâtonne quelle moitié corriger.
     return NextResponse.json(
-      { error: 'Adresse ou code incorrect. Le code est annoncé dans la salle.' },
+      { error: 'Adresse ou code incorrect. Le code est dans le mail qu’on t’a envoyé.' },
       { status: 401 },
     );
   }

@@ -1,7 +1,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { BRAND } from '@/lib/brand';
+import { CrushAffiche } from './CrushAffiche';
 
 /**
  * Ouvrir le crush time, et donner le code de la salle.
@@ -24,6 +26,10 @@ export function ActiverCrush({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+  // L'adresse dépend du domaine qu'on a sous les yeux : seul le navigateur
+  // la connaît, et elle n'existe pas au premier rendu.
+  const [racine, setRacine] = useState('');
+  useEffect(() => setRacine(BRAND.crushUrl || window.location.origin), []);
 
   async function activer() {
     setBusy(true);
@@ -48,11 +54,16 @@ export function ActiverCrush({
 
       {actif && code ? (
         <>
-          <p className="adm-code-label">Le code à annoncer dans la salle</p>
+          {racine && <CrushAffiche racine={racine} />}
+
+          <p className="adm-code-label" style={{ marginTop: 22 }}>
+            Code de secours
+          </p>
           <p className="adm-code">{code}</p>
           <p className="adm-hint" style={{ marginTop: 10 }}>
-            Avec leur email, il suffit à entrer. C’est ce crush time qui s’ouvre sur{' '}
-            <strong>crush.in-love.fr</strong> — un seul à la fois.
+            Chacun entre avec <strong>son</strong> code à quatre chiffres, reçu par mail. Celui-ci
+            ouvre n’importe quelle adresse de la liste : ne l’annonce que pour dépanner quelqu’un
+            qui ne retrouve plus son message.
           </p>
         </>
       ) : (

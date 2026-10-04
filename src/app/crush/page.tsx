@@ -18,6 +18,21 @@ import { Installation } from '@/components/crush/Installation';
 
 export const dynamic = 'force-dynamic';
 
+/**
+ * Le manifeste, par les métadonnées plutôt que par une balise posée dans la
+ * page : Next la déplacerait vers l'en-tête côté client et signalerait une
+ * différence avec ce que le serveur a rendu.
+ *
+ * Il porte le jeton, et c'est le détail qui décide de tout : sur iPhone,
+ * l'application installée a un stockage séparé de Safari, et l'icône
+ * ouvrirait une demande d'email si son adresse de départ ne disait pas qui
+ * l'on est.
+ */
+export async function generateMetadata() {
+  const moi = await participantConnecte();
+  return moi ? { manifest: `/crush/manifeste?t=${moi.jeton}` } : {};
+}
+
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 
 /**
@@ -61,11 +76,6 @@ export default async function CrushPage({ searchParams }: Props) {
 
   return (
     <main className="cr-main">
-      {/* Le manifeste porte le jeton : l'icône posée sur l'écran d'accueil
-          ouvre une session valide, et non une demande d'email. */}
-      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-      <link rel="manifest" href={`/crush/manifeste?t=${moi.jeton}`} />
-
       {/* L'écran se remet à jour tout seul quand l'autre rend son like, ou
           quand un crush time s'ouvre. */}
       <Veille matchs={matchs.length} manche={manche?.id ?? null} />

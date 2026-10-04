@@ -76,11 +76,27 @@ continuer de fonctionner.
 
 ## Entrer
 
-Lien personnel envoyé avant la soirée, **ou** email + code à quatre chiffres
-annoncé à voix haute dans la salle. Le second est en pratique la porte
-principale : rien à recevoir, rien à attendre, aucun réseau à partager entre
-cinquante téléphones. Après l'email, on affiche photo et prénom — « c'est
-bien toi ? » — pour rattraper les fautes de frappe.
+**Un QR unique pour la salle**, affiché sur les tables ou un écran, et
+imprimable depuis le tableau de bord de la soirée. Cinquante QR personnels
+coûteraient trop cher à imprimer — celui-ci mène à `/crush`, où l'on dit
+qui l'on est.
+
+Pourquoi un QR plutôt qu'un lien cliqué dans le mail : **scanné avec
+l'appareil photo, il ouvre Safari.** Un lien ouvert depuis l'app Gmail
+s'ouvre dans son navigateur intégré, où « Ajouter à l'écran d'accueil »
+n'existe pas. C'est la seule façon fiable de ne pas s'y retrouver enfermé.
+
+**Chacun a son code à quatre chiffres**, reçu par mail avant la soirée.
+Avec son adresse, il suffit à entrer. Le code de la soirée existe toujours
+mais c'est désormais un **secours** : il ouvre n'importe quelle adresse de
+la liste, et ne doit être annoncé que pour dépanner quelqu'un qui ne
+retrouve plus son message.
+
+Dix essais par quart d'heure et par adresse : quatre chiffres se devinent
+en dix mille coups, pas en dix.
+
+Le **lien personnel** envoyé par mail reste le chemin le plus court pour
+qui le fait au calme, la veille.
 
 ## L'installation et les notifications
 

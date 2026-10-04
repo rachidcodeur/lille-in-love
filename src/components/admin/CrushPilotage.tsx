@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BRAND } from '@/lib/brand';
 import { nomManche } from '@/lib/crush-regles';
 import { sansAccent } from '@/lib/groupes';
@@ -25,6 +25,7 @@ type Personne = {
   retire_at: string | null;
   member_id: string | null;
   jeton: string;
+  code?: string | null;
 };
 
 async function commander(corps: Record<string, unknown>): Promise<string | null> {
@@ -85,7 +86,12 @@ export function CrushPilotage({
   // Le lien personnel de chacun. En production il porte le domaine du crush
   // time ; ailleurs, l'adresse qu'on a sous les yeux — un lien de maquette
   // doit rester cliquable depuis la maquette.
-  const racine = BRAND.crushUrl || (typeof window === 'undefined' ? '' : window.location.origin);
+  //
+  // Lue après coup et non pendant le rendu : le serveur ne connaît pas
+  // l'adresse, et poser ici deux valeurs différentes mettait l'attribut
+  // « title » en désaccord entre le serveur et le navigateur.
+  const [racine, setRacine] = useState(BRAND.crushUrl);
+  useEffect(() => setRacine(BRAND.crushUrl || window.location.origin), []);
   const lienDe = (p: Personne) => `${racine}/crush/c/${p.jeton}`;
 
   async function copier(texte: string, quoi: string) {
@@ -136,15 +142,18 @@ export function CrushPilotage({
             className="adm-btn"
             onClick={() =>
               copier(
-                presents.map((p) => `${p.first_name} <${p.email}> ${lienDe(p)}`).join('\n'),
+                presents
+                  .map((p) => `${p.first_name}\t${p.email}\t${p.code ?? ''}\t${lienDe(p)}`)
+                  .join('\n'),
                 'tous',
               )
             }
           >
-            {copie === 'tous' ? '✓ Copiés' : `Copier les ${presents.length} liens`}
+            {copie === 'tous' ? '✓ Copiés' : `Copier les ${presents.length} accès`}
           </button>
           <span className="adm-hint" style={{ margin: 0 }}>
-            Un lien par personne, à envoyer avant la soirée.
+            Prénom, adresse, code, lien — séparés par des tabulations, à coller dans un tableur
+            ou un outil d’envoi.
           </span>
         </div>
 
@@ -179,7 +188,10 @@ export function CrushPilotage({
                   {!p.gender && <span className="adm-tag">profil incomplet</span>}
                   {p.retire_at && <span className="adm-tag">retiré</span>}
                 </p>
-                <p className="adm-present-mail">{p.email}</p>
+                <p className="adm-present-mail">
+                  {p.email}
+                  {p.code && <span className="adm-present-code">{p.code}</span>}
+                </p>
               </div>
 
               {!p.retire_at && (
