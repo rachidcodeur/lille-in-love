@@ -14,11 +14,13 @@
   --or-clair: #e4d6b4;
   --creme: #f6f0e4;
   --creme-doux: #cbc0b2;
-  /* Le cœur est doré, comme le reste de la marque : ni jaune ni rose.
-     Deux valeurs — la claire pour ce qui s'écrit sur le fond nuit, la
-     pleine pour ce qui se remplit et porte du texte sombre. */
-  --coeur: #e4d6b4;
-  --coeur-plein: #c3b291;
+  /* Dans l'application, le cœur est rose : sur un fond nuit, à bout de
+     bras dans une salle sombre, il se repère d'un coup d'œil là où le doré
+     se fond dans le reste. L'icône de l'écran d'accueil, elle, garde le
+     doré de la marque — elle se regarde de près, et elle représente
+     Lille in Love, pas le jeu. */
+  --coeur: #e0657a;
+  --coeur-plein: #e0657a;
 
   min-height: 100vh;
   min-height: 100dvh;
@@ -163,7 +165,7 @@
 
 .cr-coeur {
   background: var(--coeur-plein);
-  color: #1c130f;
+  color: #fff;
 }
 
 /* --- La règle du jeu, avant tout le reste ---------------------------- */
@@ -177,8 +179,8 @@
   padding: 14px 16px;
   margin-bottom: 20px;
   border-radius: 14px;
-  border: 1px solid rgba(227, 214, 180, 0.35);
-  background: rgba(227, 214, 180, 0.09);
+  border: 1px solid rgba(224, 101, 122, 0.4);
+  background: rgba(224, 101, 122, 0.12);
   font-size: 15px;
   color: var(--creme);
 }
@@ -337,7 +339,7 @@
 .cr-coeur-carte[data-etat='choisi'],
 .cr-coeur-carte[data-etat='match'] {
   background: var(--coeur-plein);
-  color: #1c130f;
+  color: #fff;
   cursor: default;
 }
 
@@ -367,7 +369,7 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   background: var(--coeur-plein);
-  color: #1c130f;
+  color: #fff;
   padding: 3px 8px;
   border-radius: 999px;
 }
@@ -543,7 +545,7 @@
 /* Dès qu'il y a quelque chose dedans, ça se voit de loin. */
 .cr-matchs-onglet[data-pleins] {
   border-color: var(--coeur);
-  background: rgba(227, 214, 180, 0.12);
+  background: rgba(224, 101, 122, 0.14);
 }
 
 .cr-matchs-coeur {
@@ -563,7 +565,7 @@
 
 .cr-matchs-onglet[data-pleins] b {
   background: var(--coeur-plein);
-  color: #1c130f;
+  color: #fff;
 }
 
 /* Au plus étroit, « Mes matchs » s'efface : le cœur et le compte suffisent. */
@@ -820,4 +822,38 @@
   text-underline-offset: 3px;
   cursor: pointer;
   align-self: center;
+}
+
+/* --- La permission de notifier ---------------------------------------- */
+
+/* Posée au-dessus des profils, et non en bannière flottante : c'est une
+   chose à faire une fois, pas un bandeau à chasser. */
+.cr-notifs {
+  margin-bottom: 18px;
+  padding: 15px 17px;
+  border-radius: 14px;
+  border: 1px solid rgba(224, 101, 122, 0.4);
+  background: rgba(224, 101, 122, 0.1);
+}
+
+.cr-notifs p {
+  margin: 0;
+  font-size: 14.5px;
+  line-height: 1.5;
+  color: var(--creme);
+}
+
+.cr-notifs .cr-bouton {
+  margin-top: 13px;
+}
+
+/* Refusées, il n'y a plus rien à proposer : on explique, en retrait. */
+.cr-notifs[data-refusee] {
+  border-color: #3a302d;
+  background: var(--nuit-2);
+}
+
+.cr-notifs[data-refusee] p {
+  color: var(--creme-doux);
+  font-size: 13.5px;
 }

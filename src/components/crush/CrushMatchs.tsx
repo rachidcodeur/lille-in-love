@@ -2,24 +2,21 @@
 
 import { useState } from 'react';
 import type { Profil } from '@/lib/crush';
-import { nomManche } from '@/lib/crush-regles';
 
 /**
- * Mes choix et mes matchs, en haut à droite.
+ * Mes matchs, en haut à droite.
  *
- * Deux listes, parce que ce sont deux choses : un like est un choix qui
- * attend, un match est un choix rendu. Les confondre ferait croire à une
- * réciprocité qui n'existe pas encore — et voir ses propres likes évite de
- * se demander toute la soirée si le geste a été pris en compte.
+ * Seulement les matchs. Un like reste en sourdine tant qu'il n'a pas été
+ * rendu : l'afficher en attente ne dit rien d'utile et installe une
+ * surveillance qui n'a pas sa place dans une soirée. Que le choix ait été
+ * pris en compte, le bandeau du haut le dit déjà — « ton choix : Samir ».
  *
- * Qui m'a choisi reste invisible tant que ce n'est pas réciproque. Les
- * coordonnées et les trois photos n'apparaissent qu'au match : pendant le
- * crush time, pouvoir écrire à qui l'on vient de repérer viderait le jeu de
- * son sens.
+ * Les coordonnées et les trois photos n'apparaissent qu'au match : pendant
+ * le crush time, pouvoir écrire à qui l'on vient de repérer viderait le jeu
+ * de son sens.
  */
-export function CrushMatchs({ matchs, likes }: { matchs: Profil[]; likes: Profil[] }) {
+export function CrushMatchs({ matchs }: { matchs: Profil[] }) {
   const [ouvert, setOuvert] = useState(false);
-  const enAttente = likes.filter((l) => !l.match);
 
   return (
     <>
@@ -100,40 +97,6 @@ export function CrushMatchs({ matchs, likes }: { matchs: Profil[]; likes: Profil
               ))
             )}
 
-            {/* Les choix qui attendent encore. Jamais présentés comme des
-                matchs : c'est exactement la confusion à éviter. */}
-            {enAttente.length > 0 && (
-              <>
-                <h3 className="cr-sous-titre">
-                  {enAttente.length} like{enAttente.length > 1 ? 's' : ''} en attente
-                </h3>
-                <p className="cr-aide" style={{ marginTop: 0 }}>
-                  Tu les as choisis. Ça ne devient un match que si c’est réciproque.
-                </p>
-
-                {enAttente.map((l) => (
-                  <div className="cr-match-ligne" key={`${l.id}-${l.manche}`}>
-                    {l.photo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={l.photo} alt="" loading="lazy" />
-                    ) : (
-                      <span className="cr-carte-vide" aria-hidden="true">
-                        {l.first_name.slice(0, 1).toUpperCase()}
-                      </span>
-                    )}
-                    <div>
-                      <p className="cr-match-nom">
-                        {l.first_name}
-                        {l.age ? ` · ${l.age} ans` : ''}
-                      </p>
-                      <p className="cr-match-ville">
-                        {l.manche ? `Choisi au ${nomManche(l.manche)}` : 'En attente'}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </>
-            )}
           </div>
         </div>
       )}

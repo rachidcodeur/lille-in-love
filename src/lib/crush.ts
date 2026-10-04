@@ -2,6 +2,8 @@ import { randomBytes, randomInt } from 'node:crypto';
 import { colonne, lireCsv } from './csv';
 import { age, peutVoir, type Genre, type Orientation } from './crush-regles';
 import { estOuverte, finPrevue } from './manches';
+import { notifier } from './notifications';
+import { nomManche } from './crush-regles';
 import { supabaseAdmin } from './supabase';
 import { lienPhoto } from './admin';
 
@@ -397,10 +399,6 @@ export type Profil = {
   instagram?: string | null;
   /** Toutes ses photos, dans l'ordre. Réservé aux matchs, comme le contact. */
   photos?: string[];
-  /** Pour un like : la manche où on l'a donné. */
-  manche?: number;
-  /** Pour un like : est-il devenu un match ? */
-  match?: boolean;
 };
 
 /** Les participants qu'une personne peut voir, avec leur photo. */
@@ -550,8 +548,55 @@ export async function liker(moi: Participant, versId: string): Promise<ResultatL
     );
   if (eMatch) return { ok: false, raison: eMatch.message };
 
+  // Les deux côtés sont prévenus, une seule fois. Celui qui vient de
+  // cliquer le voit déjà à l'écran ; l'autre n'a peut-être pas son
+  // téléphone en main, et c'est le moment de la soirée.
+  await previenirDuMatch(moi, cible);
+
   const [profil] = await habiller([cible], { contact: true });
   return { ok: true, match: profil ?? null };
+}
+
+/**
+ * Annoncer un match aux deux personnes.
+ *
+ * Le prénom de l'autre voyage dans chaque message : « c'est un match »
+ * tout seul fait sortir le téléphone pour rien, et la notification
+ * s'affiche parfois sur un écran verrouillé que d'autres regardent.
+ */
+async function previenirDuMatch(a: Participant, b: Participant): Promise<void> {
+  const db = supabaseAdmin();
+  const [a_id, b_id] = [a.id, b.id].sort();
+
+  const { data: match } = await db
+    .from('lil_crush_matches')
+    .select('id, notifie_at')
+    .eq('soiree_id', a.soiree_id)
+    .eq('a_id', a_id)
+    .eq('b_id', b_id)
+    .maybeSingle();
+
+  if (!match || match.notifie_at) return;
+
+  await Promise.all([
+    notifier([a.id], {
+      titre: `C'est un match avec ${b.first_name}`,
+      corps: 'Ses coordonnées sont dans l’application.',
+      lien: '/crush',
+      etiquette: `match-${match.id}`,
+    }),
+    notifier([b.id], {
+      titre: `C'est un match avec ${a.first_name}`,
+      corps: 'Ses coordonnées sont dans l’application.',
+      lien: '/crush',
+      etiquette: `match-${match.id}`,
+    }),
+  ]);
+
+  await db
+    .from('lil_crush_matches')
+    .update({ notifie_at: new Date().toISOString() })
+    .eq('id', match.id);
 }
 
 /** Mon like de la manche en cours, s'il y en a un. */
@@ -563,66 +608,6 @@ export async function monLike(moi: Participant, mancheId: string): Promise<strin
     .eq('de_id', moi.id)
     .maybeSingle();
   return data?.vers_id ?? null;
-}
-
-/**
- * Mes likes, dans l'ordre où je les ai donnés.
- *
- * Un like n'est pas un match : c'est un choix qui attend. Le voir évite de
- * se demander toute la soirée si le geste a été pris en compte — et de
- * revenir liker la même personne.
- *
- * Seuls les miens : qui m'a choisi reste invisible tant que ce n'est pas
- * réciproque, c'est le sel du jeu et la tranquillité de tout le monde.
- */
-export async function mesLikes(moi: Participant): Promise<Profil[]> {
-  const db = supabaseAdmin();
-  const toutes = await manches(moi.soiree_id);
-  if (toutes.length === 0) return [];
-
-  const parManche = new Map(toutes.map((m) => [m.id, m.numero]));
-  const { data: likes } = await db
-    .from('lil_crush_likes')
-    .select('round_id, vers_id, created_at')
-    .in(
-      'round_id',
-      toutes.map((m) => m.id),
-    )
-    .eq('de_id', moi.id)
-    .order('created_at', { ascending: true });
-
-  if (!likes?.length) return [];
-
-  const { data: gens } = await db
-    .from('lil_crush_participants')
-    .select('*')
-    .in(
-      'id',
-      likes.map((l) => l.vers_id),
-    );
-
-  const { data: matchs } = await db
-    .from('lil_crush_matches')
-    .select('a_id, b_id')
-    .or(`a_id.eq.${moi.id},b_id.eq.${moi.id}`);
-  const matches = new Set(
-    (matchs ?? []).map((m) => (m.a_id === moi.id ? m.b_id : m.a_id)),
-  );
-
-  const profils = await habiller((gens ?? []) as Participant[]);
-  const parId = new Map(profils.map((p) => [p.id, p]));
-
-  const sortie: Profil[] = [];
-  for (const like of likes) {
-    const profil = parId.get(like.vers_id);
-    if (!profil) continue;
-    sortie.push({
-      ...profil,
-      manche: parManche.get(like.round_id),
-      match: matches.has(like.vers_id),
-    });
-  }
-  return sortie;
 }
 
 /** Mes matchs, avec de quoi se retrouver après la soirée. */
@@ -717,12 +702,47 @@ export async function remettre(participantId: string): Promise<void> {
    Ouvrir et fermer une manche
    ==================================================================== */
 
+/**
+ * Ouvrir une manche, et prévenir la salle.
+ *
+ * La notification ne part qu'une fois : rouvrir une manche après l'avoir
+ * fermée par erreur ne doit pas refaire sonner cinquante téléphones. Et
+ * elle ne part qu'après l'écriture — une notification pour un crush time
+ * qui ne s'est pas ouvert serait pire que pas de notification du tout.
+ */
 export async function ouvrirManche(mancheId: string): Promise<void> {
-  const { error } = await supabaseAdmin()
+  const db = supabaseAdmin();
+
+  const { data: manche, error } = await db
     .from('lil_crush_rounds')
     .update({ ouvert_at: new Date().toISOString(), ferme_at: null })
-    .eq('id', mancheId);
+    .eq('id', mancheId)
+    .select('*')
+    .maybeSingle();
   if (error) throw new Error(error.message);
+  if (!manche || manche.notifie_at) return;
+
+  const { data: gens } = await db
+    .from('lil_crush_participants')
+    .select('id')
+    .eq('soiree_id', manche.soiree_id)
+    .is('retire_at', null);
+
+  const minutes = manche.duree_minutes ?? 15;
+  await notifier(
+    (gens ?? []).map((p) => p.id),
+    {
+      titre: `${nomManche(manche.numero)}, c'est parti`,
+      corps: `${minutes} minutes pour choisir une personne.`,
+      lien: '/crush',
+      etiquette: 'crush-manche',
+    },
+  );
+
+  await db
+    .from('lil_crush_rounds')
+    .update({ notifie_at: new Date().toISOString() })
+    .eq('id', mancheId);
 }
 
 export async function fermerManche(mancheId: string): Promise<void> {

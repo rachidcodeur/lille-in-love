@@ -3,7 +3,6 @@ import {
   finPrevue,
   manches,
   matchsDe,
-  mesLikes,
   monLike,
   profilsPour,
   soireeActive,
@@ -15,6 +14,7 @@ import { CrushMatchs } from '@/components/crush/CrushMatchs';
 import { CrushAttente } from '@/components/crush/CrushAttente';
 import { Veille } from '@/components/crush/Veille';
 import { Installation } from '@/components/crush/Installation';
+import { Notifications } from '@/components/crush/Notifications';
 
 export const dynamic = 'force-dynamic';
 
@@ -58,11 +58,7 @@ export default async function CrushPage({ searchParams }: Props) {
     );
   }
 
-  const [rounds, matchs, likes] = await Promise.all([
-    manches(moi.soiree_id),
-    matchsDe(moi),
-    mesLikes(moi),
-  ]);
+  const [rounds, matchs] = await Promise.all([manches(moi.soiree_id), matchsDe(moi)]);
   const manche = rounds.find(estOuverte) ?? null;
   // Celui d'après : savoir qu'il reste un tour, et à quelle heure, change
   // la façon dont on dépense son unique like.
@@ -82,12 +78,18 @@ export default async function CrushPage({ searchParams }: Props) {
 
       <Installation jeton={moi.jeton} prenom={moi.first_name} />
 
+      {/* Une fois l'application installée : la permission, qui n'existe
+          pas ailleurs sur iPhone. */}
+      {process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && (
+        <Notifications clePublique={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
+      )}
+
       <header className="cr-entete">
         <div>
           <p className="cr-marque">Lille in Love</p>
           <p className="cr-moi">{moi.first_name}</p>
         </div>
-        <CrushMatchs matchs={matchs} likes={likes} />
+        <CrushMatchs matchs={matchs} />
       </header>
 
       {manche ? (

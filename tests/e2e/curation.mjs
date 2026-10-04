@@ -2174,21 +2174,13 @@ s.crushMatches.length === 0
   ? ok('aucun match tant que l’autre n’a pas choisi')
   : bad('match créé à sens unique');
 
-// --- Un like qui attend encore -------------------------------------
+// --- Un like reste en sourdine -------------------------------------
 await tel.locator('.cr-matchs-onglet').click();
 await tel.waitForTimeout(600);
-const attente = await tel.locator('.cr-matchs-corps').innerText();
-attente.includes('Pas encore de match') &&
-attente.includes('like') &&
-attente.includes('Samir') &&
-attente.includes('1er crush time')
-  ? ok('un like sans retour s’affiche en attente, jamais présenté comme un match')
-  : bad('le like en attente est absent ou mal nommé', attente.replace(/\n+/g, ' | '));
-
-// Le contact ne doit pas fuiter par la liste des likes.
-!attente.includes('samir@soiree.test')
-  ? ok('et un like en attente ne donne pas les coordonnées')
-  : bad('un like en attente livre le contact');
+const panneauMuet = await tel.locator('.cr-matchs-corps').innerText();
+panneauMuet.includes('Pas encore de match') && !panneauMuet.includes('Samir')
+  ? ok('un like n’apparaît nulle part tant qu’il n’est pas rendu')
+  : bad('le like se montre avant d’être un match', panneauMuet.replace(/\n+/g, ' | '));
 await tel.locator('.cr-fermer').click();
 await tel.waitForTimeout(300);
 
@@ -2242,15 +2234,18 @@ s.crushMatches[0].a_id < s.crushMatches[0].b_id
   ? ok('la paire est rangée : deux clics simultanés ne peuvent pas la dédoubler')
   : bad('paire non ordonnée');
 
-// --- Un like n'est pas un match ------------------------------------
-// Celui qui a choisi mais n'a pas encore été choisi doit voir son like en
-// attente, et surtout ne pas le prendre pour un match.
-await tel.locator('.cr-matchs-onglet').click();
-await tel.waitForTimeout(600);
-const panneau = await tel.locator('.cr-matchs-corps').innerText();
-panneau.includes('match') && panneau.includes('Samir')
+// --- Le match, une fois qu'il est fait -----------------------------
+// La veille redessine la page toutes les huit secondes : on attend que le
+// panneau porte le match plutôt que de l'ouvrir au mauvais moment.
+(await jusqua(async () => {
+  if ((await tel.locator('.cr-matchs-corps').count()) === 0) {
+    await tel.locator('.cr-matchs-onglet').click();
+    await tel.waitForTimeout(400);
+  }
+  return (await tel.locator('.cr-matchs-corps').innerText()).includes('Samir');
+}, 25_000))
   ? ok('le panneau montre le match une fois qu’il est fait')
-  : bad('match absent du panneau', panneau.replace(/\n+/g, ' | '));
+  : bad('match absent du panneau', await tel.locator('.cr-matchs-corps').innerText().catch(() => ''));
 await tel.locator('.cr-fermer').click();
 await tel.waitForTimeout(300);
 

@@ -35,11 +35,10 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
 - **« Mes matchs » est en haut à droite**, pas en bas : c'est la récompense du
   jeu, elle doit se voir sans être cherchée, et le bas de l'écran disparaît
   sous le pouce et les barres du navigateur.
-- **Le panneau montre deux listes** : les matchs, et **les likes en attente**.
-  Un like est un choix qui attend, un match est un choix rendu ; les
-  confondre ferait croire à une réciprocité qui n'existe pas. On ne voit que
-  **ses propres** likes — qui vous a choisi reste invisible tant que ce n'est
-  pas réciproque.
+- **Le panneau ne montre que les matchs.** Un like reste en sourdine tant
+  qu'il n'est pas rendu : l'afficher en attente ne dit rien d'utile et
+  installe une surveillance qui n'a pas sa place dans une soirée. Que le
+  choix ait été pris en compte, le bandeau du haut le dit déjà.
 - **Un match donne les trois photos**, le téléphone, l'email et l'Instagram.
   Un like en attente ne donne rien de tout cela : c'est au match qu'on décide
   si l'on écrit, et un seul visage ne suffit pas.
@@ -114,23 +113,46 @@ montre pas les profils : elle montre comment poser l'icône.
 son navigateur intégré, où « Ajouter à l'écran d'accueil » n'existe pas, et
 personne ne le devine. L'écran le détecte, l'explique, et propose de copier
 le lien pour le coller dans Safari. Même chose pour Instagram, Facebook,
-LinkedIn, et pour Chrome ou Firefox sur iOS, qui ne savent pas non plus
-poser d'icône.
+LinkedIn, et pour Chrome ou Firefox sur iOS. **Le QR de la salle évite tout
+cela** : scanné avec l'appareil photo, il ouvre Safari.
 
 **Le stockage séparé.** L'application installée a son propre stockage,
 distinct de Safari : connecté dans Safari puis installé, on ouvre l'icône
 *déconnecté*. Le manifeste est donc servi par `/crush/manifeste?t=<jeton>`
-et son `start_url` porte le jeton — l'icône ouvre une session valide du
-premier coup.
+et son `start_url` absolu porte le jeton.
+
+**« no-store » sur le manifeste.** Il interdisait à Safari de le garder, et
+l'application installée s'ouvrait sur une page blanche. `private` écarte les
+caches partagés sans empêcher le navigateur de le conserver.
 
 **Le blocage.** Quelqu'un coincé à l'installation est quelqu'un de perdu
-pour la soirée. « Continuer sans installer » est toujours là : le jeu
-marche sans notification, et la veille de huit secondes fait déjà basculer
-l'écran de ceux qui l'ont sous les yeux.
+pour la soirée. « Continuer sans installer » est toujours là.
 
 Sur Android, `beforeinstallprompt` donne un vrai bouton : un geste.
 
 Un **widget** reste impossible — réservé aux applications natives.
+
+### Les notifications
+
+Deux moments, deux seulement : **l'ouverture d'une manche** et **un match**.
+Un like reste muet — le notifier dirait à l'autre qu'il a été choisi.
+
+Chacune ne part **qu'une fois** : `notifie_at` sur la manche et sur le
+match. Deux appuis sur « Ouvrir » n'envoient pas cent notifications, et
+rouvrir une manche fermée par erreur ne refait pas sonner la salle.
+
+Les clés VAPID vivent dans `.env.local` (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
+`VAPID_PRIVATE_KEY`). **Sans elles, rien n'est envoyé et tout le reste
+marche** — la veille de huit secondes fait déjà basculer l'écran de ceux
+qui l'ont sous les yeux.
+
+Le service worker vit à `/crush/sw.js` : sa portée est son dossier, et
+c'est exactement ce qu'on veut — le back-office n'a rien à y faire. Il ne
+met rien en cache ; une soirée dure trois heures, et un cache mal réglé
+montrerait des profils périmés au pire moment.
+
+Un abonnement que le service déclare mort (404, 410) est effacé : un
+téléphone réinstallé en laisse un derrière lui.
 
 ## Le soir
 
@@ -153,7 +175,9 @@ atteindre la session du back-office. Repli possible sur
 
 ## Les migrations
 
-`13_crushtime.sql` (le schéma) et `14_ordre_photos.sql` (l'ordre des photos).
+`13_crushtime.sql` (le schéma), `14_ordre_photos.sql` (l'ordre des photos),
+`15_duree_manches.sql` (les quinze minutes), `16_code_personnel.sql` (le
+code de chacun), `17_notifications.sql` (la trace des envois).
 
 ## Voir tout ça en local
 

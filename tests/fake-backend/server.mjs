@@ -542,6 +542,7 @@ async function traiter(req, res) {
       crushRounds: tables.lil_crush_rounds,
       crushLikes: tables.lil_crush_likes,
       crushMatches: tables.lil_crush_matches,
+      crushPush: tables.lil_crush_push,
       reviews: tables.lil_reviews,
       photos: tables.lil_photos,
       curators: tables.lil_curators,
