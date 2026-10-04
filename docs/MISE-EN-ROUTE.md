@@ -1,6 +1,6 @@
 # Mise en route
 
-État au 27 septembre 2026.
+État au 4 octobre 2026.
 
 Le formulaire tourne, la curation aussi. Il reste **des migrations SQL à
 passer**, **la reprise des anciennes candidatures** et **le déploiement de
@@ -15,7 +15,8 @@ l'application** sur `app.in-love.fr`.
 | Projet Supabase | `sljvoplsedepnecgmjih`, bucket `lil-photos` privé |
 | Scripts SQL passés | `01` à `05`, et `08` |
 | **À passer d'urgence** | **`10_accompagnant.sql`** — sans lui, toute candidature « je viens accompagné » est refusée |
-| **À passer aussi** | **`09_simplification.sql`** (groupe G), **`11_corbeille.sql`** (corbeille), **`12_anciennes.sql`** (anciennes candidatures) |
+| **À passer aussi** | **`09_simplification.sql`** (groupe G), **`11_corbeille.sql`**, **`12_anciennes.sql`** |
+| **Pour le Crush Time** | **`13_crushtime.sql`** (indispensable), **`14_ordre_photos.sql`**, **`15_duree_manches.sql`** |
 | Resend | domaine **`in-love.fr` vérifié**, clé en place |
 | Expéditeur / réponse | `Lille in Love <info@in-love.fr>` |
 | `.env.local` | rempli et valide — `/api/health` répond `ok: true` |
@@ -457,10 +458,49 @@ que si quelqu'un clique « valider » dans le back-office. Un test le fige.
 
 ---
 
+## 6 ter. Essayer le Crush Time en ligne
+
+Le crush time fait partie de la même application : **déployer sur
+`app.in-love.fr` le rend accessible tout de suite**, sans attendre le
+sous-domaine. C'est ce qu'il faut pour l'essayer sur un vrai téléphone —
+poser une icône sur l'écran d'accueil et recevoir une notification
+demandent du HTTPS, que `localhost` n'a pas.
+
+1. **Exécute `supabase/13_crushtime.sql`.** Sans lui, les pages du crush
+   time s'affichent mais disent ce qui manque. `14` et `15` peuvent
+   attendre : l'application retombe sur ses valeurs par défaut.
+2. **Pousse les commits**, puis redéploie chez Hostinger (section 3).
+3. Dans `/admin/soirees`, crée une soirée, compose-la, et **ajoute-toi par
+   l'onglet « À la main »**.
+4. Ouvre son Crush Time, appuie sur **« Ouvrir ce crush time »**, puis
+   copie ton lien personnel avec le bouton **Lien**.
+5. Envoie-le-toi par mail, et ouvre-le **depuis ton iPhone**.
+
+Ce qu'il faut vérifier, dans l'ordre :
+
+- [ ] Le lien ouvert depuis Gmail propose bien « Ouvre ce lien dans Safari »
+- [ ] Dans Safari, les trois étapes s'affichent
+- [ ] Partager → Sur l'écran d'accueil → Ajouter pose l'icône
+- [ ] **L'icône ouvre l'application déjà connectée** — c'est le point à
+      vérifier avant tout le reste, tout en dépend
+- [ ] Les profils du sexe opposé s'affichent, le cœur réagit au toucher
+
+Rien à ajouter côté variables d'environnement. `NEXT_PUBLIC_CRUSH_URL`
+reste vide tant qu'on est sur `app.in-love.fr` : les liens se construisent
+sur l'adresse qu'on a sous les yeux.
+
+> **Le sous-domaine viendra après.** `crush.in-love.fr` sépare l'origine du
+> back-office : une faille dans l'application des participants ne doit pas
+> atteindre la session de curation. Pour un essai entre soi, le chemin
+> `/crush` suffit.
+
+---
+
 ## 7. La recette avant d'ouvrir
 
 - [ ] `supabase/10_accompagnant.sql` exécuté (bloquant)
 - [ ] `supabase/09_simplification.sql`, `11_corbeille.sql` et `12_anciennes.sql` exécutés
+- [ ] `supabase/13_crushtime.sql` exécuté si tu veux le Crush Time
 - [ ] La reprise des anciennes candidatures lancée (section 8)
 - [ ] Une inscription en répondant **« oui, je viens avec quelqu'un »**
 - [ ] `DELAI_REPONSE_MINUTES=360` en production
