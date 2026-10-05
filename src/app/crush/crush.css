@@ -857,3 +857,17 @@
   color: var(--creme-doux);
   font-size: 13.5px;
 }
+
+/* Activées : un mot, et on passe à autre chose. */
+.cr-notifs-ok {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--creme-doux);
+}
+
+.cr-notifs-ok span {
+  color: #7fbf8f;
+  font-size: 9px;
+  vertical-align: middle;
+  margin-right: 6px;
+}

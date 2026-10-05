@@ -122,6 +122,11 @@ export async function GET() {
         expediteur: expediteur || null,
         ipSalt: Boolean(process.env.IP_HASH_SALT),
         adminOuvert: !(process.env.ADMIN_CODE ?? '').trim(),
+        // Sans ces deux-là, l'application marche mais ne notifie rien —
+        // et personne ne s'en aperçoit avant le soir de la soirée.
+        notifications: Boolean(
+          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY,
+        ),
       },
       problemes,
       at: new Date().toISOString(),

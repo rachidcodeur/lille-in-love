@@ -68,7 +68,17 @@ export function Notifications({ clePublique }: { clePublique: string }) {
     }
   }
 
-  if (etat === 'hors-app' || etat === 'inconnu' || etat === 'active') return null;
+  if (etat === 'hors-app' || etat === 'inconnu') return null;
+
+  // Active : on le dit une fois, sobrement. Sans retour, on reste à se
+  // demander si le bouton a servi à quelque chose.
+  if (etat === 'active') {
+    return (
+      <p className="cr-notifs-ok">
+        <span aria-hidden="true">●</span> Notifications activées
+      </p>
+    );
+  }
 
   return (
     <div className="cr-notifs" data-refusee={etat === 'refusee' || undefined}>

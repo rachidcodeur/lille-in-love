@@ -630,7 +630,11 @@ export async function matchsDe(moi: Participant): Promise<Profil[]> {
    Tenir la liste, le soir même
    ==================================================================== */
 
-export type LigneParticipant = Participant & { photo: string | null };
+export type LigneParticipant = Participant & {
+  photo: string | null;
+  /** Son téléphone est-il abonné aux notifications ? */
+  notifiable: boolean;
+};
 
 /** Tout le monde, retirés compris : c'est la liste d'émargement de l'hôte. */
 export async function participants(soireeId: string): Promise<LigneParticipant[]> {
@@ -644,9 +648,21 @@ export async function participants(soireeId: string): Promise<LigneParticipant[]
   const gens = (data ?? []) as Participant[];
   const ids = gens.map((p) => p.member_id).filter((id): id is string => Boolean(id));
 
-  const { data: photos } = ids.length
-    ? await db.from('lil_photos').select('id, member_id, position').in('member_id', ids)
-    : { data: [] as { id: string; member_id: string; position: number }[] };
+  const [{ data: photos }, { data: abonnes }] = await Promise.all([
+    ids.length
+      ? db.from('lil_photos').select('id, member_id, position').in('member_id', ids)
+      : Promise.resolve({ data: [] as { id: string; member_id: string; position: number }[] }),
+    // Qui a vraiment posé l'application et accordé la permission. C'est la
+    // seule façon de savoir, avant la soirée, combien de téléphones
+    // sonneront — et de voir tout de suite si la chaîne est cassée.
+    db
+      .from('lil_crush_push')
+      .select('participant_id')
+      .in(
+        'participant_id',
+        gens.map((p) => p.id),
+      ),
+  ]);
 
   const premiere = new Map<string, string>();
   for (const photo of [...(photos ?? [])].sort((a, b) => a.position - b.position)) {
@@ -655,9 +671,12 @@ export async function participants(soireeId: string): Promise<LigneParticipant[]
     }
   }
 
+  const notifiables = new Set((abonnes ?? []).map((a) => a.participant_id));
+
   return gens.map((p) => ({
     ...p,
     photo: p.member_id ? (premiere.get(p.member_id) ?? null) : null,
+    notifiable: notifiables.has(p.id),
   }));
 }
 
@@ -783,4 +802,23 @@ export async function activerCrushTime(soireeId: string, code: string): Promise<
     .update({ crush_actif: true, crush_code: code })
     .eq('id', soireeId);
   if (error) throw new Error(error.message);
+}
+
+/**
+ * Une notification d'essai, à une seule personne.
+ *
+ * « Ça ne marche pas » peut vouloir dire six choses : clés absentes,
+ * application non installée, permission refusée, abonnement perdu, envoi
+ * refusé par le service, téléphone en silencieux. Ce bouton répond à la
+ * question en deux secondes au lieu d'une soirée.
+ */
+export async function essaiNotification(
+  participantId: string,
+): Promise<{ envoyees: number; mortes: number }> {
+  return notifier([participantId], {
+    titre: 'Lille in Love',
+    corps: 'Essai : si tu lis ceci, les notifications fonctionnent.',
+    lien: '/crush',
+    etiquette: 'crush-essai',
+  });
 }

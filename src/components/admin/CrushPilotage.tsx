@@ -26,6 +26,7 @@ type Personne = {
   member_id: string | null;
   jeton: string;
   code?: string | null;
+  notifiable: boolean;
 };
 
 async function commander(corps: Record<string, unknown>): Promise<string | null> {
@@ -53,9 +54,12 @@ const heure = (iso: string) =>
 export function CrushPilotage({
   manches,
   gens,
+  notificationsConfigurees,
 }: {
   manches: Manche[];
   gens: Personne[];
+  /** Les clés VAPID sont-elles en place sur ce serveur ? */
+  notificationsConfigurees: boolean;
 }) {
   const router = useRouter();
   const [occupe, setOccupe] = useState<string | null>(null);
@@ -74,6 +78,7 @@ export function CrushPilotage({
   const femmes = presents.filter((p) => p.gender === 'femme').length;
   const hommes = presents.filter((p) => p.gender === 'homme').length;
   const incomplets = presents.filter((p) => !p.gender);
+  const notifiables = presents.filter((p) => p.notifiable).length;
 
   // Avant la première ouverture, cet écran sert à l'appel. Après, il sert à
   // rattraper : les deux ne se racontent pas de la même façon.
@@ -157,6 +162,32 @@ export function CrushPilotage({
           </span>
         </div>
 
+        {/* Sans clés, rien ne part — et c'est invisible depuis le
+            téléphone de quelqu'un : il voit « activées » et ne reçoit
+            jamais rien. */}
+        {!notificationsConfigurees && (
+          <div className="adm-alerte" data-gravite="haute">
+            <strong>Les notifications ne sont pas configurées sur ce serveur.</strong> Il manque{' '}
+            <code>NEXT_PUBLIC_VAPID_PUBLIC_KEY</code> et <code>VAPID_PRIVATE_KEY</code> dans les
+            variables d’environnement. Tant qu’elles manquent, ouvrir un crush time ne fera sonner
+            aucun téléphone, et personne ne verra le bouton pour les activer.
+          </div>
+        )}
+
+        {/* Le seul moyen de savoir, avant la soirée, combien de téléphones
+            sonneront réellement. Une notification ne s'envoie qu'à qui a
+            posé l'application et accordé la permission. */}
+        {notificationsConfigurees && (
+          <div className="adm-notifiables" data-aucun={notifiables === 0 || undefined}>
+            <strong>
+              {notifiables} / {presents.length}
+            </strong>{' '}
+            {notifiables === 0
+              ? 'téléphone prêt à recevoir une notification. Tant que personne n’a installé l’application et accordé la permission, ouvrir un crush time ne fera sonner personne.'
+              : `téléphone${notifiables > 1 ? 's' : ''} recevront les notifications. Les autres verront l’écran basculer s’ils ont l’application ouverte.`}
+          </div>
+        )}
+
         <div className="adm-recherche" style={{ margin: '0 0 16px' }}>
           <span className="adm-recherche-loupe" aria-hidden="true">
             <Icone nom="loupe" taille={18} />
@@ -185,6 +216,11 @@ export function CrushPilotage({
               <div className="adm-present-main">
                 <p className="adm-present-nom">
                   {p.first_name}
+                  {p.notifiable && (
+                    <span className="adm-cloche" title="Notifications activées">
+                      ●
+                    </span>
+                  )}
                   {!p.gender && <span className="adm-tag">profil incomplet</span>}
                   {p.retire_at && <span className="adm-tag">retiré</span>}
                 </p>
@@ -193,6 +229,24 @@ export function CrushPilotage({
                   {p.code && <span className="adm-present-code">{p.code}</span>}
                 </p>
               </div>
+
+              {!p.retire_at && p.notifiable && (
+                <button
+                  type="button"
+                  className="adm-btn"
+                  title="Envoyer une notification d’essai à cette personne"
+                  disabled={occupe === `essai-${p.id}`}
+                  onClick={async () => {
+                    setOccupe(`essai-${p.id}`);
+                    setErreur(await commander({ action: 'essai', participantId: p.id }));
+                    setCopie(`essai-${p.id}`);
+                    setTimeout(() => setCopie(null), 2500);
+                    setOccupe(null);
+                  }}
+                >
+                  {copie === `essai-${p.id}` ? '✓ Envoyée' : 'Tester'}
+                </button>
+              )}
 
               {!p.retire_at && (
                 <button

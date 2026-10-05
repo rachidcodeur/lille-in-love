@@ -2618,3 +2618,35 @@ a.adm-btn:hover {
   font-weight: 700;
   font-variant-numeric: lining-nums tabular-nums;
 }
+
+/* --- Qui recevra vraiment les notifications --------------------------- */
+
+.adm-notifiables {
+  margin: 0 0 16px;
+  padding: 13px 16px;
+  border-radius: var(--radius);
+  background: var(--cream);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+.adm-notifiables strong {
+  font-size: 16px;
+  color: var(--ink);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+/* Personne d'abonné : ce n'est pas un détail, c'est une soirée muette. */
+.adm-notifiables[data-aucun] {
+  background: var(--error-bg);
+  color: var(--ink);
+  border-left: 3px solid var(--error);
+}
+
+/* La pastille de qui recevra : discrète, mais repérable en parcourant. */
+.adm-cloche {
+  color: var(--success);
+  font-size: 10px;
+  line-height: 1;
+}

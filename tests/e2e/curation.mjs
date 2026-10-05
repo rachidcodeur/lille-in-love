@@ -2324,6 +2324,41 @@ await fetch(`${FAKE}/rest/v1/lil_crush_rounds?id=eq.${manche1.id}`, {
   body: JSON.stringify({ ouvert_at: new Date().toISOString() }),
 });
 
+// --- Savoir qui recevra, avant la soirée ----------------------------
+// « Ça ne marche pas » peut vouloir dire six choses. Le tableau de bord
+// doit dire laquelle, et avant la soirée.
+await page.goto(`${BASE}/admin/soirees/${soireeCrush.id}`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+const etatNotifs = await page.locator('.adm-notifiables, .adm-alerte').first().innerText();
+/aucun téléphone|0 \/|pas configurées/i.test(etatNotifs)
+  ? ok('le tableau de bord dit combien de téléphones sonneront vraiment')
+  : bad('l’état des notifications n’est pas annoncé', etatNotifs.replace(/\n+/g, ' | '));
+
+// Un abonnement, et la pastille doit apparaître.
+await fetch(`${FAKE}/rest/v1/lil_crush_push`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    participant_id: qui['Inès'].id,
+    endpoint: 'https://exemple.test/push/ines',
+    p256dh: 'cle',
+    auth: 'auth',
+  }),
+});
+await page.reload({ waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+(await page.locator('.adm-present', { hasText: 'Inès' }).locator('.adm-cloche').count()) === 1
+  ? ok('et marque d’une pastille celui dont le téléphone est prêt')
+  : bad('l’abonnement n’est pas signalé dans la liste');
+
+(await page.locator('.adm-present', { hasText: 'Inès' }).getByRole('button', { name: 'Tester' }).count()) === 1
+  ? ok('avec un bouton pour lui envoyer un essai')
+  : bad('pas de bouton d’essai');
+
+(await page.locator('.adm-present', { hasText: 'Thomas' }).getByRole('button', { name: 'Tester' }).count()) === 0
+  ? ok('et rien à tester chez qui n’a pas installé')
+  : bad('un essai est proposé à quelqu’un sans abonnement');
+
 // --- Rouvrir prévient de nouveau ------------------------------------
 // C'est ce qu'il faut pour essayer, et aussi le soir même : une manche
 // rouverte parce qu'on l'avait fermée trop tôt doit se redire. Seul le

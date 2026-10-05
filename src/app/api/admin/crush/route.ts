@@ -6,6 +6,7 @@ import {
   ajouterUnePersonne,
   composerCrushTime,
   creerCrushTime,
+  essaiNotification,
   fermerManche,
   nouveauCode,
   ouvrirManche,
@@ -63,6 +64,7 @@ const schema = z.discriminatedUnion('action', [
   }),
   z.object({ action: z.literal('ouvrir'), mancheId: z.string().uuid() }),
   z.object({ action: z.literal('fermer'), mancheId: z.string().uuid() }),
+  z.object({ action: z.literal('essai'), participantId: z.string().uuid() }),
   z.object({ action: z.literal('retirer'), participantId: z.string().uuid() }),
   z.object({ action: z.literal('remettre'), participantId: z.string().uuid() }),
 ]);
@@ -123,6 +125,10 @@ export async function POST(request: Request) {
       case 'fermer':
         await fermerManche(commande.mancheId);
         return NextResponse.json({ ok: true });
+      case 'essai': {
+        const bilan = await essaiNotification(commande.participantId);
+        return NextResponse.json({ ok: true, ...bilan });
+      }
       case 'retirer':
         await retirer(commande.participantId);
         return NextResponse.json({ ok: true });

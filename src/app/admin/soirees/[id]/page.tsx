@@ -4,6 +4,7 @@ import { CrushComposer, type Candidat } from '@/components/admin/CrushComposer';
 import { CrushPilotage } from '@/components/admin/CrushPilotage';
 import { ActiverCrush } from '@/components/admin/ActiverCrush';
 import { manches, participants } from '@/lib/crush';
+import { notificationsPossibles } from '@/lib/notifications';
 import { facettes, vignettes } from '@/lib/admin';
 import { getSoiree } from '@/lib/soirees';
 import { formatDate } from '@/lib/libelles';
@@ -96,7 +97,11 @@ export default async function CrushPage({ params }: Props) {
             actif={Boolean(soiree.crush_actif)}
             participants={gens.filter((p) => !p.retire_at).length}
           />
-          <CrushPilotage manches={rounds} gens={gens} />
+          <CrushPilotage
+            manches={rounds}
+            gens={gens}
+            notificationsConfigurees={notificationsPossibles()}
+          />
 
           <details className="adm-card adm-ajout">
             <summary>
