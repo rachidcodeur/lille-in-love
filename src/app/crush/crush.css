@@ -826,39 +826,42 @@
 
 /* --- La permission de notifier ---------------------------------------- */
 
-/* Posée au-dessus des profils, et non en bannière flottante : c'est une
-   chose à faire une fois, pas un bandeau à chasser. */
+/* En voile par-dessus la soirée, qu'on aperçoit derrière : c'est la seule
+   chose à faire à cet instant, et l'arrière-plan dit pourquoi ça vaut le
+   geste. Une bande en haut de page se contourne du pouce sans la lire. */
 .cr-notifs {
-  margin-bottom: 18px;
-  padding: 15px 17px;
-  border-radius: 14px;
-  border: 1px solid rgba(224, 101, 122, 0.4);
-  background: rgba(224, 101, 122, 0.1);
+  text-align: center;
+  padding: 30px 22px 18px;
 }
 
-.cr-notifs p {
+.cr-notifs-coeur {
   margin: 0;
-  font-size: 14.5px;
-  line-height: 1.5;
-  color: var(--creme);
+  font-size: 40px;
+  line-height: 1;
+  color: var(--coeur);
 }
 
-.cr-notifs .cr-bouton {
-  margin-top: 13px;
+.cr-notifs .cr-fiche-nom {
+  margin-top: 14px;
 }
 
-/* Refusées, il n'y a plus rien à proposer : on explique, en retrait. */
-.cr-notifs[data-refusee] {
-  border-color: #3a302d;
-  background: var(--nuit-2);
+.cr-notifs .cr-texte {
+  margin-top: 10px;
 }
 
-.cr-notifs[data-refusee] p {
-  color: var(--creme-doux);
+.cr-notifs .cr-passer {
+  margin-top: 6px;
+}
+
+/* Le message d'un échec d'activation : il doit se lire, pas s'excuser. */
+.cr-notifs-souci {
+  margin: 14px 0 0;
   font-size: 13.5px;
+  color: var(--coeur);
 }
 
-/* Activées : un mot, et on passe à autre chose. */
+/* Bloquées : plus rien à demander, une ligne en passant. Pas de voile —
+   ce serait barrer l'écran avec une impasse. */
 .cr-notifs-ok {
   margin: 0 0 16px;
   font-size: 13px;
@@ -872,43 +875,3 @@
   margin-right: 6px;
 }
 
-/* --- Quitter la session ------------------------------------------------ */
-
-/* Tout en bas, et en retrait : ce n'est pas un geste de soirée. */
-.cr-sortir,
-.cr-sortir-confirme button {
-  font: inherit;
-  background: transparent;
-  border: 0;
-  color: var(--creme-doux);
-  opacity: 0.55;
-  font-size: 13px;
-  padding: 14px 10px;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.cr-sortir {
-  display: block;
-  margin: 34px auto 0;
-}
-
-.cr-sortir-confirme {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  margin: 34px 0 0;
-}
-
-.cr-sortir-confirme button:first-child {
-  opacity: 1;
-  color: var(--coeur);
-}
-
-/* Le message d'un échec d'activation : il doit se lire, pas s'excuser. */
-.cr-notifs-souci {
-  margin: 10px 0 0 !important;
-  font-size: 13px !important;
-  color: var(--coeur) !important;
-}

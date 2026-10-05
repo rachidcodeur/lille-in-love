@@ -13,13 +13,20 @@ type Etat = 'inconnu' | 'possible' | 'refusee' | 'active' | 'hors-app';
  * donc qu'une fois l'application installée — demander avant ne ferait que
  * griller la seule occasion qu'on a.
  *
- * Et la demande doit partir d'un geste : un navigateur refuse sèchement une
- * permission réclamée au chargement, sans rien montrer à personne.
+ * Posée en voile par-dessus la soirée, qu'on aperçoit derrière : c'est la
+ * seule chose à faire à cet instant, et l'arrière-plan dit pourquoi ça vaut
+ * le geste. Une bande en haut de page se contourne du pouce sans la lire.
+ *
+ * La demande part d'un geste, jamais du chargement : un navigateur refuse
+ * sèchement une permission réclamée toute seule, sans rien montrer.
  */
 export function Notifications({ clePublique }: { clePublique: string }) {
   const [etat, setEtat] = useState<Etat>('inconnu');
   const [busy, setBusy] = useState(false);
   const [souci, setSouci] = useState<string | null>(null);
+  // Remis à plus tard pour cette visite seulement : rien n'est enregistré,
+  // la demande revient en rouvrant l'application.
+  const [remis, setRemis] = useState(false);
 
   useEffect(() => {
     const terrain = regarder();
@@ -72,37 +79,43 @@ export function Notifications({ clePublique }: { clePublique: string }) {
     }
   }
 
-  if (etat === 'hors-app' || etat === 'inconnu') return null;
+  if (etat === 'hors-app' || etat === 'inconnu' || etat === 'active' || remis) return null;
 
-  // Active : on le dit une fois, sobrement. Sans retour, on reste à se
-  // demander si le bouton a servi à quelque chose.
-  if (etat === 'active') {
+  // Refusées : plus rien à demander, on explique en passant. Pas de voile :
+  // ce serait barrer l'écran avec une impasse.
+  if (etat === 'refusee') {
     return (
-      <p className="cr-notifs-ok">
-        <span aria-hidden="true">●</span> Notifications activées
+      <p className="cr-notifs-ok" data-refusee="true">
+        Notifications bloquées — tu peux les rouvrir dans Réglages → Lille in Love.
       </p>
     );
   }
 
   return (
-    <div className="cr-notifs" data-refusee={etat === 'refusee' || undefined}>
-      {etat === 'refusee' ? (
-        <p>
-          Les notifications sont bloquées. Tu peux les rouvrir dans Réglages → Lille in Love. Sans
-          elles, garde simplement l’application ouverte pendant la soirée.
+    <div className="cr-voile" role="dialog" aria-modal="true">
+      <div className="cr-fiche cr-notifs">
+        <p className="cr-notifs-coeur" aria-hidden="true">
+          ♥
         </p>
-      ) : (
-        <>
-          <p>
-            Active les notifications pour être prévenu à l’ouverture de chaque crush time, et quand
-            tu as un match.
-          </p>
-          {souci && <p className="cr-notifs-souci">{souci}</p>}
-          <button type="button" className="cr-bouton cr-coeur" disabled={busy} onClick={activer}>
-            {busy ? 'Un instant…' : souci ? 'Réessayer' : 'Activer les notifications'}
-          </button>
-        </>
-      )}
+        <h2 className="cr-fiche-nom">Reste prévenu</h2>
+        <p className="cr-texte">
+          Un crush time dure quinze minutes et peut s’ouvrir à tout moment. Avec les notifications,
+          ton téléphone te prévient — à l’ouverture, et quand tu as un match.
+        </p>
+
+        {souci && <p className="cr-notifs-souci">{souci}</p>}
+
+        <button type="button" className="cr-bouton cr-coeur" disabled={busy} onClick={activer}>
+          {busy ? 'Un instant…' : souci ? 'Réessayer' : 'Activer les notifications'}
+        </button>
+
+        {/* Pas de piège : qui ne touche rien doit pouvoir regarder la
+            soirée. Mais rien n'est retenu — la demande revient au prochain
+            passage, parce qu'elle décide de la suite. */}
+        <button type="button" className="cr-passer" onClick={() => setRemis(true)}>
+          Plus tard
+        </button>
+      </div>
     </div>
   );
 }

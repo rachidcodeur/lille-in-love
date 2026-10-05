@@ -1997,7 +1997,11 @@ const IPHONE =
   'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 ' +
   '(KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
 
-/** Comme un participant qui n'installe pas : il doit pouvoir jouer. */
+/**
+ * Comme un navigateur qui ne sait pas installer : le seul cas où l'écran
+ * s'écarte, parce qu'on n'a rien à proposer. Les pages du test tournent
+ * sous Chrome de bureau — exactement ce cas-là.
+ */
 const passerInstallation = async (page) => {
   const sortie = page.getByRole('button', { name: 'Continuer sans installer' });
   if (await sortie.count()) await sortie.click();
@@ -2016,13 +2020,12 @@ marche.includes('Partager') && marche.includes('écran d’accueil')
   ? ok('sur iPhone, le geste exact est montré — Partager, puis écran d’accueil')
   : bad('consignes d’installation absentes sur iPhone', marche.replace(/\n+/g, ' | '));
 
-// Toujours une sortie : quelqu'un bloqué ici est perdu pour la soirée.
-await safari.getByRole('button', { name: 'Continuer sans installer' }).click();
-await safari.waitForTimeout(400);
-(await safari.locator('.cr-install').count()) === 0 &&
-(await safari.locator('.cr-carte').count()) > 0
-  ? ok('et « continuer sans installer » laisse jouer quand même')
-  : bad('l’écran d’installation bloque le passage');
+// Plus de passe-droit là où l'installation est possible : sans icône, la
+// personne ne saura pas qu'un crush time s'est ouvert, et toute la soirée
+// repose là-dessus.
+(await safari.getByRole('button', { name: 'Continuer sans installer' }).count()) === 0
+  ? ok('et l’écran ne se contourne pas sur un téléphone qui peut installer')
+  : bad('on peut encore passer outre sur iPhone');
 await safari.close();
 
 // Le lien arrive par mail : ouvert depuis Gmail, « Ajouter à l'écran
@@ -2116,23 +2119,6 @@ const codeNotifs = await (await fetch(`${BASE}/crush`)).text();
 !/serviceWorker\.ready/.test(codeNotifs)
   ? ok('et l’application ne l’attend plus par une voie qui ne répond pas')
   : bad('serviceWorker.ready est encore utilisé : le bouton peut tourner sans fin');
-
-// --- Une porte de sortie --------------------------------------------
-(await tel.locator('.cr-sortir').count()) === 1
-  ? ok('on peut quitter la session — un raccourci supprimé ne déconnecte pas')
-  : bad('aucun moyen de se déconnecter');
-
-await tel.locator('.cr-sortir').click();
-await tel.waitForTimeout(300);
-await tel.getByRole('button', { name: 'Se déconnecter' }).click();
-await tel.waitForTimeout(1200);
-(await tel.locator('#cr-email').count()) === 1
-  ? ok('et l’on retombe bien sur la porte d’entrée')
-  : bad('la déconnexion ne ramène pas à l’entrée');
-
-(await entrer('ines@soiree.test', '1000'))
-  ? ok('puis l’on peut revenir')
-  : bad('impossible de se reconnecter après déconnexion');
 
 // --- Qui on voit ---------------------------------------------------
 const vus = (await tel.locator('.cr-carte-nom').allInnerTexts()).map((t) => t.split(' ·')[0].trim());

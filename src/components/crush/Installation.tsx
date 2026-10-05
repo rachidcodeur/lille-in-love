@@ -9,35 +9,27 @@ type Props = {
   prenom: string;
 };
 
-const DEJA_VU = 'lil-install-passee';
-
 /**
  * Faire poser l'application sur l'écran d'accueil.
  *
  * C'est le seul moyen de notifier quelqu'un sur iPhone : Apple réserve le
- * push aux applications installées. Et c'est aussi le moment le plus
- * fragile de la soirée — cinq gestes à faire debout, dans une salle sombre,
- * par quelqu'un qui n'est pas venu pour installer un logiciel.
+ * push aux applications installées. L'écran ne se contourne donc pas quand
+ * un chemin d'installation existe — sans icône, la personne ne saura pas
+ * qu'un crush time s'est ouvert, et toute la soirée repose là-dessus.
  *
- * D'où l'ordre : on dit pourquoi en une phrase, on montre le geste exact du
- * téléphone qu'on a dans la main, et on laisse toujours passer outre. Une
- * personne bloquée à l'installation est une personne perdue pour la soirée.
+ * Une seule exception, et elle est nécessaire : quand aucun chemin n'existe
+ * — un ordinateur, un navigateur qui ne sait pas installer — refuser le
+ * passage enfermerait quelqu'un dehors sans lui donner le moyen d'entrer.
+ * On ne bloque que là où l'on peut proposer quelque chose.
  */
 export function Installation({ jeton, prenom }: Props) {
   const [terrain, setTerrain] = useState<Terrain | null>(null);
-  const [passee, setPassee] = useState(true);
   const [invite, setInvite] = useState<Event | null>(null);
   const [copie, setCopie] = useState(false);
+  const [passee, setPassee] = useState(false);
 
   useEffect(() => {
     setTerrain(regarder());
-    try {
-      setPassee(localStorage.getItem(DEJA_VU) === 'oui');
-    } catch {
-      // Navigation privée, stockage refusé : on remontre l'écran, ce qui
-      // est moins grave que de ne jamais le montrer.
-      setPassee(false);
-    }
 
     // Android et les navigateurs de bureau proposent un vrai bouton : on
     // garde l'invitation sous le coude au lieu de la laisser filer.
@@ -53,14 +45,10 @@ export function Installation({ jeton, prenom }: Props) {
   // ferait clignoter l'écran d'accueil de la soirée.
   if (!terrain || terrain.installee || passee) return null;
 
-  const plusTard = () => {
-    try {
-      localStorage.setItem(DEJA_VU, 'oui');
-    } catch {
-      /* tant pis */
-    }
-    setPassee(true);
-  };
+  // Y a-t-il un chemin à proposer ? Sur iPhone et sur Android, oui. Sur un
+  // ordinateur ou un navigateur sans invitation d'installation, non — et
+  // c'est le seul cas où l'on ouvre la porte.
+  const chemin = terrain.integre || terrain.ios || Boolean(invite);
 
   const copier = async () => {
     try {
@@ -142,11 +130,13 @@ export function Installation({ jeton, prenom }: Props) {
         </ol>
       )}
 
-      {/* Toujours une sortie : quelqu'un bloqué ici est quelqu'un de perdu
-          pour la soirée, et le jeu marche sans notification. */}
-      <button type="button" className="cr-passer" onClick={plusTard}>
-        Continuer sans installer
-      </button>
+      {/* Seulement là où l'on n'a rien à proposer : ailleurs, l'icône est
+          la condition pour être prévenu, et toute la soirée en dépend. */}
+      {!chemin && (
+        <button type="button" className="cr-passer" onClick={() => setPassee(true)}>
+          Continuer sans installer
+        </button>
+      )}
     </div>
   );
 }

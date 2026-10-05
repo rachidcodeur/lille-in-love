@@ -99,8 +99,7 @@ qui le fait au calme, la veille.
 
 La session tient deux jours, dans un cookie. **Supprimer l'icône de
 l'écran d'accueil ne déconnecte pas** : ce sont deux choses séparées, et
-Safari garde ce qu'il sait. D'où « Ce n'est pas moi » en bas de l'écran —
-pour essayer avec deux comptes, et pour qui prête son téléphone.
+Safari garde ce qu'il sait.
 
 ## L'installation et les notifications
 
@@ -130,8 +129,12 @@ et son `start_url` absolu porte le jeton.
 l'application installée s'ouvrait sur une page blanche. `private` écarte les
 caches partagés sans empêcher le navigateur de le conserver.
 
-**Le blocage.** Quelqu'un coincé à l'installation est quelqu'un de perdu
-pour la soirée. « Continuer sans installer » est toujours là.
+**Le blocage.** L'écran ne se contourne pas là où un chemin d'installation
+existe : sans icône, la personne ne saura pas qu'un crush time s'est
+ouvert, et toute la soirée repose là-dessus. Une seule exception, et elle
+est nécessaire — quand aucun chemin n'existe (un ordinateur, un navigateur
+qui ne sait pas installer), refuser le passage enfermerait quelqu'un
+dehors sans lui donner le moyen d'entrer.
 
 Sur Android, `beforeinstallprompt` donne un vrai bouton : un geste.
 
