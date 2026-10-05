@@ -80,6 +80,22 @@ export function CrushPilotage({
   const incomplets = presents.filter((p) => !p.gender);
   const notifiables = presents.filter((p) => p.notifiable).length;
 
+  /**
+   * Le piège qui coûterait une soirée.
+   *
+   * NEXT_PUBLIC_VAPID_PUBLIC_KEY est inscrite dans le code du navigateur
+   * au moment de la compilation, pas lue au démarrage. Ajouter la variable
+   * chez l'hébergeur puis seulement redémarrer laisse donc le serveur
+   * croire que tout va bien — /api/health dit « oui » — pendant que
+   * l'application livrée aux téléphones, elle, ne la connaît pas. Personne
+   * ne voit alors le bouton pour activer, et rien ne le dit.
+   *
+   * Ce composant tourne dans le navigateur : la valeur qu'il lit est celle
+   * de la compilation. Les comparer suffit à démasquer le cas.
+   */
+  const clePubliqueCompilee = Boolean(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY);
+  const compilationEnRetard = notificationsConfigurees && !clePubliqueCompilee;
+
   // Avant la première ouverture, cet écran sert à l'appel. Après, il sert à
   // rattraper : les deux ne se racontent pas de la même façon.
   const aucuneOuverte = manches.every((m) => !m.ouvert_at);
@@ -171,6 +187,16 @@ export function CrushPilotage({
             <code>NEXT_PUBLIC_VAPID_PUBLIC_KEY</code> et <code>VAPID_PRIVATE_KEY</code> dans les
             variables d’environnement. Tant qu’elles manquent, ouvrir un crush time ne fera sonner
             aucun téléphone, et personne ne verra le bouton pour les activer.
+          </div>
+        )}
+
+        {compilationEnRetard && (
+          <div className="adm-alerte" data-gravite="haute">
+            <strong>Les clés sont là, mais l’application n’a pas été recompilée depuis.</strong>{' '}
+            <code>NEXT_PUBLIC_VAPID_PUBLIC_KEY</code> est inscrite dans le code envoyé aux
+            téléphones au moment de la compilation, pas lue au démarrage. Relance un déploiement
+            complet — un simple redémarrage ne suffit pas, et personne ne verra le bouton pour
+            activer les notifications.
           </div>
         )}
 

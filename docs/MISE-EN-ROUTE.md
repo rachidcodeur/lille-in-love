@@ -134,8 +134,16 @@ Importer un dépôt Git**, puis :
 ### c. Les variables d'environnement
 
 **Le plus simple : importer le fichier tout prêt.** `.env.hostinger.local`, à
-la racine du projet, contient les **15 variables** avec les valeurs de
+la racine du projet, contient les **17 variables** avec les valeurs de
 production.
+
+> **Après avoir ajouté ou changé une variable, relance un déploiement
+> complet, pas un simple redémarrage.** Celles dont le nom commence par
+> `NEXT_PUBLIC_` — dont la clé des notifications — sont inscrites dans le
+> code envoyé aux téléphones au moment de la compilation, et non lues au
+> démarrage. Sans recompilation, le serveur croit que tout va bien pendant
+> que les téléphones ne voient rien. Le tableau de bord d'une soirée le
+> signale, mais autant ne pas en arriver là.
 Dans le tableau de bord du site : **Variables d'environnement → Importer .env**.
 
 > Ce fichier contient tes clés. Il est exclu de git, ne le partage pas. Il
