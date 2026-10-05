@@ -702,13 +702,20 @@ export async function remettre(participantId: string): Promise<void> {
    Ouvrir et fermer une manche
    ==================================================================== */
 
+/** Deux ouvertures à moins d'une minute : c'est le même geste, hésitant. */
+const REPIT_NOTIFICATION = 60_000;
+
 /**
  * Ouvrir une manche, et prévenir la salle.
  *
- * La notification ne part qu'une fois : rouvrir une manche après l'avoir
- * fermée par erreur ne doit pas refaire sonner cinquante téléphones. Et
- * elle ne part qu'après l'écriture — une notification pour un crush time
- * qui ne s'est pas ouvert serait pire que pas de notification du tout.
+ * Rouvrir prévient de nouveau : c'est ce qu'on veut en essai, et c'est
+ * aussi ce qu'on veut le soir même — une manche rouverte parce qu'on
+ * l'avait fermée trop tôt doit se redire. Ce qu'on refuse, c'est le double
+ * appui : deux ouvertures à moins d'une minute d'intervalle ne font sonner
+ * la salle qu'une fois.
+ *
+ * La notification part après l'écriture — annoncer un crush time qui ne
+ * s'est pas ouvert serait pire que de ne rien annoncer.
  */
 export async function ouvrirManche(mancheId: string): Promise<void> {
   const db = supabaseAdmin();
@@ -720,7 +727,10 @@ export async function ouvrirManche(mancheId: string): Promise<void> {
     .select('*')
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!manche || manche.notifie_at) return;
+  if (!manche) return;
+
+  const derniere = manche.notifie_at ? new Date(manche.notifie_at).getTime() : 0;
+  if (Date.now() - derniere < REPIT_NOTIFICATION) return;
 
   const { data: gens } = await db
     .from('lil_crush_participants')

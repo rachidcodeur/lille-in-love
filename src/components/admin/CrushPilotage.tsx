@@ -282,9 +282,10 @@ export function CrushPilotage({
         </div>
 
         <p className="adm-hint">
-          Ouvrir envoie la notification à tout le monde — fais l’appel avant. Chaque crush time se
-          referme seul au bout de quinze minutes ; tu peux l’abréger, ou le rouvrir — il reprend là
-          où il s’était arrêté, les choix déjà faits sont faits.
+          Ouvrir envoie la notification à tout le monde — fais l’appel avant. <strong>Rouvrir la
+          renvoie</strong>, sauf si tu viens d’appuyer : deux ouvertures à moins d’une minute ne
+          sonnent qu’une fois. Chaque crush time se referme seul au bout de quinze minutes ; un
+          crush time rouvert reprend là où il s’était arrêté, les choix déjà faits sont faits.
         </p>
       </div>
 

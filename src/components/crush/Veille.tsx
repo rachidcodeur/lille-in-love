@@ -2,9 +2,14 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { alerterMatch, alerterOuverture, preparerLeSon } from '@/lib/alerte';
 
 /**
  * Regarder, de loin en loin, si quelque chose a changé.
+ *
+ * Et le faire remarquer : quand l'application est ouverte sous les yeux,
+ * le système n'affiche aucune notification, et un écran qui se redessine
+ * en silence ne se remarque pas dans une salle bruyante.
  *
  * Deux choses doivent faire bouger l'écran sans qu'on y touche : un match
  * que l'autre vient de faire, et un crush time qui s'ouvre. Personne ne
@@ -19,6 +24,9 @@ export function Veille({ matchs, manche }: { matchs: number; manche: string | nu
 
   useEffect(() => {
     let vivant = true;
+    // Le son doit être déverrouillé par un geste, et le geste arrive
+    // toujours avant la nouvelle : on prépare dès l'arrivée sur la page.
+    const ranger = preparerLeSon();
 
     const regarder = async () => {
       if (!vivant || document.visibilityState !== 'visible') return;
@@ -26,7 +34,14 @@ export function Veille({ matchs, manche }: { matchs: number; manche: string | nu
         const r = await fetch('/api/crush/etat', { cache: 'no-store' });
         if (!r.ok) return;
         const etat = (await r.json()) as { matchs: number; manche: string | null };
-        if (etat.matchs !== matchs || etat.manche !== manche) router.refresh();
+        if (etat.matchs === matchs && etat.manche === manche) return;
+
+        // Application ouverte sous les yeux : le système n'affiche aucune
+        // notification, c'est donc à nous de faire remarquer la nouvelle.
+        if (etat.matchs > matchs) alerterMatch();
+        else if (etat.manche && etat.manche !== manche) alerterOuverture();
+
+        router.refresh();
       } catch {
         /* réseau de salle : on retentera dans huit secondes */
       }
@@ -39,6 +54,7 @@ export function Veille({ matchs, manche }: { matchs: number; manche: string | nu
 
     return () => {
       vivant = false;
+      ranger();
       clearInterval(minuterie);
       document.removeEventListener('visibilitychange', regarder);
     };

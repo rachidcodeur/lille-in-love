@@ -18,7 +18,7 @@ alter table public.lil_crush_rounds
   add column if not exists notifie_at timestamptz;
 
 comment on column public.lil_crush_rounds.notifie_at is
-  'Date d''envoi de la notification d''ouverture. Non vide = déjà prévenu : un second appui sur « Ouvrir » n''enverra rien.';
+  'Date du dernier envoi de la notification d''ouverture. Rouvrir une manche prévient de nouveau ; seuls deux appuis à moins d''une minute d''intervalle ne sonnent qu''une fois.';
 
 alter table public.lil_crush_matches
   add column if not exists notifie_at timestamptz;

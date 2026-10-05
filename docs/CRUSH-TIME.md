@@ -137,9 +137,30 @@ Un **widget** reste impossible — réservé aux applications natives.
 Deux moments, deux seulement : **l'ouverture d'une manche** et **un match**.
 Un like reste muet — le notifier dirait à l'autre qu'il a été choisi.
 
-Chacune ne part **qu'une fois** : `notifie_at` sur la manche et sur le
-match. Deux appuis sur « Ouvrir » n'envoient pas cent notifications, et
-rouvrir une manche fermée par erreur ne refait pas sonner la salle.
+**Rouvrir une manche prévient de nouveau** — c'est ce qu'il faut pour
+essayer, et aussi le soir même : une manche rouverte parce qu'on l'avait
+fermée trop tôt doit se redire. Ce qu'on écarte, c'est le double appui :
+deux ouvertures à moins d'une minute ne sonnent qu'une fois. Un match, lui,
+ne s'annonce qu'une seule fois.
+
+### Le son et la vibration
+
+Ce qui est possible, et ce qui ne l'est pas :
+
+| | iPhone | Android |
+| --- | --- | --- |
+| Son d'une notification poussée | **Oui**, le son système | **Oui**, le son système |
+| Son personnalisé | Non — aucun navigateur ne l'implémente | Non |
+| Vibration d'une notification | **Non** — Safari n'a pas l'API Vibration | **Oui** |
+| Son et vibration **dans** l'application ouverte | Son oui, vibration non | Les deux |
+
+Le dernier cas est le plus important et le seul qu'on contrôle : quand
+l'application est ouverte sous les yeux, **le système n'affiche aucune
+notification**. Un écran qui se redessine en silence ne se remarque pas
+dans une salle bruyante. La veille joue donc elle-même deux notes montantes
+à l'ouverture d'une manche, trois pour un match — synthétisées, sans
+fichier à charger. Le son doit être déverrouillé par un geste : on le
+prépare dès l'arrivée sur la page, bien avant d'en avoir besoin.
 
 Les clés VAPID vivent dans `.env.local` (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
 `VAPID_PRIVATE_KEY`). **Sans elles, rien n'est envoyé et tout le reste

@@ -2324,6 +2324,44 @@ await fetch(`${FAKE}/rest/v1/lil_crush_rounds?id=eq.${manche1.id}`, {
   body: JSON.stringify({ ouvert_at: new Date().toISOString() }),
 });
 
+// --- Rouvrir prévient de nouveau ------------------------------------
+// C'est ce qu'il faut pour essayer, et aussi le soir même : une manche
+// rouverte parce qu'on l'avait fermée trop tôt doit se redire. Seul le
+// double appui est écarté.
+const notifieeA = (await state()).crushRounds.find((r) => r.id === manche1.id)?.notifie_at ?? null;
+
+await fetch(`${FAKE}/rest/v1/lil_crush_rounds?id=eq.${manche1.id}`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    // Comme si la salle avait été prévenue il y a dix minutes.
+    notifie_at: new Date(Date.now() - 10 * 60_000).toISOString(),
+  }),
+});
+
+await fetch(`${BASE}/api/admin/crush`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'ouvrir', mancheId: manche1.id }),
+});
+await tel.waitForTimeout(900);
+
+const notifieeB = (await state()).crushRounds.find((r) => r.id === manche1.id)?.notifie_at ?? null;
+notifieeB && notifieeB !== notifieeA
+  ? ok('rouvrir une manche prévient de nouveau')
+  : bad('la réouverture ne renvoie rien', String(notifieeB));
+
+// Le double appui, lui, ne doit sonner qu'une fois.
+await fetch(`${BASE}/api/admin/crush`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'ouvrir', mancheId: manche1.id }),
+});
+await tel.waitForTimeout(700);
+(await state()).crushRounds.find((r) => r.id === manche1.id)?.notifie_at === notifieeB
+  ? ok('mais deux appuis d’affilée ne font pas sonner deux fois')
+  : bad('le double appui a renvoyé une notification');
+
 // --- Hors manche ----------------------------------------------------
 await fetch(`${FAKE}/rest/v1/lil_crush_rounds?id=eq.${manche1.id}`, {
   method: 'PATCH',
