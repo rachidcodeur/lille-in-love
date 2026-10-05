@@ -2103,6 +2103,37 @@ const entrer = async (email, code) => {
   ? ok('son propre code ouvre la porte depuis le QR de la salle')
   : bad('le code personnel n’ouvre pas');
 
+// --- Le service worker doit couvrir la page elle-même ---------------
+// « /crush », sans barre oblique finale, était hors de la portée
+// « /crush/ » : l'attente d'activation ne se terminait jamais et le bouton
+// tournait indéfiniment. Il vit donc à la racine, et réclame « /crush ».
+const sw = await (await fetch(`${BASE}/crush-sw.js`)).text();
+sw.includes('showNotification')
+  ? ok('le service worker est servi depuis la racine')
+  : bad('service worker introuvable');
+
+const codeNotifs = await (await fetch(`${BASE}/crush`)).text();
+!/serviceWorker\.ready/.test(codeNotifs)
+  ? ok('et l’application ne l’attend plus par une voie qui ne répond pas')
+  : bad('serviceWorker.ready est encore utilisé : le bouton peut tourner sans fin');
+
+// --- Une porte de sortie --------------------------------------------
+(await tel.locator('.cr-sortir').count()) === 1
+  ? ok('on peut quitter la session — un raccourci supprimé ne déconnecte pas')
+  : bad('aucun moyen de se déconnecter');
+
+await tel.locator('.cr-sortir').click();
+await tel.waitForTimeout(300);
+await tel.getByRole('button', { name: 'Se déconnecter' }).click();
+await tel.waitForTimeout(1200);
+(await tel.locator('#cr-email').count()) === 1
+  ? ok('et l’on retombe bien sur la porte d’entrée')
+  : bad('la déconnexion ne ramène pas à l’entrée');
+
+(await entrer('ines@soiree.test', '1000'))
+  ? ok('puis l’on peut revenir')
+  : bad('impossible de se reconnecter après déconnexion');
+
 // --- Qui on voit ---------------------------------------------------
 const vus = (await tel.locator('.cr-carte-nom').allInnerTexts()).map((t) => t.split(' ·')[0].trim());
 JSON.stringify(vus.sort()) === JSON.stringify(['Samir', 'Thomas'])

@@ -19,6 +19,7 @@ type Etat = 'inconnu' | 'possible' | 'refusee' | 'active' | 'hors-app';
 export function Notifications({ clePublique }: { clePublique: string }) {
   const [etat, setEtat] = useState<Etat>('inconnu');
   const [busy, setBusy] = useState(false);
+  const [souci, setSouci] = useState<string | null>(null);
 
   useEffect(() => {
     const terrain = regarder();
@@ -39,8 +40,8 @@ export function Notifications({ clePublique }: { clePublique: string }) {
         return;
       }
 
-      const sw = await navigator.serviceWorker.register('/crush/sw.js', { scope: '/crush/' });
-      await navigator.serviceWorker.ready;
+      const sw = await navigator.serviceWorker.register('/crush-sw.js', { scope: '/crush' });
+      await actif(sw);
 
       const abonnement = await sw.pushManager.subscribe({
         // Obligatoire sur tous les navigateurs : on ne reçoit rien en
@@ -61,8 +62,11 @@ export function Notifications({ clePublique }: { clePublique: string }) {
       });
 
       setEtat('active');
-    } catch {
-      setEtat('refusee');
+    } catch (cause) {
+      // On dit ce qui s'est passé plutôt que de laisser un bouton tourner :
+      // un écran qui attend sans fin ne se distingue pas d'un écran cassé.
+      setSouci(cause instanceof Error ? cause.message : String(cause));
+      setEtat('possible');
     } finally {
       setBusy(false);
     }
@@ -93,13 +97,49 @@ export function Notifications({ clePublique }: { clePublique: string }) {
             Active les notifications pour être prévenu à l’ouverture de chaque crush time, et quand
             tu as un match.
           </p>
+          {souci && <p className="cr-notifs-souci">{souci}</p>}
           <button type="button" className="cr-bouton cr-coeur" disabled={busy} onClick={activer}>
-            {busy ? 'Un instant…' : 'Activer les notifications'}
+            {busy ? 'Un instant…' : souci ? 'Réessayer' : 'Activer les notifications'}
           </button>
         </>
       )}
     </div>
   );
+}
+
+/**
+ * Attendre que le service worker soit vivant.
+ *
+ * Surtout pas « navigator.serviceWorker.ready » : il n'aboutit que si la
+ * page elle-même est dans la portée du service worker. La page /crush, sans
+ * barre oblique finale, était hors de la portée /crush/ — l'attente ne se
+ * terminait jamais, et le bouton tournait indéfiniment.
+ *
+ * On regarde donc l'inscription qu'on vient d'obtenir, et on borne
+ * l'attente : mieux vaut un message qu'un écran qui tourne.
+ */
+function actif(inscription: ServiceWorkerRegistration): Promise<void> {
+  if (inscription.active) return Promise.resolve();
+
+  return new Promise((resoudre, rejeter) => {
+    const minuterie = setTimeout(
+      () => rejeter(new Error('Le service de notification n’a pas démarré. Réessaie.')),
+      10_000,
+    );
+
+    const candidat = inscription.installing ?? inscription.waiting;
+    if (!candidat) {
+      clearTimeout(minuterie);
+      return rejeter(new Error('Le service de notification n’a pas pu s’installer.'));
+    }
+
+    candidat.addEventListener('statechange', () => {
+      if (candidat.state === 'activated') {
+        clearTimeout(minuterie);
+        resoudre();
+      }
+    });
+  });
 }
 
 /**

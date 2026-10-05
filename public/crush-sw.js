@@ -6,9 +6,14 @@
  * une soirée dure trois heures, le réseau est là, et un cache mal réglé
  * montrerait des profils périmés au pire moment.
  *
- * Il vit sous /crush/ : un service worker ne peut agir que sur son dossier
- * et ce qu'il contient, et c'est exactement la portée qu'on veut. Le
- * back-office n'a rien à faire ici.
+ * Il vit à la racine, et non sous /crush/ : un service worker ne peut
+ * prendre en charge que son propre dossier et ce qu'il contient, et celui
+ * qui vivait dans /crush/ ne couvrait donc pas la page /crush elle-même —
+ * sans barre oblique finale, elle est en dehors. De la racine, il peut
+ * réclamer la portée « /crush », qui couvre les deux.
+ *
+ * La portée est demandée à l'inscription : le back-office n'a rien à faire
+ * ici, et il n'y est pas.
  */
 
 self.addEventListener('install', () => self.skipWaiting());

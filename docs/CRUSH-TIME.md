@@ -97,6 +97,11 @@ en dix mille coups, pas en dix.
 Le **lien personnel** envoyé par mail reste le chemin le plus court pour
 qui le fait au calme, la veille.
 
+La session tient deux jours, dans un cookie. **Supprimer l'icône de
+l'écran d'accueil ne déconnecte pas** : ce sont deux choses séparées, et
+Safari garde ce qu'il sait. D'où « Ce n'est pas moi » en bas de l'écran —
+pour essayer avec deux comptes, et pour qui prête son téléphone.
+
 ## L'installation et les notifications
 
 Sur iPhone, le web push n'existe **que** pour une application ajoutée à
@@ -174,10 +179,17 @@ Les clés VAPID vivent dans `.env.local` (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
 marche** — la veille de huit secondes fait déjà basculer l'écran de ceux
 qui l'ont sous les yeux.
 
-Le service worker vit à `/crush/sw.js` : sa portée est son dossier, et
-c'est exactement ce qu'on veut — le back-office n'a rien à y faire. Il ne
-met rien en cache ; une soirée dure trois heures, et un cache mal réglé
-montrerait des profils périmés au pire moment.
+Le service worker vit à **`/crush-sw.js`, à la racine**, et réclame la
+portée `/crush`. Il a d'abord vécu dans `/crush/`, ce qui paraissait plus
+propre — mais un service worker ne peut prendre en charge que son propre
+dossier, et la page `/crush`, sans barre oblique finale, en était exclue.
+`navigator.serviceWorker.ready` ne répondait alors jamais et le bouton
+d'activation tournait sans fin. L'application ne s'en sert plus : elle
+attend l'inscription qu'elle vient d'obtenir, avec une borne de dix
+secondes et un message en cas d'échec.
+
+Il ne met rien en cache ; une soirée dure trois heures, et un cache mal
+réglé montrerait des profils périmés au pire moment.
 
 Un abonnement que le service déclare mort (404, 410) est effacé : un
 téléphone réinstallé en laisse un derrière lui.
