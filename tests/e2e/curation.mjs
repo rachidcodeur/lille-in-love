@@ -2057,6 +2057,14 @@ manifeste.name === 'Lille in Love' && manifeste.short_name === 'Lille in Love'
   ? ok('l’application s’appelle Lille in Love sur l’écran d’accueil')
   : bad('nom inattendu', `${manifeste.name} / ${manifeste.short_name}`);
 
+// L'hébergeur sert public/ avec un an de cache et iOS fige l'icône à
+// l'installation : sans numéro de version dans l'adresse, un nouveau
+// dessin ne remplacerait jamais l'ancien.
+const tete2 = await (await fetch(`${BASE}/crush`)).text();
+manifeste.icons.every((i) => /\?v=\d+$/.test(i.src)) && /crush-apple-touch\.png\?v=\d+/.test(tete2)
+  ? ok('les icônes portent un numéro de version : un nouveau dessin remplace l’ancien')
+  : bad('icônes sans version', JSON.stringify(manifeste.icons.map((i) => i.src)));
+
 const tete = await (await fetch(`${BASE}/crush`)).text();
 tete.includes('name="apple-mobile-web-app-capable"') &&
 tete.includes('content="Lille in Love"')

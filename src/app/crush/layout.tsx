@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import { iconeCrush } from '@/lib/icones';
 import './crush.css';
 
 export const metadata: Metadata = {
@@ -8,7 +9,7 @@ export const metadata: Metadata = {
   // iOS ne lit pas les icônes du manifeste pour l'écran d'accueil : il ne
   // regarde que celle-ci. Sans elle, l'icône serait une capture floue de
   // la page.
-  icons: { apple: '/crush-apple-touch.png' },
+  icons: { apple: iconeCrush('crush-apple-touch.png') },
   appleWebApp: {
     // C'est ce titre-là qui s'écrit sous l'icône sur iPhone : le manifeste
     // n'a pas toujours le dernier mot.

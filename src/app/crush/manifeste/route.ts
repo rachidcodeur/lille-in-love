@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { parLien } from '@/lib/crush-session';
+import { iconeCrush } from '@/lib/icones';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -45,10 +46,18 @@ export async function GET(requete: Request) {
       theme_color: '#141010',
       orientation: 'portrait',
       lang: 'fr',
+      // L'adresse porte un numéro de version : sans lui, l'icône d'il y a
+      // un an resterait en place, l'hébergeur servant public/ avec un an
+      // de cache et iOS figeant l'image au moment de l'installation.
       icons: [
-        { src: '/crush-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-        { src: '/crush-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-        { src: '/crush-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        { src: iconeCrush('crush-192.png'), sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: iconeCrush('crush-512.png'), sizes: '512x512', type: 'image/png', purpose: 'any' },
+        {
+          src: iconeCrush('crush-512.png'),
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable',
+        },
       ],
     },
     {

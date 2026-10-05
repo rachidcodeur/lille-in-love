@@ -130,6 +130,13 @@ pour la soirée. « Continuer sans installer » est toujours là.
 
 Sur Android, `beforeinstallprompt` donne un vrai bouton : un geste.
 
+**L'icône se grave à l'installation.** iOS la fige au moment où on pose le
+raccourci, et l'hébergeur sert `public/` avec un an de cache : changer le
+dessin sans changer l'adresse laisse l'ancienne image en place, même après
+avoir supprimé puis réinstallé. Les adresses portent donc un numéro de
+version — `src/lib/icones.ts`, à incrémenter à chaque nouveau dessin, et à
+recopier dans `public/crush/sw.js` qui ne peut pas l'importer.
+
 Un **widget** reste impossible — réservé aux applications natives.
 
 ### Les notifications

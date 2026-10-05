@@ -25,8 +25,11 @@ self.addEventListener('push', (evenement) => {
   evenement.waitUntil(
     self.registration.showNotification(message.titre, {
       body: message.corps,
-      icon: '/crush-192.png',
-      badge: '/crush-192.png',
+      // Le numéro suit celui de src/lib/icones.ts : un service worker ne
+      // peut pas importer, alors on le recopie — et ce commentaire est là
+      // pour qu'on pense à le bouger en même temps.
+      icon: '/crush-192.png?v=2',
+      badge: '/crush-192.png?v=2',
       // Deux notifications de même étiquette se remplacent : trois crush
       // times n'empilent pas trois bannières oubliées.
       tag: message.etiquette || 'lil-crush',
