@@ -50,14 +50,22 @@ const heure = (iso: string) =>
  * autre chose à faire. D'où les gros boutons, un seul geste par ligne, et
  * aucune confirmation sur ce qui se défait — ouvrir trop tôt se referme,
  * retirer quelqu'un se remet.
+ *
+ * Deux colonnes, et l'ordre n'est pas décoratif : à gauche ce qu'on fait
+ * pendant la soirée — ouvrir une manche, faire l'appel —, à droite ce
+ * qu'on consulte ou qu'on ne fait qu'une fois. L'œil va à gauche, et c'est
+ * là qu'est le geste.
  */
 export function CrushPilotage({
   manches,
   gens,
   soireeId,
   notificationsConfigurees,
+  colonneDroite,
 }: {
   soireeId: string;
+  /** Ce qui vit à droite : le code, le QR, et l'ajout de dernière minute. */
+  colonneDroite: React.ReactNode;
   manches: Manche[];
   gens: Personne[];
   /** Les clés VAPID sont-elles en place sur ce serveur ? */
@@ -137,7 +145,133 @@ export function CrushPilotage({
     : gens;
 
   return (
-    <>
+    <div className="adm-pilotage">
+      <div className="adm-pilotage-principal">
+      <div className="adm-card">
+        <div className="adm-card-head">
+          <p className="adm-card-title">Les trois crush times</p>
+          {aucuneOuverte && <span className="adm-card-aside">rien n’a encore été lancé</span>}
+        </div>
+
+        <div className="adm-manches">
+          {manches.map((manche) => {
+            // Une manche dont les quinze minutes sont écoulées est close,
+            // même si personne ne l'a refermée : c'est ce que voit le
+            // serveur quand quelqu'un essaie de liker.
+            const fin = manche.ouvert_at
+              ? new Date(manche.ouvert_at).getTime() + (manche.duree_minutes ?? 15) * 60_000
+              : null;
+            const ecoulee = fin !== null && Date.now() >= fin;
+            const ouverte = Boolean(manche.ouvert_at) && !manche.ferme_at && !ecoulee;
+            const finie = Boolean(manche.ferme_at) || ecoulee;
+            return (
+              <div
+                className="adm-manche"
+                key={manche.id}
+                data-etat={ouverte ? 'ouverte' : finie ? 'finie' : 'attente'}
+                data-suivante={manche.id === prochaine?.id || undefined}
+              >
+                <div>
+                  <p className="adm-manche-nom">
+                    {/* Celle qui tourne se repère sans lire : c'est l'état
+                        qu'on cherche des yeux en arrivant sur la page. */}
+                    {ouverte && <span className="adm-pastille-vive" aria-hidden="true" />}
+                    {nomManche(manche.numero)}
+                  </p>
+                  <p className="adm-manche-heure">
+                    {ouverte
+                      ? `Ouvert à ${heure(manche.ouvert_at!)} · se referme à ${heure(new Date(fin!).toISOString())}`
+                      : finie
+                        ? `Terminé à ${heure(manche.ferme_at ?? new Date(fin!).toISOString())}`
+                        : `Annoncé à ${heure(manche.prevu_a)}`}
+                  </p>
+                </div>
+                {ouverte ? (
+                  <button
+                    type="button"
+                    className="adm-btn adm-btn-grand"
+                    disabled={occupe === manche.id}
+                    onClick={() => agir(manche.id, { action: 'fermer', mancheId: manche.id })}
+                  >
+                    Fermer
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className={`adm-btn${
+                      manche.id === prochaine?.id ? ' adm-btn-yes adm-btn-grand' : ''
+                    }`}
+                    disabled={occupe === manche.id}
+                    onClick={() => agir(manche.id, { action: 'ouvrir', mancheId: manche.id })}
+                  >
+                    {finie ? 'Rouvrir' : 'Ouvrir'}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <p className="adm-hint">
+          Tu lances le premier ; <strong>les suivants s’ouvrent seuls à l’heure annoncée</strong>,
+          et chacun se referme au bout de sa durée. Rien ne part avant ton premier geste. Rouvrir
+          une manche renvoie la notification, sauf si tu viens d’appuyer : deux ouvertures à moins
+          d’une minute ne sonnent qu’une fois.
+        </p>
+
+        {/* Un essai ne se joue pas à 21h, 22h30 et 23h45. Plutôt que de
+            faire recalculer trois heures à la main — et de se tromper —,
+            on les pose d'un bouton. */}
+        <details className="adm-essai">
+          <summary>Régler les heures pour un essai</summary>
+          <div className="adm-form-grille">
+            <div className="adm-champ">
+              <label htmlFor="essai-duree">Durée d’un crush time (minutes)</label>
+              <input
+                id="essai-duree"
+                className="lil-input"
+                type="number"
+                min={1}
+                max={240}
+                value={duree}
+                onChange={(e) => setDuree(e.target.value)}
+              />
+            </div>
+            <div className="adm-champ">
+              <label htmlFor="essai-pause">Pause entre deux (minutes)</label>
+              <input
+                id="essai-pause"
+                className="lil-input"
+                type="number"
+                min={0}
+                max={240}
+                value={pause}
+                onChange={(e) => setPause(e.target.value)}
+              />
+            </div>
+          </div>
+          <p className="adm-hint">
+            Le premier crush time sera annoncé pour maintenant, les suivants à la file. Les
+            manches déjà jouées repartent à zéro — à ne pas faire pendant une vraie soirée.
+          </p>
+          <button
+            type="button"
+            className="adm-btn adm-btn-yes"
+            disabled={occupe === 'regler'}
+            onClick={() =>
+              agir('regler', {
+                action: 'regler',
+                soireeId,
+                dureeMinutes: Number(duree) || 5,
+                pauseMinutes: Number(pause) || 0,
+              })
+            }
+          >
+            {occupe === 'regler' ? 'Réglage…' : 'Replanifier les trois crush times'}
+          </button>
+        </details>
+      </div>
+
       <div className="adm-card">
         <div className="adm-card-head">
           <p className="adm-card-title">Qui est là ce soir</p>
@@ -302,123 +436,14 @@ export function CrushPilotage({
         </p>
       </div>
 
-      <div className="adm-card">
-        <div className="adm-card-head">
-          <p className="adm-card-title">Les trois crush times</p>
-        </div>
-
-        <div className="adm-manches">
-          {manches.map((manche) => {
-            // Une manche dont les quinze minutes sont écoulées est close,
-            // même si personne ne l'a refermée : c'est ce que voit le
-            // serveur quand quelqu'un essaie de liker.
-            const fin = manche.ouvert_at
-              ? new Date(manche.ouvert_at).getTime() + (manche.duree_minutes ?? 15) * 60_000
-              : null;
-            const ecoulee = fin !== null && Date.now() >= fin;
-            const ouverte = Boolean(manche.ouvert_at) && !manche.ferme_at && !ecoulee;
-            const finie = Boolean(manche.ferme_at) || ecoulee;
-            return (
-              <div className="adm-manche" key={manche.id} data-etat={ouverte ? 'ouverte' : finie ? 'finie' : 'attente'}>
-                <div>
-                  <p className="adm-manche-nom">{nomManche(manche.numero)}</p>
-                  <p className="adm-manche-heure">
-                    {ouverte
-                      ? `Ouvert à ${heure(manche.ouvert_at!)} · se referme à ${heure(new Date(fin!).toISOString())}`
-                      : finie
-                        ? `Terminé à ${heure(manche.ferme_at ?? new Date(fin!).toISOString())}`
-                        : `Annoncé à ${heure(manche.prevu_a)}`}
-                  </p>
-                </div>
-                {ouverte ? (
-                  <button
-                    type="button"
-                    className="adm-btn"
-                    disabled={occupe === manche.id}
-                    onClick={() => agir(manche.id, { action: 'fermer', mancheId: manche.id })}
-                  >
-                    Fermer
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className={`adm-btn${manche.id === prochaine?.id ? ' adm-btn-yes' : ''}`}
-                    disabled={occupe === manche.id}
-                    onClick={() => agir(manche.id, { action: 'ouvrir', mancheId: manche.id })}
-                  >
-                    {finie ? 'Rouvrir' : 'Ouvrir'}
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <p className="adm-hint">
-          Tu lances le premier ; <strong>les suivants s’ouvrent seuls à l’heure annoncée</strong>,
-          et chacun se referme au bout de sa durée. Rien ne part avant ton premier geste. Rouvrir
-          une manche renvoie la notification, sauf si tu viens d’appuyer : deux ouvertures à moins
-          d’une minute ne sonnent qu’une fois.
-        </p>
-
-        {/* Un essai ne se joue pas à 21h, 22h30 et 23h45. Plutôt que de
-            faire recalculer trois heures à la main — et de se tromper —,
-            on les pose d'un bouton. */}
-        <details className="adm-essai">
-          <summary>Régler les heures pour un essai</summary>
-          <div className="adm-form-grille">
-            <div className="adm-champ">
-              <label htmlFor="essai-duree">Durée d’un crush time (minutes)</label>
-              <input
-                id="essai-duree"
-                className="lil-input"
-                type="number"
-                min={1}
-                max={240}
-                value={duree}
-                onChange={(e) => setDuree(e.target.value)}
-              />
-            </div>
-            <div className="adm-champ">
-              <label htmlFor="essai-pause">Pause entre deux (minutes)</label>
-              <input
-                id="essai-pause"
-                className="lil-input"
-                type="number"
-                min={0}
-                max={240}
-                value={pause}
-                onChange={(e) => setPause(e.target.value)}
-              />
-            </div>
-          </div>
-          <p className="adm-hint">
-            Le premier crush time sera annoncé pour maintenant, les suivants à la file. Les
-            manches déjà jouées repartent à zéro — à ne pas faire pendant une vraie soirée.
-          </p>
-          <button
-            type="button"
-            className="adm-btn adm-btn-yes"
-            disabled={occupe === 'regler'}
-            onClick={() =>
-              agir('regler', {
-                action: 'regler',
-                soireeId,
-                dureeMinutes: Number(duree) || 5,
-                pauseMinutes: Number(pause) || 0,
-              })
-            }
-          >
-            {occupe === 'regler' ? 'Réglage…' : 'Replanifier les trois crush times'}
-          </button>
-        </details>
-      </div>
-
       {erreur && (
         <div className="adm-feedback" data-kind="ko">
           {erreur}
         </div>
       )}
-    </>
+      </div>
+
+      <aside className="adm-pilotage-cote">{colonneDroite}</aside>
+    </div>
   );
 }

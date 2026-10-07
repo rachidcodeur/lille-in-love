@@ -2675,3 +2675,120 @@ a.adm-btn:hover {
   margin-bottom: 16px;
   color: var(--ink);
 }
+
+/* --- Le tableau de bord d'un crush time ------------------------------- */
+
+/* Deux colonnes, et l'ordre n'est pas décoratif : à gauche ce qu'on fait
+   pendant la soirée — ouvrir une manche, faire l'appel —, à droite ce
+   qu'on consulte ou qu'on ne fait qu'une fois. */
+.adm-pilotage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 400px);
+  gap: 26px;
+  align-items: start;
+}
+
+@media (max-width: 1040px) {
+  .adm-pilotage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* La colonne de droite suit le défilement : le code de la salle se dicte
+   à n'importe quel moment, y compris en bas de la liste d'émargement. */
+@media (min-width: 1041px) {
+  .adm-pilotage-cote {
+    position: sticky;
+    top: 92px;
+  }
+}
+
+.adm-pilotage-cote > .adm-card:first-child {
+  margin-top: 0;
+}
+
+/* --- Des blocs et des boutons qui se voient --------------------------- */
+
+/* Le geste de la soirée ne doit pas avoir la taille d'un lien de pied de
+   page. Un bouton qu'on cherche dans une salle sombre est un bouton raté. */
+.adm-btn-grand {
+  font-size: 16px;
+  padding: 16px 28px;
+  letter-spacing: 0.01em;
+}
+
+.adm-btn-yes.adm-btn-grand {
+  box-shadow: 0 6px 18px rgba(168, 148, 110, 0.35);
+}
+
+.adm-btn-yes.adm-btn-grand:hover:not(:disabled) {
+  box-shadow: 0 8px 22px rgba(168, 148, 110, 0.45);
+  transform: translateY(-1px);
+}
+
+/* Les manches : des cartes, plus des lignes. Celle qui vient se détache
+   nettement — c'est la seule sur laquelle on va appuyer. */
+.adm-manche {
+  padding: 20px 22px;
+  background: var(--white);
+  border-color: var(--border);
+}
+
+.adm-manche-nom {
+  font-size: 17px;
+}
+
+.adm-manche[data-suivante] {
+  background: linear-gradient(
+    120deg,
+    color-mix(in srgb, var(--white) 86%, var(--sand)),
+    var(--white) 70%
+  );
+  border-color: var(--gold);
+  border-left-width: 4px;
+  box-shadow: var(--shadow-card);
+  padding: 24px 22px;
+}
+
+.adm-manche[data-suivante] .adm-manche-nom {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Les titres de carte, un cran au-dessus : une page de blocs identiques
+   ne dit pas par où commencer. */
+.adm-card-title {
+  font-size: 12px;
+  letter-spacing: 0.2em;
+}
+
+.adm-pilotage-principal .adm-card:first-child .adm-card-title,
+.adm-pilotage-principal .adm-card:nth-child(2) .adm-card-title {
+  color: var(--gold-deep);
+}
+
+/* Un bouton qui se plie en deux lignes se lit comme un accident. */
+.adm-choix-barre .adm-btn,
+.adm-notifiables + .adm-recherche .adm-btn {
+  white-space: nowrap;
+}
+
+/* La première carte de la colonne ouvre la page : elle porte le geste. */
+.adm-pilotage-principal > .adm-card:first-child {
+  border-top: 3px solid var(--gold);
+}
+
+/* La manche en cours : un point qui bat, et le titre qui l'accompagne. */
+.adm-manche-nom {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.adm-manche[data-etat='ouverte'] .adm-pastille-vive {
+  background: var(--gold-deep);
+}
+
+.adm-manche[data-etat='ouverte'] {
+  border-left-width: 4px;
+}

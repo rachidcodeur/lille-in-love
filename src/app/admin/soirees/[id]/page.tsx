@@ -93,33 +93,37 @@ export default async function CrushPage({ params }: Props) {
           />
         </div>
       ) : (
-        <>
-          <ActiverCrush
-            soireeId={id}
-            code={soiree.crush_code ?? null}
-            actif={Boolean(soiree.crush_actif)}
-            participants={gens.filter((p) => !p.retire_at).length}
-          />
-          <CrushPilotage
-            soireeId={id}
-            manches={rounds}
-            gens={gens}
-            notificationsConfigurees={notificationsPossibles()}
-          />
+        <CrushPilotage
+          soireeId={id}
+          manches={rounds}
+          gens={gens}
+          notificationsConfigurees={notificationsPossibles()}
+          colonneDroite={
+            <>
+              <ActiverCrush
+                soireeId={id}
+                code={soiree.crush_code ?? null}
+                actif={Boolean(soiree.crush_actif)}
+                participants={gens.filter((p) => !p.retire_at).length}
+              />
 
-          <details className="adm-card adm-ajout">
-            <summary>
-              <span className="adm-card-title">Ajouter des participants</span>
-              <span className="adm-hint">Un billet acheté à la dernière minute</span>
-            </summary>
-            <CrushComposer
-              soireeId={id}
-              date={soiree.date_soiree}
-              candidats={candidats}
-              manchesPosees={rounds.length > 0}
-            />
-          </details>
-        </>
+              {/* Replié : un billet de dernière minute est l'exception,
+                  pas le geste du soir. */}
+              <details className="adm-card adm-ajout">
+                <summary>
+                  <span className="adm-card-title">Ajouter des participants</span>
+                  <span className="adm-hint">Un billet acheté à la dernière minute</span>
+                </summary>
+                <CrushComposer
+                  soireeId={id}
+                  date={soiree.date_soiree}
+                  candidats={candidats}
+                  manchesPosees={rounds.length > 0}
+                />
+              </details>
+            </>
+          }
+        />
       )}
     </main>
   );
