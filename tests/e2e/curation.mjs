@@ -1872,15 +1872,18 @@ ajoutMain?.gender === 'homme' && ajoutMain?.first_name === 'Rachid' && ajoutMain
   ? ok('une personne absente de la billetterie et des candidatures peut être ajoutée')
   : bad('ajout à la main raté', JSON.stringify(ajoutMain));
 
-// --- Son lien personnel, affiché pour qu'on puisse l'envoyer --------
+// --- Son code, affiché pour qu'on puisse le dicter ------------------
+// Le lien personnel ne s'affiche plus ligne par ligne : on entre par le QR
+// de la salle et son code. Celui-ci doit donc être sous les yeux.
 await page.waitForTimeout(400);
-const lienAffiche = await page
-  .locator('.adm-present', { hasText: 'Rachid' })
-  .locator('button', { hasText: 'Lien' })
-  .getAttribute('title');
-lienAffiche?.endsWith(`/crush/c/${ajoutMain.jeton}`)
-  ? ok('le tableau de bord donne son lien personnel, prêt à envoyer')
-  : bad('lien personnel absent du tableau de bord', String(lienAffiche));
+const ligneRachid = page.locator('.adm-present', { hasText: 'Rachid' });
+(await ligneRachid.locator('.adm-present-code').innerText()) === ajoutMain.code
+  ? ok('le tableau de bord donne son code, prêt à dicter')
+  : bad('code absent du tableau de bord', await ligneRachid.innerText());
+
+(await ligneRachid.locator('button', { hasText: 'Lien' }).count()) === 0
+  ? ok('et plus de lien devant chaque profil : il ne sert plus')
+  : bad('le lien est encore affiché ligne par ligne');
 
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
@@ -2437,6 +2440,86 @@ await passerInstallation(tel);
 
 await tel.close();
 await tel2.close();
+
+// --- La suite s'ouvre toute seule ------------------------------------
+// L'hôte lance la première ; les suivantes suivent leur heure. Rien ne
+// part avant ce premier geste.
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
+const [soireeAuto] = await (
+  await fetch(`${FAKE}/rest/v1/lil_soirees`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({
+      nom: 'Soirée qui s’enchaîne',
+      age_min: 26,
+      age_max: 36,
+      date_soiree: '2026-10-18',
+      lieu: 'Un lieu',
+      publiee_at: new Date().toISOString(),
+      crush_code: '4812',
+      crush_actif: true,
+    }),
+  })
+).json();
+
+const [solo] = await (
+  await fetch(`${FAKE}/rest/v1/lil_crush_participants`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({
+      soiree_id: soireeAuto.id,
+      email: 'solo@soiree.test',
+      first_name: 'Solo',
+      gender: 'femme',
+      orientation: 'hetero',
+      jeton: 'solo',
+      code: '7777',
+    }),
+  })
+).json();
+void solo;
+
+// Deux manches dont l'heure est déjà passée : rien ne doit s'ouvrir.
+const passees = await (
+  await fetch(`${FAKE}/rest/v1/lil_crush_rounds`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify([
+      { soiree_id: soireeAuto.id, numero: 1, prevu_a: new Date(Date.now() - 60_000).toISOString(), duree_minutes: 5 },
+      { soiree_id: soireeAuto.id, numero: 2, prevu_a: new Date(Date.now() - 30_000).toISOString(), duree_minutes: 5 },
+    ]),
+  })
+).json();
+
+const veille = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
+await veille.goto(`${BASE}/crush/c/solo`, { waitUntil: 'networkidle' });
+await veille.waitForTimeout(1500);
+await passerInstallation(veille);
+
+await veille.evaluate(() => fetch('/api/crush/etat', { cache: 'no-store' }));
+await veille.waitForTimeout(600);
+(await state()).crushRounds.every((r) => !r.ouvert_at)
+  ? ok('rien ne s’ouvre tant que l’hôte n’a pas lancé la première manche')
+  : bad('une manche s’est ouverte toute seule avant le départ');
+
+// L'hôte lance la première : la seconde, dont l'heure est passée, doit
+// suivre au premier passage de la veille.
+await fetch(`${BASE}/api/admin/crush`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'ouvrir', mancheId: passees[0].id }),
+});
+await veille.evaluate(() => fetch('/api/crush/etat', { cache: 'no-store' }));
+await veille.waitForTimeout(800);
+
+(await state()).crushRounds.find((r) => r.id === passees[1].id)?.ouvert_at
+  ? ok('une fois le départ donné, la suivante s’ouvre seule à son heure')
+  : bad('la seconde manche ne s’ouvre pas toute seule');
+
+await veille.close();
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
 /* ---------------------------------------------------------------- */

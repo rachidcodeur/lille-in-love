@@ -54,8 +54,10 @@ const heure = (iso: string) =>
 export function CrushPilotage({
   manches,
   gens,
+  soireeId,
   notificationsConfigurees,
 }: {
+  soireeId: string;
   manches: Manche[];
   gens: Personne[];
   /** Les clés VAPID sont-elles en place sur ce serveur ? */
@@ -66,6 +68,8 @@ export function CrushPilotage({
   const [erreur, setErreur] = useState<string | null>(null);
   const [copie, setCopie] = useState<string | null>(null);
   const [recherche, setRecherche] = useState('');
+  const [duree, setDuree] = useState('5');
+  const [pause, setPause] = useState('0');
 
   async function agir(cle: string, corps: Record<string, unknown>) {
     setOccupe(cle);
@@ -274,17 +278,6 @@ export function CrushPilotage({
                 </button>
               )}
 
-              {!p.retire_at && (
-                <button
-                  type="button"
-                  className="adm-btn"
-                  title={lienDe(p)}
-                  onClick={() => copier(lienDe(p), p.id)}
-                >
-                  {copie === p.id ? '✓' : 'Lien'}
-                </button>
-              )}
-
               <button
                 type="button"
                 className="adm-btn"
@@ -362,11 +355,63 @@ export function CrushPilotage({
         </div>
 
         <p className="adm-hint">
-          Ouvrir envoie la notification à tout le monde — fais l’appel avant. <strong>Rouvrir la
-          renvoie</strong>, sauf si tu viens d’appuyer : deux ouvertures à moins d’une minute ne
-          sonnent qu’une fois. Chaque crush time se referme seul au bout de quinze minutes ; un
-          crush time rouvert reprend là où il s’était arrêté, les choix déjà faits sont faits.
+          Tu lances le premier ; <strong>les suivants s’ouvrent seuls à l’heure annoncée</strong>,
+          et chacun se referme au bout de sa durée. Rien ne part avant ton premier geste. Rouvrir
+          une manche renvoie la notification, sauf si tu viens d’appuyer : deux ouvertures à moins
+          d’une minute ne sonnent qu’une fois.
         </p>
+
+        {/* Un essai ne se joue pas à 21h, 22h30 et 23h45. Plutôt que de
+            faire recalculer trois heures à la main — et de se tromper —,
+            on les pose d'un bouton. */}
+        <details className="adm-essai">
+          <summary>Régler les heures pour un essai</summary>
+          <div className="adm-form-grille">
+            <div className="adm-champ">
+              <label htmlFor="essai-duree">Durée d’un crush time (minutes)</label>
+              <input
+                id="essai-duree"
+                className="lil-input"
+                type="number"
+                min={1}
+                max={240}
+                value={duree}
+                onChange={(e) => setDuree(e.target.value)}
+              />
+            </div>
+            <div className="adm-champ">
+              <label htmlFor="essai-pause">Pause entre deux (minutes)</label>
+              <input
+                id="essai-pause"
+                className="lil-input"
+                type="number"
+                min={0}
+                max={240}
+                value={pause}
+                onChange={(e) => setPause(e.target.value)}
+              />
+            </div>
+          </div>
+          <p className="adm-hint">
+            Le premier crush time sera annoncé pour maintenant, les suivants à la file. Les
+            manches déjà jouées repartent à zéro — à ne pas faire pendant une vraie soirée.
+          </p>
+          <button
+            type="button"
+            className="adm-btn adm-btn-yes"
+            disabled={occupe === 'regler'}
+            onClick={() =>
+              agir('regler', {
+                action: 'regler',
+                soireeId,
+                dureeMinutes: Number(duree) || 5,
+                pauseMinutes: Number(pause) || 0,
+              })
+            }
+          >
+            {occupe === 'regler' ? 'Réglage…' : 'Replanifier les trois crush times'}
+          </button>
+        </details>
       </div>
 
       {erreur && (

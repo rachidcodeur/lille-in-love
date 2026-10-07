@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { estOuverte, manches } from '@/lib/crush';
+import { estOuverte, manches, ouvrirCeQuiDoitLEtre } from '@/lib/crush';
 import { participantConnecte } from '@/lib/crush-session';
 import { supabaseAdmin } from '@/lib/supabase';
 
@@ -20,6 +20,12 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const moi = await participantConnecte();
   if (!moi) return NextResponse.json({ error: 'Session expirée.' }, { status: 401 });
+
+  // Les téléphones présents font avancer la soirée : l'heure d'une manche
+  // arrive, et la première demande qui passe l'ouvre pour tout le monde.
+  // Pas de tâche planifiée à installer, et rien ne bouge tant que l'hôte
+  // n'a pas lancé la première.
+  await ouvrirCeQuiDoitLEtre(moi.soiree_id).catch(() => {});
 
   const [rounds, { data: matchs }] = await Promise.all([
     manches(moi.soiree_id),

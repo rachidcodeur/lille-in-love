@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { CrushComposer, type Candidat } from '@/components/admin/CrushComposer';
 import { CrushPilotage } from '@/components/admin/CrushPilotage';
 import { ActiverCrush } from '@/components/admin/ActiverCrush';
-import { manches, participants } from '@/lib/crush';
+import { manches, ouvrirCeQuiDoitLEtre, participants } from '@/lib/crush';
 import { notificationsPossibles } from '@/lib/notifications';
 import { facettes, vignettes } from '@/lib/admin';
 import { getSoiree } from '@/lib/soirees';
@@ -27,6 +27,9 @@ export default async function CrushPage({ params }: Props) {
 
   try {
     const fiches = await facettes();
+    // L'écran de l'hôte fait avancer la soirée au même titre que les
+    // téléphones : c'est souvent le seul ouvert pendant qu'on fait l'appel.
+    await ouvrirCeQuiDoitLEtre(id).catch(() => {});
     [gens, rounds] = await Promise.all([participants(id), manches(id)]);
 
     // Qui est déjà de la soirée, pour le montrer sans permettre de le
@@ -98,6 +101,7 @@ export default async function CrushPage({ params }: Props) {
             participants={gens.filter((p) => !p.retire_at).length}
           />
           <CrushPilotage
+            soireeId={id}
             manches={rounds}
             gens={gens}
             notificationsConfigurees={notificationsPossibles()}

@@ -1358,12 +1358,17 @@ a.adm-btn:hover {
   border-color: var(--gold);
 }
 
+/* Le bouton qui engage : l'or profond de la charte, pas un vert de
+   validation emprunté ailleurs. Il doit ressortir sur le crème sans jurer
+   avec le reste de la page. */
 .adm-btn-yes {
-  background: #38634a;
-  color: #f2f7f3;
+  background: var(--gold-deep);
+  color: var(--white);
+  border-color: var(--gold-deep);
 }
 .adm-btn-yes:hover:not(:disabled) {
-  background: #2e5440;
+  background: #8f7d59;
+  border-color: #8f7d59;
 }
 
 .adm-btn-wait {
@@ -2649,4 +2654,24 @@ a.adm-btn:hover {
   color: var(--success);
   font-size: 10px;
   line-height: 1;
+}
+
+/* --- Régler les heures pour un essai ----------------------------------- */
+
+/* Replié : c'est un geste d'atelier, pas un geste de soirée. */
+.adm-essai {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--cream);
+}
+
+.adm-essai summary {
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--ink-muted);
+}
+
+.adm-essai[open] summary {
+  margin-bottom: 16px;
+  color: var(--ink);
 }

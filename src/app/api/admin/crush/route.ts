@@ -10,6 +10,7 @@ import {
   fermerManche,
   nouveauCode,
   ouvrirManche,
+  reglerLesManches,
   remettre,
   retirer,
 } from '@/lib/crush';
@@ -61,6 +62,12 @@ const schema = z.discriminatedUnion('action', [
       .regex(/^\d{4}-\d{2}-\d{2}$/)
       .optional()
       .or(z.literal('').transform(() => undefined)),
+  }),
+  z.object({
+    action: z.literal('regler'),
+    soireeId: z.string().uuid(),
+    dureeMinutes: z.number().int().min(1).max(240),
+    pauseMinutes: z.number().int().min(0).max(240),
   }),
   z.object({ action: z.literal('ouvrir'), mancheId: z.string().uuid() }),
   z.object({ action: z.literal('fermer'), mancheId: z.string().uuid() }),
@@ -118,6 +125,14 @@ export async function POST(request: Request) {
           birth_date: commande.naissance ?? null,
         });
         return NextResponse.json({ ok: true, bilan });
+      }
+      case 'regler': {
+        const combien = await reglerLesManches({
+          soireeId: commande.soireeId,
+          dureeMinutes: commande.dureeMinutes,
+          pauseMinutes: commande.pauseMinutes,
+        });
+        return NextResponse.json({ ok: true, manches: combien });
       }
       case 'ouvrir':
         await ouvrirManche(commande.mancheId);

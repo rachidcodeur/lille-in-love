@@ -1,7 +1,7 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { colonne, lireCsv } from './csv';
 import { age, peutVoir, type Genre, type Orientation } from './crush-regles';
-import { estOuverte, finPrevue } from './manches';
+import { DUREE_PAR_DEFAUT, estOuverte, finPrevue } from './manches';
 import { notifier } from './notifications';
 import { nomManche } from './crush-regles';
 import { supabaseAdmin } from './supabase';
@@ -721,6 +721,44 @@ export async function remettre(participantId: string): Promise<void> {
    Ouvrir et fermer une manche
    ==================================================================== */
 
+/**
+ * Ouvrir ce dont l'heure est venue.
+ *
+ * L'hôte lance la première manche à la main ; les suivantes s'ouvrent
+ * seules à l'heure annoncée. Rien ne part avant ce premier geste — une
+ * soirée qui démarre toute seule parce qu'on a oublié de corriger une
+ * heure est pire qu'une soirée qui attend.
+ *
+ * Appelée depuis la veille des participants, donc potentiellement par
+ * cinquante téléphones à la même seconde. D'où l'écriture conditionnelle :
+ * « ouvre si ce n'est pas déjà ouvert » est une seule instruction côté
+ * base, et seul celui qui récupère la ligne envoie la notification.
+ */
+export async function ouvrirCeQuiDoitLEtre(soireeId: string): Promise<void> {
+  const toutes = await manches(soireeId);
+
+  // Rien tant que l'hôte n'a pas donné le départ.
+  if (!toutes.some((m) => m.ouvert_at)) return;
+
+  const maintenant = Date.now();
+  const due = toutes.find(
+    (m) => !m.ouvert_at && !m.ferme_at && new Date(m.prevu_a).getTime() <= maintenant,
+  );
+  if (!due) return;
+
+  // Une manche déjà ouverte ailleurs ne doit pas se rouvrir : on ne touche
+  // que si ouvert_at est encore vide, et la base arbitre.
+  const { data } = await supabaseAdmin()
+    .from('lil_crush_rounds')
+    .update({ ouvert_at: new Date().toISOString() })
+    .eq('id', due.id)
+    .is('ouvert_at', null)
+    .select('id')
+    .maybeSingle();
+
+  if (data) await previenirOuverture(due.id);
+}
+
 /** Deux ouvertures à moins d'une minute : c'est le même geste, hésitant. */
 const REPIT_NOTIFICATION = 60_000;
 
@@ -737,15 +775,29 @@ const REPIT_NOTIFICATION = 60_000;
  * s'est pas ouvert serait pire que de ne rien annoncer.
  */
 export async function ouvrirManche(mancheId: string): Promise<void> {
-  const db = supabaseAdmin();
-
-  const { data: manche, error } = await db
+  const { data: manche, error } = await supabaseAdmin()
     .from('lil_crush_rounds')
     .update({ ouvert_at: new Date().toISOString(), ferme_at: null })
     .eq('id', mancheId)
-    .select('*')
+    .select('id')
     .maybeSingle();
   if (error) throw new Error(error.message);
+  if (manche) await previenirOuverture(mancheId);
+}
+
+/**
+ * Prévenir la salle qu'une manche s'ouvre.
+ *
+ * Après l'écriture, jamais avant : annoncer un crush time qui ne s'est pas
+ * ouvert serait pire que de ne rien annoncer.
+ */
+async function previenirOuverture(mancheId: string): Promise<void> {
+  const db = supabaseAdmin();
+  const { data: manche } = await db
+    .from('lil_crush_rounds')
+    .select('*')
+    .eq('id', mancheId)
+    .maybeSingle();
   if (!manche) return;
 
   const derniere = manche.notifie_at ? new Date(manche.notifie_at).getTime() : 0;
@@ -757,7 +809,7 @@ export async function ouvrirManche(mancheId: string): Promise<void> {
     .eq('soiree_id', manche.soiree_id)
     .is('retire_at', null);
 
-  const minutes = manche.duree_minutes ?? 15;
+  const minutes = manche.duree_minutes ?? DUREE_PAR_DEFAUT;
   await notifier(
     (gens ?? []).map((p) => p.id),
     {
@@ -821,4 +873,50 @@ export async function essaiNotification(
     lien: '/crush',
     etiquette: 'crush-essai',
   });
+}
+
+/**
+ * Régler les manches pour un essai, ou pour de vrai.
+ *
+ * Un essai ne se joue pas à 21h, 22h30 et 23h45 : on veut voir les trois
+ * manches s'enchaîner tout de suite. Plutôt que de faire recalculer trois
+ * heures à la main — et de se tromper —, on les pose ici : la première
+ * maintenant, les suivantes à la file.
+ *
+ * Les heures ne font que décrire quand une manche devrait s'ouvrir. L'hôte
+ * lance la première à la main ; c'est ce geste qui arme la suite.
+ */
+export async function reglerLesManches(options: {
+  soireeId: string;
+  dureeMinutes: number;
+  /** Minutes entre la fin d'une manche et le début de la suivante. */
+  pauseMinutes: number;
+  /** D'où part la série. Par défaut, maintenant. */
+  depart?: Date;
+}): Promise<number> {
+  const db = supabaseAdmin();
+  const toutes = await manches(options.soireeId);
+  if (toutes.length === 0) return 0;
+
+  const depart = options.depart ?? new Date();
+  const pas = (options.dureeMinutes + options.pauseMinutes) * 60_000;
+
+  await Promise.all(
+    toutes.map((manche, index) =>
+      db
+        .from('lil_crush_rounds')
+        .update({
+          prevu_a: new Date(depart.getTime() + index * pas).toISOString(),
+          duree_minutes: options.dureeMinutes,
+          // On repart de zéro : une manche déjà jouée ne doit pas rester
+          // close, ni se croire déjà annoncée.
+          ouvert_at: null,
+          ferme_at: null,
+          notifie_at: null,
+        })
+        .eq('id', manche.id),
+    ),
+  );
+
+  return toutes.length;
 }
