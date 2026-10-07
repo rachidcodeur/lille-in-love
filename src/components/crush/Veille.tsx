@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { alerterMatch, alerterOuverture, preparerLeSon } from '@/lib/alerte';
+import { alerterOuverture, preparerLeSon } from '@/lib/alerte';
 
 /**
  * Regarder, de loin en loin, si quelque chose a changé.
@@ -38,8 +38,11 @@ export function Veille({ matchs, manche }: { matchs: number; manche: string | nu
 
         // Application ouverte sous les yeux : le système n'affiche aucune
         // notification, c'est donc à nous de faire remarquer la nouvelle.
-        if (etat.matchs > matchs) alerterMatch();
-        else if (etat.manche && etat.manche !== manche) alerterOuverture();
+        //
+        // Le match, lui, ne sonne pas ici : le redessin fait apparaître
+        // l'annonce, et c'est elle qui joue sa fanfare. La faire sonner des
+        // deux endroits donnait deux arpèges qui se chevauchent.
+        if (etat.manche && etat.manche !== manche) alerterOuverture();
 
         router.refresh();
       } catch {

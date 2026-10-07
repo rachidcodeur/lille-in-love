@@ -42,6 +42,21 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
   qu'il n'est pas rendu : l'afficher en attente ne dit rien d'utile et
   installe une surveillance qui n'a pas sa place dans une soirée. Que le
   choix ait été pris en compte, le bandeau du haut le dit déjà.
+- **Un match s'annonce en grand**, et ne se range pas dans une liste. Plein
+  écran, les deux visages, un cœur qui bat entre les deux, les deux prénoms
+  réunis, les coordonnées en dessous, et une petite fanfare. C'est le moment
+  que la soirée promet ; il tenait jusqu'ici dans une carte sobre comme les
+  autres.
+- **Un match reçu pendant qu'on n'était pas là se rejoue à l'ouverture**, avec
+  les mêmes effets. Les deux personnes ne regardent pas leur téléphone au
+  même moment, et c'est tout le problème : celui qui ferme la boucle voit
+  l'annonce dans la seconde, l'autre avait le téléphone en poche. La base
+  garde donc, de chaque côté, si l'annonce a été vue — `vu_a_at`, `vu_b_at`.
+  Celui qui like en dernier est noté comme ayant vu dès l'écriture du match ;
+  l'autre déclenche l'annonce en rouvrant. Une bonne nouvelle annoncée deux
+  fois n'en est plus une, et la note part dès l'affichage, pas à la
+  fermeture : un téléphone qu'on repose sans toucher au bouton ne la reverra
+  pas demain.
 - **Un match donne les trois photos**, le téléphone, l'email et l'Instagram.
   Un like en attente ne donne rien de tout cela : c'est au match qu'on décide
   si l'on écrit, et un seul visage ne suffit pas.
@@ -182,9 +197,17 @@ Le dernier cas est le plus important et le seul qu'on contrôle : quand
 l'application est ouverte sous les yeux, **le système n'affiche aucune
 notification**. Un écran qui se redessine en silence ne se remarque pas
 dans une salle bruyante. La veille joue donc elle-même deux notes montantes
-à l'ouverture d'une manche, trois pour un match — synthétisées, sans
-fichier à charger. Le son doit être déverrouillé par un geste : on le
-prépare dès l'arrivée sur la page, bien avant d'en avoir besoin.
+à l'ouverture d'une manche ; le match, lui, a sa propre fanfare — un accord
+majeur qui monte sur quatre notes, puis la tonique tenue. Le tout
+synthétisé, sans fichier à charger, et programmé d'un coup sur l'horloge
+audio : au minuteur, l'arpège sonnerait de travers.
+
+Le son doit être déverrouillé par un geste : on le prépare dès l'arrivée
+sur la page, bien avant d'en avoir besoin. Reste un cas où le geste n'a pas
+encore eu lieu — l'application ouverte depuis l'icône sur un match reçu en
+son absence, où l'annonce s'affiche avant tout contact avec l'écran. La
+fanfare est alors mise de côté et part à la première touche, qui ne tarde
+pas puisqu'il y a un bouton sous les yeux.
 
 Les clés VAPID vivent dans `.env.local` (`NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
 `VAPID_PRIVATE_KEY`). **Sans elles, rien n'est envoyé et tout le reste
@@ -229,7 +252,8 @@ atteindre la session du back-office. Repli possible sur
 
 `13_crushtime.sql` (le schéma), `14_ordre_photos.sql` (l'ordre des photos),
 `15_duree_manches.sql` (les quinze minutes), `16_code_personnel.sql` (le
-code de chacun), `17_notifications.sql` (la trace des envois).
+code de chacun), `17_notifications.sql` (la trace des envois),
+`18_match_vu.sql` (l'annonce vue, de chaque côté).
 
 ## Voir tout ça en local
 

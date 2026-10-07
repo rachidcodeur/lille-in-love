@@ -18,6 +18,8 @@
  */
 
 let contexte: AudioContext | null = null;
+/** Ce qu'on n'a pas pu jouer faute de geste, et qu'on jouera au premier. */
+let enAttente: (() => void) | null = null;
 
 /**
  * Déverrouiller le son au premier geste.
@@ -36,6 +38,12 @@ export function preparerLeSon(): () => void {
       if (!Fabrique) return;
       contexte ??= new Fabrique();
       if (contexte.state === 'suspended') void contexte.resume();
+      // Une fanfare arrivée avant le premier geste a été mise de côté :
+      // c'est le cas de l'application ouverte depuis l'icône, où le match
+      // s'affiche avant qu'on ait touché quoi que ce soit.
+      const differee = enAttente;
+      enAttente = null;
+      if (differee) setTimeout(differee, 60);
     } catch {
       /* pas de son : ce n'est pas grave, l'écran dit la même chose */
     }
@@ -45,28 +53,45 @@ export function preparerLeSon(): () => void {
   return () => document.removeEventListener('pointerdown', ouvrir);
 }
 
-/** Deux notes brèves, montantes ou descendantes selon la nouvelle. */
-function jouer(notes: [number, number], duree: number) {
+/** Une note, à un moment donné, d'un volume donné. */
+function note(frequence: number, retard: number, duree: number, force = 0.22) {
   if (!contexte || contexte.state !== 'running') return;
 
-  notes.forEach((frequence, index) => {
-    const oscillateur = contexte!.createOscillator();
-    const volume = contexte!.createGain();
-    const debut = contexte!.currentTime + index * duree;
+  const oscillateur = contexte.createOscillator();
+  const volume = contexte.createGain();
+  const debut = contexte.currentTime + retard;
 
-    oscillateur.type = 'sine';
-    oscillateur.frequency.value = frequence;
+  oscillateur.type = 'sine';
+  oscillateur.frequency.value = frequence;
 
-    // Une attaque douce et une extinction progressive : un son carré
-    // claque et s'entend comme une erreur.
-    volume.gain.setValueAtTime(0, debut);
-    volume.gain.linearRampToValueAtTime(0.22, debut + 0.015);
-    volume.gain.exponentialRampToValueAtTime(0.001, debut + duree);
+  // Une attaque douce et une extinction progressive : un son carré claque
+  // et s'entend comme une erreur.
+  volume.gain.setValueAtTime(0, debut);
+  volume.gain.linearRampToValueAtTime(force, debut + 0.015);
+  volume.gain.exponentialRampToValueAtTime(0.001, debut + duree);
 
-    oscillateur.connect(volume).connect(contexte!.destination);
-    oscillateur.start(debut);
-    oscillateur.stop(debut + duree);
-  });
+  oscillateur.connect(volume).connect(contexte.destination);
+  oscillateur.start(debut);
+  oscillateur.stop(debut + duree);
+}
+
+/** Deux notes brèves, montantes ou descendantes selon la nouvelle. */
+function jouer(notes: [number, number], duree: number) {
+  notes.forEach((frequence, index) => note(frequence, index * duree, duree));
+}
+
+/**
+ * Jouer, ou retenir pour le premier geste.
+ *
+ * Un match reçu pendant qu'on n'était pas dans l'application s'affiche dès
+ * l'ouverture, avant tout contact avec l'écran — et le navigateur refuse
+ * alors tout son. Plutôt que de perdre la fanfare, on la garde : elle
+ * partira à la première touche, qui ne tardera pas puisqu'il y a un bouton
+ * sous les yeux.
+ */
+function jouerOuAttendre(fanfare: () => void) {
+  if (contexte?.state === 'running') fanfare();
+  else enAttente = fanfare;
 }
 
 function vibrer(motif: number[]) {
@@ -80,9 +105,23 @@ export function alerterOuverture() {
   vibrer([80, 60, 80]);
 }
 
-/** Un match : trois notes, et plus long — ça se fête. */
+/**
+ * Un match : une petite fanfare.
+ *
+ * Un accord majeur qui monte (fa, la, do, fa), puis la tonique tenue une
+ * octave au-dessus avec sa quinte : quatre notes se remarquent dans une
+ * salle bruyante là où deux passent pour un accusé de réception. Tout est
+ * programmé d'un coup sur l'horloge audio, et non au minuteur : à cette
+ * échelle, setTimeout dérive assez pour que l'arpège sonne de travers.
+ */
 export function alerterMatch() {
-  jouer([660, 990], 0.2);
-  setTimeout(() => jouer([1320, 1320], 0.22), 400);
-  vibrer([110, 70, 110, 70, 180]);
+  jouerOuAttendre(() => {
+    const arpege = [698.46, 880, 1046.5, 1396.9];
+    arpege.forEach((frequence, index) => note(frequence, index * 0.11, 0.3, 0.2));
+    // L'accord final, posé sur la dernière note de l'arpège et tenu : c'est
+    // lui qui donne l'impression d'un aboutissement et non d'une suite.
+    note(1396.9, 0.44, 0.9, 0.17);
+    note(2093, 0.46, 0.8, 0.09);
+  });
+  vibrer([110, 70, 110, 70, 240]);
 }

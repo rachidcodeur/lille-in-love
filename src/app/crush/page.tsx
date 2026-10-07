@@ -3,7 +3,9 @@ import {
   finPrevue,
   manches,
   matchsDe,
+  matchsNonVus,
   monLike,
+  monProfil,
   profilsPour,
   soireeActive,
 } from '@/lib/crush';
@@ -11,6 +13,7 @@ import { participantConnecte } from '@/lib/crush-session';
 import { CrushEntree } from '@/components/crush/CrushEntree';
 import { CrushProfils } from '@/components/crush/CrushProfils';
 import { CrushMatchs } from '@/components/crush/CrushMatchs';
+import { CrushFete } from '@/components/crush/CrushFete';
 import { CrushAttente } from '@/components/crush/CrushAttente';
 import { Veille } from '@/components/crush/Veille';
 import { Installation } from '@/components/crush/Installation';
@@ -59,7 +62,15 @@ export default async function CrushPage({ searchParams }: Props) {
     );
   }
 
-  const [rounds, matchs] = await Promise.all([manches(moi.soiree_id), matchsDe(moi)]);
+  // « aFeter » : les matchs dont l'annonce ne m'a pas encore été faite.
+  // Celui qui a liké le dernier les a vus tout de suite ; l'autre avait le
+  // téléphone en poche, et c'est à l'ouverture qu'on les lui montre.
+  const [rounds, matchs, aFeter, moiEnProfil] = await Promise.all([
+    manches(moi.soiree_id),
+    matchsDe(moi),
+    matchsNonVus(moi),
+    monProfil(moi),
+  ]);
   const manche = rounds.find(estOuverte) ?? null;
   // Celui d'après : savoir qu'il reste un tour, et à quelle heure, change
   // la façon dont on dépense son unique like.
@@ -76,6 +87,13 @@ export default async function CrushPage({ searchParams }: Props) {
       {/* L'écran se remet à jour tout seul quand l'autre rend son like, ou
           quand un crush time s'ouvre. */}
       <Veille matchs={matchs.length} manche={manche?.id ?? null} />
+
+      {/* Le moment de la soirée. Il passe devant tout le reste, y compris
+          devant un profil resté ouvert. */}
+      <CrushFete
+        moi={{ prenom: moi.first_name, photo: moiEnProfil?.photo ?? null }}
+        attendus={aFeter}
+      />
 
       <Installation jeton={moi.jeton} prenom={moi.first_name} />
 

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import type { Profil } from '@/lib/crush';
 import { nomManche } from '@/lib/crush-regles';
 import { Compte } from './Compte';
+import { EVENEMENT_MATCH } from './CrushFete';
 
 /**
  * Les profils de la manche, deux par rangée.
@@ -55,7 +56,6 @@ export function CrushProfils({
   const router = useRouter();
   const [ouvert, setOuvert] = useState<Profil | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
-  const [nouveauMatch, setNouveauMatch] = useState<Profil | null>(null);
 
   /**
    * Le choix, affiché avant que le serveur réponde.
@@ -97,7 +97,13 @@ export function CrushProfils({
       return;
     }
 
-    if (res?.match) setNouveauMatch(res.match);
+    // La fête est tenue par un composant qui couvre l'écran entier, monté
+    // plus haut : on lui passe la nouvelle plutôt que d'attendre le
+    // redessin du serveur, qui mettrait une demi-seconde entre le geste et
+    // les deux visages.
+    if (res?.match) {
+      window.dispatchEvent(new CustomEvent<Profil>(EVENEMENT_MATCH, { detail: res.match }));
+    }
     // En arrière-plan : le compteur des matchs et la liste des likes se
     // remettent à jour sans que personne attende devant son écran.
     router.refresh();
@@ -246,28 +252,6 @@ export function CrushProfils({
         </div>
       )}
 
-      {/* --- Le match, qui doit s'annoncer tout seul --- */}
-      {nouveauMatch && (
-        <div className="cr-voile" role="dialog" aria-modal="true" onClick={() => setNouveauMatch(null)}>
-          <div className="cr-fiche cr-match" onClick={(e) => e.stopPropagation()}>
-            <p className="cr-match-mot">C’est un match</p>
-            {nouveauMatch.photo && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img className="cr-fiche-photo" src={nouveauMatch.photo} alt="" />
-            )}
-            <h2 className="cr-fiche-nom">
-              {nouveauMatch.first_name}
-              {nouveauMatch.nom ? ` ${nouveauMatch.nom}` : ''}
-            </h2>
-            <p className="cr-texte">
-              Vous vous êtes choisis. Ses coordonnées sont dans l’onglet du bas.
-            </p>
-            <button type="button" className="cr-bouton" onClick={() => setNouveauMatch(null)}>
-              Continuer
-            </button>
-          </div>
-        </div>
-      )}
     </>
   );
 }

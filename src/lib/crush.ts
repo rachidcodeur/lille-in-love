@@ -404,6 +404,8 @@ export type Profil = {
   instagram?: string | null;
   /** Toutes ses photos, dans l'ordre. Réservé aux matchs, comme le contact. */
   photos?: string[];
+  /** L'identifiant du match, quand ce profil en vient d'un. */
+  matchId?: string;
 };
 
 /** « Haddad » devient « Had. ». Vide ou trop court, rien du tout. */
@@ -560,7 +562,17 @@ export async function liker(moi: Participant, versId: string): Promise<ResultatL
   const { error: eMatch } = await db
     .from('lil_crush_matches')
     .upsert(
-      { soiree_id: moi.soiree_id, round_id: manche.id, a_id, b_id },
+      {
+        soiree_id: moi.soiree_id,
+        round_id: manche.id,
+        a_id,
+        b_id,
+        // Mon côté est noté vu dès l'écriture : la fête s'affiche sous mes
+        // yeux dans la seconde, elle n'a pas à m'être rejouée demain. Le
+        // côté de l'autre reste vide — c'est lui qui déclenchera l'annonce
+        // à sa prochaine ouverture.
+        [a_id === moi.id ? 'vu_a_at' : 'vu_b_at']: new Date().toISOString(),
+      },
       { onConflict: 'soiree_id,a_id,b_id', ignoreDuplicates: true },
     );
   if (eMatch) return { ok: false, raison: eMatch.message };
@@ -625,6 +637,71 @@ export async function monLike(moi: Participant, mancheId: string): Promise<strin
     .eq('de_id', moi.id)
     .maybeSingle();
   return data?.vers_id ?? null;
+}
+
+/**
+ * Les matchs dont je n'ai pas encore vu l'annonce.
+ *
+ * Celui qui ferme la boucle voit son match tout de suite ; l'autre a
+ * peut-être le téléphone en poche. L'annonce l'attend donc, et se rejoue à
+ * sa prochaine ouverture — c'est le moment de la soirée, il ne doit pas se
+ * perdre dans une liste.
+ */
+export async function matchsNonVus(moi: Participant): Promise<Profil[]> {
+  const db = supabaseAdmin();
+  const { data } = await db
+    .from('lil_crush_matches')
+    .select('id, a_id, b_id, vu_a_at, vu_b_at')
+    .or(`a_id.eq.${moi.id},b_id.eq.${moi.id}`)
+    .order('created_at', { ascending: true });
+
+  const attendus = (data ?? []).filter((m) =>
+    m.a_id === moi.id ? !m.vu_a_at : !m.vu_b_at,
+  );
+  if (attendus.length === 0) return [];
+
+  const { data: gens } = await db
+    .from('lil_crush_participants')
+    .select('*')
+    .in(
+      'id',
+      attendus.map((m) => (m.a_id === moi.id ? m.b_id : m.a_id)),
+    );
+
+  const profils = await habiller((gens ?? []) as Participant[], { contact: true });
+  const parId = new Map(profils.map((p) => [p.id, p]));
+
+  const sortie: Profil[] = [];
+  for (const m of attendus) {
+    const autre = parId.get(m.a_id === moi.id ? m.b_id : m.a_id);
+    if (autre) sortie.push({ ...autre, matchId: m.id });
+  }
+  return sortie;
+}
+
+/** Noter que l'annonce a été vue, du bon côté. */
+export async function marquerMatchVu(moi: Participant, matchId: string): Promise<void> {
+  const db = supabaseAdmin();
+  const { data: match } = await db
+    .from('lil_crush_matches')
+    .select('a_id, b_id')
+    .eq('id', matchId)
+    .maybeSingle();
+  if (!match) return;
+
+  const cote = match.a_id === moi.id ? 'vu_a_at' : match.b_id === moi.id ? 'vu_b_at' : null;
+  if (!cote) return;
+
+  await db
+    .from('lil_crush_matches')
+    .update({ [cote]: new Date().toISOString() })
+    .eq('id', matchId);
+}
+
+/** Moi, tel que les autres me voient. */
+export async function monProfil(moi: Participant): Promise<Profil | null> {
+  const [profil] = await habiller([moi]);
+  return profil ?? null;
 }
 
 /** Mes matchs, avec de quoi se retrouver après la soirée. */

@@ -2318,10 +2318,26 @@ await passerInstallation(tel2);
 await tel2.locator('.cr-carte', { hasText: 'Inès' }).locator('.cr-coeur-carte').click();
 await jusqua(async () => (await state()).crushMatches.length === 1);
 
-(await tel2.locator('.cr-match-mot').innerText().catch(() => ''))
+(await tel2.locator('.cr-fete-mot').innerText().catch(() => ''))
   .includes('match')
   ? ok('le match s’annonce tout de suite à celui qui ferme la boucle')
   : bad('aucun match annoncé');
+
+// Deux visages et un cœur : c'est le moment de la soirée, il ne tient pas
+// dans une carte sobre comme les autres.
+(await tel2.locator('.cr-fete-tete').count()) === 2
+  ? ok('les deux visages sont là, le sien et celui de l’autre')
+  : bad('la fête ne montre pas les deux têtes', String(await tel2.locator('.cr-fete-tete').count()));
+(await tel2.locator('.cr-fete-coeur svg').count()) === 1
+  ? ok('et un grand cœur entre les deux')
+  : bad('pas de cœur dans la fête');
+(await tel2.locator('.cr-fete-noms').innerText()).includes('Inès')
+  ? ok('les deux prénoms sont réunis sous les visages')
+  : bad('prénoms manquants', await tel2.locator('.cr-fete-noms').innerText());
+// Le contact est dans l'annonce : c'est ce qu'on vient y chercher.
+(await tel2.locator('.cr-fete-contact').count()) > 0
+  ? ok('les coordonnées sont données dans l’annonce même')
+  : bad('aucune coordonnée dans l’annonce');
 
 s = await state();
 s.crushMatches.length === 1
@@ -2330,6 +2346,43 @@ s.crushMatches.length === 1
 s.crushMatches[0].a_id < s.crushMatches[0].b_id
   ? ok('la paire est rangée : deux clics simultanés ne peuvent pas la dédoubler')
   : bad('paire non ordonnée');
+
+// --- Celle qui avait le téléphone en poche -------------------------
+// Inès a liké la première et a rangé son téléphone. Le match s'est fait
+// sans elle : la veille doit le lui annoncer avec les mêmes effets, sans
+// qu'elle ait rien à chercher.
+(await jusqua(async () => (await tel.locator('.cr-fete-tetes').count()) > 0, 25_000))
+  ? ok('le match reçu pendant l’absence s’annonce à l’ouverture, pas dans une liste')
+  : bad('aucune annonce pour celle qui n’avait pas fermé la boucle');
+(await tel.locator('.cr-fete-noms').innerText()).includes('Samir')
+  ? ok('et c’est bien le bon visage qui lui est annoncé')
+  : bad('mauvais nom dans l’annonce', await tel.locator('.cr-fete-noms').innerText());
+
+await tel.locator('.cr-fete-ok').click();
+await tel.waitForTimeout(400);
+(await tel.locator('.cr-fete-tetes').count()) === 0
+  ? ok('l’annonce se referme sur « Continuer »')
+  : bad('l’annonce reste à l’écran');
+
+// La note « vu » part en arrière-plan, sans que personne attende devant
+// son écran : on la guette plutôt que de la supposer arrivée.
+(await jusqua(async () => {
+  const m = (await state()).crushMatches[0];
+  return Boolean(m?.vu_a_at && m?.vu_b_at);
+}))
+  ? ok('les deux côtés sont notés comme vus : la fête ne se rejouera pas')
+  : bad('un côté reste non vu', JSON.stringify((await state()).crushMatches[0]));
+
+// Et elle ne revient pas au rechargement suivant : une bonne nouvelle
+// annoncée deux fois n'en est plus une.
+await tel.reload({ waitUntil: 'networkidle' });
+await tel.waitForTimeout(800);
+// Le pas d'installation revient à chaque chargement tant que l'application
+// n'est pas posée sur l'écran d'accueil : on le repasse.
+await passerInstallation(tel);
+(await tel.locator('.cr-fete-tetes').count()) === 0
+  ? ok('et elle ne se rejoue pas au rechargement')
+  : bad('l’annonce revient alors qu’elle a été vue');
 
 // --- Le match, une fois qu'il est fait -----------------------------
 // La veille redessine la page toutes les huit secondes : on attend que le
@@ -2373,10 +2426,23 @@ contacts.includes('+33612345678') && contacts.includes('samir@soiree.test')
 await tel.locator('.cr-fermer').click();
 await tel.waitForTimeout(300);
 
+// Le contact de quelqu'un qu'on n'a pas matché ne doit nulle part traîner
+// dans la page — pas plus dans les données que le serveur y dépose que dans
+// ce qui s'affiche : l'avoir suffirait à court-circuiter le jeu.
+//
+// Celui de Samir, lui, y est légitimement : Inès vient de matcher avec lui,
+// l'annonce le lui a donné et l'onglet le garde.
 const htmlProfils = await tel.content();
-!htmlProfils.includes('samir@soiree.test')
-  ? ok('et jamais dans la page des profils, où elle court-circuiterait le jeu')
-  : bad('une adresse email fuite dans la liste des profils');
+!htmlProfils.includes('thomas@soiree.test')
+  ? ok('et le contact d’un profil non matché ne traîne nulle part dans la page')
+  : bad(
+      'une adresse email fuite dans la liste des profils',
+      htmlProfils
+        .split('thomas@soiree.test')
+        .slice(0, 2)
+        .map((bout) => bout.slice(-260))
+        .join(' <<<ICI>>> '),
+    );
 
 // --- La photo de quelqu'un d'une autre soirée est refusée ----------
 const [intruse] = await (
