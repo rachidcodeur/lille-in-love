@@ -11,6 +11,8 @@ import {
 } from '@/lib/libelles';
 import { FicheActions } from '@/components/admin/FicheActions';
 import { PhotoGallery } from '@/components/admin/PhotoGallery';
+import { AjouterPhoto } from '@/components/admin/AjouterPhoto';
+import { CorrigerGenre } from '@/components/admin/CorrigerGenre';
 import { AnnulerEnvoi } from '@/components/admin/AnnulerEnvoi';
 import { GroupePicker } from '@/components/admin/GroupePicker';
 import { ActionsCorbeille } from '@/components/admin/ActionsCorbeille';
@@ -188,6 +190,19 @@ export default async function FichePage({ params }: Props) {
               <span className="adm-card-aside">{photos.length} / 3</span>
             </div>
             <PhotoGallery photos={photos} firstName={member.first_name} memberId={member.id} />
+
+            {/* Une candidature sans photo ne montre qu'une initiale sur
+                fond beige — autant dire rien, un soir où tout se joue sur
+                un visage. */}
+            <AjouterPhoto memberId={member.id} place={3 - photos.length} />
+          </div>
+
+          <div className="adm-card">
+            <div className="adm-card-head">
+              <p className="adm-card-title">Femme ou homme</p>
+              <span className="adm-card-aside">{label.gender(member.gender)}</span>
+            </div>
+            <CorrigerGenre memberId={member.id} genre={member.gender} />
           </div>
 
           <div className="adm-card">

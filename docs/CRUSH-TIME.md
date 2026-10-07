@@ -51,7 +51,12 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
   l'écran.
 - **La photo de tête** est celle rangée en position 1 dans le back-office,
   réordonnable par glissé-déposé. Elle décide à peu près seule du sort d'un
-  profil.
+  profil. Une candidature sans photo peut en recevoir une à la main depuis
+  sa fiche, et chaque photo se retire — le fichier part avec la ligne.
+- **Le genre se corrige depuis la fiche.** Quelqu'un coche la mauvaise case,
+  et toute la soirée en découle : le genre décide de qui voit qui. La
+  correction suit jusque dans les soirées où la personne est déjà inscrite,
+  qui en gardent une copie figée à l'inscription.
 - Un like se confirme avant d'être écrit, puisqu'il ne se reprend pas.
 
 ## Composer la soirée

@@ -413,3 +413,115 @@ export async function listCurators(): Promise<{ id: string; full_name: string | 
     .order('created_at', { ascending: true });
   return data ?? [];
 }
+
+/* ====================================================================
+   Corriger une fiche à la main
+   ==================================================================== */
+
+/**
+ * Ajouter une photo à une candidature.
+ *
+ * Il en manque parfois : un envoi qui a échoué, un téléphone à court de
+ * place, quelqu'un qui n'avait pas la bonne photo sous la main. Sans elle,
+ * le profil ne montre qu'une initiale sur fond beige — autant dire rien, un
+ * soir où tout se joue sur un visage.
+ *
+ * La place est prise dans l'ordre : la première libre entre 1 et 3. La
+ * position 1 étant celle qu'on voit partout, une candidature sans photo
+ * reçoit donc sa photo de profil du premier coup.
+ */
+export async function ajouterPhoto(options: {
+  memberId: string;
+  octets: Uint8Array;
+  extension: string;
+  mimeType: string;
+}): Promise<{ id: string; position: number }> {
+  const db = supabaseAdmin();
+
+  const { data: existantes } = await db
+    .from('lil_photos')
+    .select('position')
+    .eq('member_id', options.memberId);
+
+  const prises = new Set((existantes ?? []).map((p) => p.position));
+  const position = [1, 2, 3].find((n) => !prises.has(n));
+  if (!position) throw new Error('Trois photos au maximum par candidature.');
+
+  const chemin = `candidatures/${options.memberId}/${position}.${options.extension}`;
+
+  // « upsert » : une position libérée puis reprise réécrit le fichier qui
+  // dormait encore là, plutôt que d'échouer sur un conflit invisible.
+  const { error: envoi } = await db.storage
+    .from(env.storageBucket())
+    .upload(chemin, options.octets, { contentType: options.mimeType, upsert: true });
+  if (envoi) throw new Error(envoi.message);
+
+  const { data, error } = await db
+    .from('lil_photos')
+    .insert({
+      member_id: options.memberId,
+      storage_path: chemin,
+      position,
+      mime_type: options.mimeType,
+      size_bytes: options.octets.length,
+    })
+    .select('id, position')
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data as { id: string; position: number };
+}
+
+/**
+ * Retirer une photo.
+ *
+ * Le fichier part avec la ligne : le laisser dormir dans le bucket
+ * occuperait la place pour toujours, et la position ne pourrait pas être
+ * reprise proprement.
+ */
+export async function supprimerPhoto(photoId: string): Promise<void> {
+  const db = supabaseAdmin();
+
+  const { data: photo } = await db
+    .from('lil_photos')
+    .select('storage_path')
+    .eq('id', photoId)
+    .maybeSingle();
+  if (!photo) return;
+
+  await db.storage.from(env.storageBucket()).remove([photo.storage_path]);
+
+  const { error } = await db.from('lil_photos').delete().eq('id', photoId);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Corriger le genre d'une candidature.
+ *
+ * Quelqu'un se trompe de case, et toute la soirée en découle : le genre
+ * décide de qui voit qui. Le corriger sur la candidature ne suffit pas —
+ * un participant inscrit à une soirée en garde une copie, figée au moment
+ * de l'inscription. Les deux changent ensemble, sinon la correction serait
+ * invisible là où elle compte.
+ */
+export async function changerGenre(
+  memberId: string,
+  genre: 'femme' | 'homme',
+): Promise<void> {
+  const db = supabaseAdmin();
+
+  const { error } = await db.from('lil_members').update({ gender: genre }).eq('id', memberId);
+  if (error) throw new Error(error.message);
+
+  // Les soirées ignorent peut-être tout de cette personne, et la table
+  // peut même ne pas exister : une correction de fiche ne doit pas échouer
+  // pour autant.
+  await db
+    .from('lil_crush_participants')
+    .update({ gender: genre })
+    .eq('member_id', memberId)
+    .then(
+      () => undefined,
+      () => undefined,
+    );
+}

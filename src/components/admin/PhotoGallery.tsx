@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { reparerHeic } from '@/lib/heic';
 
@@ -26,6 +27,7 @@ type Props = {
  * back-office se consulte aussi sur un téléphone.
  */
 export function PhotoGallery({ photos, firstName, memberId }: Props) {
+  const router = useRouter();
   // L'ordre affiché bouge tout de suite, sans attendre le serveur : traîner
   // une photo et la voir revenir en place une demi-seconde donnerait
   // l'impression que le geste a raté.
@@ -219,6 +221,27 @@ export function PhotoGallery({ photos, firstName, memberId }: Props) {
             }
           }}
         />
+
+        {/* Retirer : ajouter une mauvaise photo sans recours serait un
+            piège, et le fichier part avec la ligne. */}
+        {memberId && (
+          <button
+            type="button"
+            className="adm-photo-retirer"
+            title="Retirer cette photo"
+            onClick={async () => {
+              const r = await fetch('/api/admin/fiche', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'retirer-photo', photoId: photo.id }),
+              }).catch(() => null);
+              if (r?.ok) router.refresh();
+              else setSouci('La photo n’a pas pu être retirée.');
+            }}
+          >
+            ×
+          </button>
+        )}
 
         {rangeable &&
           (index === 0 ? (

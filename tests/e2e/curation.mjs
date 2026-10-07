@@ -1677,6 +1677,52 @@ await page.evaluate(() => {
   ? ok('glisser la dernière sur la première les range aussi')
   : bad('ordre inattendu après le glissé', JSON.stringify(await positions()));
 
+// --- Compléter une fiche à la main ----------------------------------
+// Une candidature sans photo ne montre qu'une initiale sur fond beige :
+// autant dire rien, un soir où tout se joue sur un visage.
+await page.goto(`${BASE}/admin/${garance.id}`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(600);
+
+(await page.locator('.adm-photo-ajout').count()) === 0
+  ? ok('aucun ajout proposé quand les trois places sont prises')
+  : bad('on propose une quatrième photo');
+
+// On en retire une, la place se libère.
+await page.locator('.adm-photo-case').first().hover();
+await page.locator('.adm-photo-case').first().locator('.adm-photo-retirer').click();
+await jusqua(async () => (await state()).photos.filter((p) => p.member_id === garance.id).length === 2);
+(await state()).photos.filter((p) => p.member_id === garance.id).length === 2
+  ? ok('une photo se retire, fichier compris')
+  : bad('la photo est encore là');
+
+await page.waitForTimeout(600);
+(await page.locator('.adm-photo-ajout').count()) === 1
+  ? ok('et la place libérée se propose aussitôt')
+  : bad('aucun ajout proposé malgré une place libre');
+
+// Un fichier qui n'est pas une image doit être refusé sur ses octets, et
+// non sur ce que le navigateur annonce.
+const fauxFichier = await page.evaluate(async (id) => {
+  const corps = new FormData();
+  corps.append('memberId', id);
+  corps.append('file', new File(['ceci n’est pas une image'], 'faux.jpg', { type: 'image/jpeg' }));
+  return (await fetch('/api/admin/fiche', { method: 'POST', body: corps })).status;
+}, garance.id);
+fauxFichier === 415
+  ? ok('un fichier qui se dit image sans l’être est refusé')
+  : bad('un faux fichier est passé', String(fauxFichier));
+
+// --- Corriger un genre coché de travers ------------------------------
+const avantGenre = (await state()).members.find((m) => m.id === garance.id)?.gender;
+await page.locator('.adm-corriger summary').click();
+await page.waitForTimeout(300);
+await page.locator('.adm-corriger button').click();
+await jusqua(async () => (await state()).members.find((m) => m.id === garance.id)?.gender !== avantGenre);
+
+(await state()).members.find((m) => m.id === garance.id)?.gender === 'homme'
+  ? ok('le genre se corrige depuis la fiche')
+  : bad('le genre n’a pas changé');
+
 // --- Ce que la liste affiche --------------------------------------
 await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(600);

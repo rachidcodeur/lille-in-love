@@ -2792,3 +2792,88 @@ a.adm-btn:hover {
 .adm-manche[data-etat='ouverte'] {
   border-left-width: 4px;
 }
+
+/* --- Compléter une fiche à la main ------------------------------------ */
+
+.adm-photo-ajout {
+  margin-top: 14px;
+}
+
+/* Le champ de fichier est illisible partout : on le cache et c'est le
+   libellé qui fait le bouton. */
+.adm-photo-ajout label {
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  background: var(--white);
+  border-color: var(--border);
+  color: var(--ink);
+}
+
+.adm-photo-ajout label:hover {
+  border-color: var(--gold);
+}
+
+.adm-photo-ajout label[data-busy] {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.adm-photo-ajout input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Le retrait d'une photo : en haut à gauche, à l'opposé du cœur, et
+   discret — on ne doit pas le toucher en visant autre chose. */
+.adm-photo-retirer {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(28, 19, 15, 0.55);
+  color: #fff;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 150ms ease, background 150ms ease;
+  padding: 0;
+}
+
+.adm-photo-case:hover .adm-photo-retirer,
+.adm-photo-retirer:focus-visible {
+  opacity: 1;
+}
+
+.adm-photo-retirer:hover {
+  background: var(--error);
+}
+
+@media (hover: none) {
+  .adm-photo-retirer {
+    opacity: 1;
+  }
+}
+
+.adm-corriger summary {
+  cursor: pointer;
+  font-size: 13.5px;
+  color: var(--ink-muted);
+}
+
+.adm-corriger[open] summary {
+  color: var(--ink);
+}
+
+.adm-corriger .adm-hint {
+  margin-bottom: 14px;
+}
