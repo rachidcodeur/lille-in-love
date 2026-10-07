@@ -388,6 +388,11 @@ export async function manches(soireeId: string): Promise<Manche[]> {
 export type Profil = {
   id: string;
   first_name: string;
+  /**
+   * Les trois premières lettres du nom, comme le demande le formulaire.
+   * De quoi distinguer deux Thomas sans livrer l'identité de personne.
+   */
+  nom: string | null;
   age: number | null;
   photo: string | null;
   profession: string | null;
@@ -400,6 +405,13 @@ export type Profil = {
   /** Toutes ses photos, dans l'ordre. Réservé aux matchs, comme le contact. */
   photos?: string[];
 };
+
+/** « Haddad » devient « Had. ». Vide ou trop court, rien du tout. */
+function abreger(nom: string | null | undefined): string | null {
+  const propre = (nom ?? '').trim();
+  if (propre.length < 2) return null;
+  return propre.length <= 3 ? propre : `${propre.slice(0, 3)}.`;
+}
 
 /** Les participants qu'une personne peut voir, avec leur photo. */
 export async function profilsPour(moi: Participant): Promise<Profil[]> {
@@ -432,7 +444,7 @@ async function habiller(
     ids.length
       ? db
           .from('lil_members')
-          .select('id, profession, city, about, instagram, phone')
+          .select('id, profession, city, about, instagram, phone, last_name')
           .in('id', ids)
       : Promise.resolve({
           data: [] as {
@@ -442,6 +454,7 @@ async function habiller(
             about: string;
             instagram: string | null;
             phone: string | null;
+            last_name: string | null;
           }[],
         }),
     ids.length
@@ -461,6 +474,10 @@ async function habiller(
   return participants.map((p) => ({
     id: p.id,
     first_name: p.first_name,
+    // Trois lettres, pas une de plus : les anciennes candidatures n'ont pas
+    // de nom du tout, et une chaîne vide ne doit pas s'afficher comme un
+    // point en l'air.
+    nom: abreger(p.member_id ? infos.get(p.member_id)?.last_name : null),
     age: age(p.birth_date),
     photo: p.member_id ? (premiere.get(p.member_id) ?? null) : null,
     profession: p.member_id ? (infos.get(p.member_id)?.profession ?? null) : null,

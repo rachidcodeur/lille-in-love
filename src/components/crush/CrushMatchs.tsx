@@ -61,6 +61,7 @@ export function CrushMatchs({ matchs }: { matchs: Profil[] }) {
 
                   <p className="cr-match-nom">
                     {m.first_name}
+                    {m.nom ? ` ${m.nom}` : ''}
                     {m.age ? ` · ${m.age} ans` : ''}
                   </p>
                   {(m.profession || m.city) && (

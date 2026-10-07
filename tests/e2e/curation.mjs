@@ -2155,6 +2155,23 @@ const entrer = async (email, code) => {
   ? ok('son propre code ouvre la porte depuis le QR de la salle')
   : bad('le code personnel n’ouvre pas');
 
+// --- Changer de profil ----------------------------------------------
+(await tel.locator('.cr-sortir').count()) === 1
+  ? ok('on peut changer de profil — un raccourci supprimé ne déconnecte pas')
+  : bad('aucun moyen de se déconnecter');
+
+await tel.locator('.cr-sortir').click();
+await tel.waitForTimeout(300);
+await tel.getByRole('button', { name: 'Se déconnecter' }).click();
+await jusqua(async () => (await tel.locator('#cr-email').count()) === 1);
+(await tel.locator('#cr-email').count()) === 1
+  ? ok('et l’on retombe sur la porte d’entrée')
+  : bad('la déconnexion ne ramène pas à l’entrée');
+
+(await entrer('ines@soiree.test', '1000'))
+  ? ok('puis l’on peut revenir, ou entrer avec un autre profil')
+  : bad('impossible de se reconnecter après déconnexion');
+
 // --- Le service worker doit couvrir la page elle-même ---------------
 // « /crush », sans barre oblique finale, était hors de la portée
 // « /crush/ » : l'attente d'activation ne se terminait jamais et le bouton
@@ -2171,9 +2188,15 @@ const codeNotifs = await (await fetch(`${BASE}/crush`)).text();
 
 // --- Qui on voit ---------------------------------------------------
 const vus = (await tel.locator('.cr-carte-nom').allInnerTexts()).map((t) => t.split(' ·')[0].trim());
-JSON.stringify(vus.sort()) === JSON.stringify(['Samir', 'Thomas'])
+JSON.stringify(vus.map((v) => v.split(' ')[0]).sort()) === JSON.stringify(['Samir', 'Thomas'])
   ? ok('une femme hétéro ne voit que les hommes de la soirée')
   : bad('profils inattendus', vus.join(', ') || '(aucun)');
+
+// Trois lettres du nom : de quoi distinguer deux Thomas sans livrer
+// l'identité de personne. Seul Samir a une candidature, donc un nom.
+vus.includes('Samir Cru.') && vus.includes('Thomas')
+  ? ok('le prénom est accompagné des trois premières lettres du nom')
+  : bad('nom abrégé absent', vus.join(', '));
 
 (await tel.locator('.cr-grille')).isVisible() &&
 (await tel.locator('.cr-grille').evaluate((el) => getComputedStyle(el).gridTemplateColumns.split(' ').length)) === 2

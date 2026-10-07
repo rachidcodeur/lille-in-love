@@ -167,6 +167,7 @@ export function CrushProfils({
                 <span className="cr-carte-pied">
                   <span className="cr-carte-nom">
                     {profil.first_name}
+                    {profil.nom ? ` ${profil.nom}` : ''}
                     {profil.age ? ` · ${profil.age}` : ''}
                   </span>
                   {aMatche && <span className="cr-carte-match">Match</span>}
@@ -220,6 +221,7 @@ export function CrushProfils({
 
             <h2 className="cr-fiche-nom">
               {ouvert.first_name}
+              {ouvert.nom ? ` ${ouvert.nom}` : ''}
               {ouvert.age ? <span> · {ouvert.age} ans</span> : null}
             </h2>
             {(ouvert.profession || ouvert.city) && (
@@ -253,7 +255,10 @@ export function CrushProfils({
               // eslint-disable-next-line @next/next/no-img-element
               <img className="cr-fiche-photo" src={nouveauMatch.photo} alt="" />
             )}
-            <h2 className="cr-fiche-nom">{nouveauMatch.first_name}</h2>
+            <h2 className="cr-fiche-nom">
+              {nouveauMatch.first_name}
+              {nouveauMatch.nom ? ` ${nouveauMatch.nom}` : ''}
+            </h2>
             <p className="cr-texte">
               Vous vous êtes choisis. Ses coordonnées sont dans l’onglet du bas.
             </p>

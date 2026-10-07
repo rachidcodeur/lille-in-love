@@ -29,6 +29,9 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
 - **Un cœur en haut à droite de chaque carte** : on reconnaît un visage et on
   choisit, sans ouvrir la fiche. La confirmation reste, puisque le geste ne
   se reprend pas.
+- **Les noms** s'affichent avec les trois premières lettres du nom de
+  famille — « Samir Had. ». De quoi distinguer deux Thomas sans livrer
+  l'identité de personne, comme le formulaire le promet en la demandant.
 - **Le profil ouvert** donne prénom, âge, métier, ville, et une présentation
   **coupée vers 140 caractères** — personne ne lit dix lignes debout, et une
   fiche qui s'allonge repousse le bouton hors de l'écran.
@@ -104,7 +107,8 @@ qui le fait au calme, la veille.
 
 La session tient deux jours, dans un cookie. **Supprimer l'icône de
 l'écran d'accueil ne déconnecte pas** : ce sont deux choses séparées, et
-Safari garde ce qu'il sait.
+Safari garde ce qu'il sait. D'où « Connecté en tant que X — changer » tout
+en bas, pour essayer plusieurs profils depuis un seul téléphone.
 
 ## L'installation et les notifications
 

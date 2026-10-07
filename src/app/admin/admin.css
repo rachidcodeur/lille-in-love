@@ -2642,11 +2642,17 @@ a.adm-btn:hover {
   font-variant-numeric: lining-nums tabular-nums;
 }
 
-/* Personne d'abonné : ce n'est pas un détail, c'est une soirée muette. */
+/* Personne d'abonné : c'est un avertissement, pas une panne. Rien n'est
+   cassé — il manque seulement que les gens installent l'application, ce
+   qui arrivera à la porte. Le rouge ferait chercher une erreur. */
 .adm-notifiables[data-aucun] {
-  background: var(--error-bg);
+  background: #fdf6e8;
   color: var(--ink);
-  border-left: 3px solid var(--error);
+  border-left: 3px solid #d9b877;
+}
+
+.adm-notifiables[data-aucun] strong {
+  color: #8a6524;
 }
 
 /* La pastille de qui recevra : discrète, mais repérable en parcourant. */
