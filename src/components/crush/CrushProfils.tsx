@@ -104,6 +104,18 @@ export function CrushProfils({
   }, [fin]);
 
   const dejaMatche = new Set(matchs.map((m) => m.id));
+
+  /**
+   * Les matchs en tête, le reste derrière.
+   *
+   * Deux listes mises bout à bout, et jamais un tri sur place : à l'intérieur
+   * de chaque groupe, l'ordre reste celui que le serveur a rendu, qui ne
+   * bouge plus. C'est ce qui fait qu'une carte reste où on l'a laissée.
+   */
+  const ranges = [
+    ...profils.filter((p) => dejaMatche.has(p.id)),
+    ...profils.filter((p) => !dejaMatche.has(p.id)),
+  ];
   const choisi = profils.find((p) => p.id === choixLocal) ?? null;
   /**
    * Le like est-il seulement possible ?
@@ -245,7 +257,7 @@ export function CrushProfils({
       )}
 
       <div className="cr-grille">
-        {profils.map((profil) => {
+        {ranges.map((profil) => {
           const estChoisi = profil.id === choixLocal;
           const aMatche = dejaMatche.has(profil.id);
 

@@ -89,6 +89,12 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
   « non vus » couvrent le téléphone qu'on avait en poche. Le premier des
   deux à voir le match le fête, le second le trouve déjà fêté.
 
+  Le faux Supabase était gentil sur ce point aussi : il rendait toujours
+  les lignes dans l'ordre d'insertion. On peut maintenant déclarer une
+  table « à l'ordre instable » (`/__ordre-instable`), et elle alterne —
+  alterner et non tirer au hasard, pour qu'un test échoue toujours plutôt
+  qu'une fois sur deux.
+
   Le faux Supabase des tests acceptait n'importe quelle colonne — une table
   n'y est qu'un tableau d'objets — et ne pouvait donc pas voir ce bug. On
   peut désormais lui déclarer qu'une colonne n'existe pas
@@ -130,6 +136,14 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
   le like ou qu'un crush time s'ouvre. Personne ne recharge une page au
   milieu d'une soirée. La veille se tait quand l'application n'est pas à
   l'écran.
+- **L'ordre des cartes ne bouge pas**, et les matchs sont en tête. Une base
+  qui n'a pas d'`ORDER BY` rend ses lignes dans l'ordre qui l'arrange, et
+  cet ordre change d'une requête à l'autre : la page se redessinant toutes
+  les huit secondes, les profils se redistribuaient sous le pouce pendant
+  qu'on faisait défiler. L'ordre est donc demandé explicitement — par date
+  d'inscription, l'identifiant départageant celles de la même seconde — et
+  les matchs sont remontés devant par une simple concaténation, jamais par
+  un tri sur place.
 - **La photo de tête** est celle rangée en position 1 dans le back-office,
   réordonnable par glissé-déposé. Elle décide à peu près seule du sort d'un
   profil. Une candidature sans photo peut en recevoir une à la main depuis

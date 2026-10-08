@@ -2510,6 +2510,23 @@ contacts.includes('+33612345678') && contacts.includes('WhatsApp')
 await tel.locator('.cr-fermer').click();
 await tel.waitForTimeout(300);
 
+// Le match passe devant : c'est la carte qu'on rouvre, et celle qu'on
+// cherche des yeux en revenant sur l'écran. Et il y reste, quel que soit
+// l'ordre dans lequel la base a servi les lignes.
+await fetch(`${FAKE}/__ordre-instable?table=lil_crush_participants&on=1`, { method: 'POST' });
+const premieresCartes = [];
+for (let passage = 0; passage < 2; passage += 1) {
+  await tel.reload({ waitUntil: 'networkidle' });
+  await passerInstallation(tel);
+  const noms = await tel.locator('.cr-carte-nom').allInnerTexts();
+  premieresCartes.push((noms[0] ?? '').split(' ·')[0].trim());
+}
+await fetch(`${FAKE}/__ordre-instable?table=lil_crush_participants&on=0`, { method: 'POST' });
+
+premieresCartes.every((nom) => nom.startsWith('Samir'))
+  ? ok('le profil matché passe en tête, et y reste d’un affichage à l’autre')
+  : bad('le match ne tient pas la première place', premieresCartes.join(' puis '));
+
 // Aucune adresse email ne descend jamais jusqu'au navigateur — ni celle
 // d'un profil qu'on n'a pas matché, ni même celle de Samir, qu'Inès vient
 // pourtant de matcher. Ni dans ce qui s'affiche, ni dans les données que le
@@ -2629,6 +2646,30 @@ await passerInstallation(tel3);
 (await tel3.locator('.cr-coeur-carte').count()) > 0
   ? ok('Thomas a bien son like à donner')
   : bad('aucun cœur pour Thomas', await tel3.locator('.cr-main').innerText().catch(() => ''));
+
+// --- Les cartes restent où on les a laissées ------------------------
+// Sans ORDER BY, une base rend les lignes dans l'ordre qui l'arrange, et
+// il change d'une requête à l'autre. La page se redessinant toutes les
+// huit secondes, les profils se redistribuaient sous le pouce pendant
+// qu'on faisait défiler. On demande donc l'ordre, explicitement.
+await fetch(`${FAKE}/__ordre-instable?table=lil_crush_participants&on=1`, { method: 'POST' });
+
+const ordreDe = async (page) =>
+  (await page.locator('.cr-carte-nom').allInnerTexts()).map((t) => t.split(' ·')[0].trim());
+
+const premierOrdre = await ordreDe(tel3);
+await tel3.reload({ waitUntil: 'networkidle' });
+await passerInstallation(tel3);
+const secondOrdre = await ordreDe(tel3);
+
+premierOrdre.length >= 2
+  ? ok('Thomas voit assez de monde pour que l’ordre veuille dire quelque chose')
+  : bad('pas assez de profils pour juger', premierOrdre.join(', '));
+JSON.stringify(premierOrdre) === JSON.stringify(secondOrdre)
+  ? ok('l’ordre des profils tient d’un affichage à l’autre, même si la base le brouille')
+  : bad('les cartes se redistribuent', `${premierOrdre.join(', ')} puis ${secondOrdre.join(', ')}`);
+
+await fetch(`${FAKE}/__ordre-instable?table=lil_crush_participants&on=0`, { method: 'POST' });
 
 // Cas 1 : l'hôte abrège la manche pendant qu'on hésite. L'écran ne le sait
 // pas encore ; la vérification lancée pendant la lecture de la demande le

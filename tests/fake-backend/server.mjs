@@ -53,6 +53,20 @@ const record = (entry) => log.push({ at: Date.now(), ...entry });
  */
 const colonnesAbsentes = new Map();
 
+/*
+ * L'autre gentillesse de ce faux serveur : il rend toujours les lignes
+ * dans l'ordre où elles ont été insérées. Une vraie base ne promet rien
+ * sans ORDER BY — elle sert les lignes dans l'ordre qui l'arrange, et cet
+ * ordre change d'une requête à l'autre. Une page qui se redessine toutes
+ * les huit secondes voyait donc ses cartes se redistribuer sous le pouce.
+ *
+ * Déclarer une table « à l'ordre instable » fait alterner l'ordre rendu à
+ * chaque lecture qui ne demande rien. Alterner et non tirer au hasard :
+ * un test doit échouer toujours, pas une fois sur deux.
+ */
+const ordreInstable = new Set();
+let tourDeLecture = 0;
+
 const absentes = (table) => colonnesAbsentes.get(table) ?? null;
 
 /** Le refus de PostgREST à l'écriture d'une colonne inconnue. */
@@ -309,6 +323,12 @@ async function traiter(req, res) {
     record({ what: 'resend:batch', taille: body.length });
     return json(res, 200, { data: ids });
   }
+  if (path === '/__ordre-instable' && req.method === 'POST') {
+    const table = url.searchParams.get('table');
+    if (url.searchParams.get('on') === '1') ordreInstable.add(table);
+    else ordreInstable.delete(table);
+    return json(res, 200, { table, instable: ordreInstable.has(table) });
+  }
   if (path === '/__colonnes-absentes' && req.method === 'POST') {
     const table = url.searchParams.get('table');
     const liste = (url.searchParams.get('colonnes') ?? '').split(',').filter(Boolean);
@@ -423,7 +443,14 @@ async function traiter(req, res) {
       const refusLecture = colonneManquanteEnLecture(table, params);
       if (refusLecture) return json(res, 400, refusLecture);
 
-      const rows = applyFilters(readTable(table), params);
+      let rows = applyFilters(readTable(table), params);
+
+      // Rien n'a été demandé, et la table est déclarée instable : on rend
+      // l'ordre inverse une fois sur deux, comme le ferait une vraie base.
+      if (ordreInstable.has(table) && !params.get('order')) {
+        tourDeLecture += 1;
+        if (tourDeLecture % 2 === 0) rows = [...rows].reverse();
+      }
 
       if (prefer.includes('count=exact') && String(req.headers['range-unit'] ?? '') !== '') {
         // head:true → supabase-js n'attend que l'en-tête Content-Range
@@ -633,6 +660,8 @@ async function traiter(req, res) {
     cancelQueuedFois = 0;
     storage.clear();
     colonnesAbsentes.clear();
+    ordreInstable.clear();
+    tourDeLecture = 0;
     log.length = 0;
     return json(res, 200, { ok: true });
   }

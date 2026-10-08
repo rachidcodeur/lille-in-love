@@ -438,7 +438,15 @@ export async function profilsPour(moi: Participant): Promise<Profil[]> {
     .from('lil_crush_participants')
     .select('*')
     .eq('soiree_id', moi.soiree_id)
-    .is('retire_at', null);
+    .is('retire_at', null)
+    // Un ordre, et toujours le même. Sans « order », la base rend les
+    // lignes dans l'ordre qui l'arrange, et il change d'une requête à
+    // l'autre : l'écran se redessinant toutes les huit secondes, les
+    // cartes se redistribuaient sous le pouce pendant qu'on faisait
+    // défiler. L'identifiant départage les inscriptions d'une même
+    // seconde, qui arrivent par paquets à la composition de la soirée.
+    .order('created_at', { ascending: true })
+    .order('id', { ascending: true });
 
   const visibles = ((data ?? []) as Participant[]).filter((autre) => peutVoir(moi, autre));
   return habiller(visibles);
@@ -801,7 +809,11 @@ export async function participants(soireeId: string): Promise<LigneParticipant[]
     .from('lil_crush_participants')
     .select('*')
     .eq('soiree_id', soireeId)
-    .order('first_name', { ascending: true });
+    .order('first_name', { ascending: true })
+    // Deux Thomas se départagent par l'identifiant : sans quoi ils
+    // pourraient permuter d'un chargement à l'autre, et l'hôte qui coche
+    // sa liste d'émargement perdrait sa ligne.
+    .order('id', { ascending: true });
 
   const gens = (data ?? []) as Participant[];
   const ids = gens.map((p) => p.member_id).filter((id): id is string => Boolean(id));
