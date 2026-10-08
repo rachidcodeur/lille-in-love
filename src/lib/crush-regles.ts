@@ -101,3 +101,80 @@ export function lienWhatsApp(telephone: string | null | undefined): string | nul
 
   return null;
 }
+
+/* ====================================================================
+   L'heure de la soirée est l'heure de Lille
+
+   Une soirée se passe dans une salle, à une heure annoncée à voix haute.
+   Ni le fuseau du serveur, ni celui du téléphone n'ont voix au chapitre :
+   « 21 h 00 » veut dire 21 h 00 à Lille, pour l'hôte qui pose l'horaire
+   comme pour la personne qui lit son écran.
+
+   Sans ça, deux choses cassaient. L'hôte saisit « 21:00 » dans un champ
+   qui n'emporte aucun fuseau ; le serveur interprétait cette heure dans
+   le sien — Paris sur un poste français, UTC sur l'hébergement, soit deux
+   heures d'écart une fois en ligne. Et l'affichage suivait le fuseau de
+   la machine qui dessinait la page, qui n'est pas le même au premier
+   rendu (le serveur) et ensuite (le téléphone).
+   ==================================================================== */
+
+const PARIS = 'Europe/Paris';
+
+/** De combien Paris devance UTC à cet instant précis. En millisecondes. */
+function decalageDeParis(instant: Date): number {
+  const morceaux = new Intl.DateTimeFormat('en-US', {
+    timeZone: PARIS,
+    hour12: false,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(instant);
+
+  const p: Record<string, string> = {};
+  for (const m of morceaux) p[m.type] = m.value;
+
+  const commeSiUTC = Date.UTC(
+    Number(p.year),
+    Number(p.month) - 1,
+    Number(p.day),
+    // « 24 » et non « 00 » à minuit, selon les versions.
+    Number(p.hour) % 24,
+    Number(p.minute),
+    Number(p.second),
+  );
+  return commeSiUTC - instant.getTime();
+}
+
+/**
+ * « 2026-10-18T21:00 », saisi par l'hôte, devient l'instant qu'il désigne.
+ *
+ * C'est ce que rend un champ « datetime-local » : une heure de mur, sans
+ * fuseau. On la lit comme une heure de Lille, et on la range en UTC.
+ */
+export function instantDepuisParis(local: string): string {
+  const propre = local.trim();
+  if (!propre) return '';
+  // On complète les secondes si le champ ne les donne pas, puis on lit la
+  // chaîne comme si elle était UTC : c'est le point de départ du calcul.
+  const avecSecondes = /\d{2}:\d{2}:\d{2}/.test(propre) ? propre : `${propre}:00`;
+  const depart = Date.parse(`${avecSecondes}Z`);
+  if (Number.isNaN(depart)) return '';
+
+  // Deux passes : à la nuit du changement d'heure, le décalage trouvé sur
+  // l'instant de départ n'est plus celui qui s'applique une fois corrigé.
+  let instant = depart - decalageDeParis(new Date(depart));
+  instant = depart - decalageDeParis(new Date(instant));
+  return new Date(instant).toISOString();
+}
+
+/** « 21:00 » — l'heure de Lille, quel que soit l'endroit d'où on regarde. */
+export function heureDeParis(iso: string): string {
+  return new Date(iso).toLocaleTimeString('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: PARIS,
+  });
+}

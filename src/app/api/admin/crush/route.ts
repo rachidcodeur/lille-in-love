@@ -14,6 +14,7 @@ import {
   remettre,
   retirer,
 } from '@/lib/crush';
+import { instantDepuisParis } from '@/lib/crush-regles';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -77,7 +78,11 @@ const schema = z.discriminatedUnion('action', [
 ]);
 
 /** « 2026-10-18T20:00 » tel que l'écrit un champ de formulaire. */
-const enIso = (heures?: string[]) => (heures ?? []).map((h) => new Date(h).toISOString());
+// « new Date('2026-10-18T21:00') » lit cette heure dans le fuseau de la
+// machine : Paris sur un poste français, UTC sur l'hébergement. L'horaire
+// annoncé se décalait donc de deux heures une fois en ligne. On la lit
+// explicitement comme une heure de Lille.
+const enIso = (heures?: string[]) => (heures ?? []).map(instantDepuisParis).filter(Boolean);
 
 export async function POST(request: Request) {
   if (!(await isAdminAllowed())) {

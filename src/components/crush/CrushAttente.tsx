@@ -1,6 +1,6 @@
 'use client';
 
-import { nomManche } from '@/lib/crush-regles';
+import { nomManche, heureDeParis } from '@/lib/crush-regles';
 import { Compte } from './Compte';
 
 /**
@@ -15,8 +15,7 @@ export function CrushAttente({
   manches: { numero: number; prevu_a: string; passee: boolean }[];
 }) {
   const prochaine = manches.find((m) => !m.passee);
-  const heure = (iso: string) =>
-    new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  const heure = heureDeParis;
 
   return (
     <div className="cr-attente">

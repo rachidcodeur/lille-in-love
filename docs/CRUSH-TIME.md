@@ -208,6 +208,34 @@ l'écran d'accueil ne déconnecte pas** : ce sont deux choses séparées, et
 Safari garde ce qu'il sait. D'où « Connecté en tant que X — changer » tout
 en bas, pour essayer plusieurs profils depuis un seul téléphone.
 
+## L'heure de la soirée est l'heure de Lille
+
+« 21 h 00 » veut dire 21 h 00 dans la salle. Ni le fuseau du serveur, ni
+celui du téléphone n'ont voix au chapitre.
+
+Ce n'est pas théorique. Un champ `datetime-local` rend une heure de mur,
+sans fuseau : « 2026-10-18T21:00 ». Lue par le serveur avec un simple
+`new Date(...)`, elle prenait le fuseau de la machine — Paris sur un poste
+français, **UTC sur l'hébergement**. L'horaire annoncé se décalait donc de
+deux heures une fois en ligne, et de rien du tout en développement : le
+genre d'écart qu'on découvre le soir même. L'affichage avait le même
+défaut, en pire : rendu d'abord par le serveur puis par le téléphone, il
+pouvait donner deux heures différentes pour la même manche.
+
+Deux fonctions, dans `src/lib/crush-regles.ts`, et rien d'autre ne doit
+toucher aux heures :
+
+- `instantDepuisParis('2026-10-18T21:00')` — ce que l'hôte a saisi, rangé
+  en UTC. Deux passes de calcul, parce que la nuit du changement d'heure
+  le décalage trouvé au départ n'est plus celui qui s'applique à l'arrivée.
+- `heureDeParis(iso)` — « 21:00 », identique sur le serveur et sur le
+  téléphone, et juste même pour un invité dont le téléphone serait resté
+  sur un autre fuseau.
+
+Les règles sont éprouvées été comme hiver, la nuit de la bascule, et
+depuis un fuseau à six heures de là. La chaîne complète se rejoue avec le
+serveur en UTC : `TZ=UTC npm run test:curation`.
+
 ## L'installation et les notifications
 
 Sur iPhone, le web push n'existe **que** pour une application ajoutée à

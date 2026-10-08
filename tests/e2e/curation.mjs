@@ -919,16 +919,29 @@ await page.waitForTimeout(500);
 // coordonnées d'il y a une seconde tombe à côté. C'est ce qui faisait
 // échouer ce test une fois sur quelques-unes.
 const viseur = page.locator('.adm-row', { hasText: 'Carmen' }).locator('.adm-chip');
-for (let essai = 0; essai < 4; essai += 1) {
-  const avant = await viseur.boundingBox();
-  await page.waitForTimeout(250);
-  const pastille = await viseur.boundingBox();
-  // Deux mesures identiques : la ligne a fini de bouger.
-  if (!avant || !pastille || avant.y !== pastille.y) continue;
-  await page.mouse.click(pastille.x + pastille.width / 2, pastille.y + pastille.height / 2);
-  if (await jusqua(async () => page.url().includes('/admin/') && page.url() !== `${BASE}/admin`, 4000)) {
-    break;
+const surCarmen = async () =>
+  ((await page.locator('.adm-name').innerText().catch(() => '')) || '').includes('Carmen');
+
+// On remesure avant chaque essai et on vise de nouveau : les vignettes qui
+// finissent d'arriver décalent les lignes, et un clic parti aux
+// coordonnées d'il y a une seconde tombe sur la voisine — ou dans le vide.
+// Attendre que la page se fige ne suffisait pas : elle ne se fige pas
+// toujours dans le temps imparti. On retourne donc à la liste et on
+// recommence, jusqu'à tomber sur la bonne fiche.
+for (let essai = 0; essai < 5 && !(await surCarmen()); essai += 1) {
+  if (page.url() !== `${BASE}/admin`) {
+    await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+    await page.waitForSelector('.adm-row');
   }
+  // La pastille de Carmen se retrouve souvent sous le bas de la fenêtre :
+  // « mouse.click » vise des coordonnées de fenêtre, et un clic sous le
+  // pli part dans le vide. C'était toute l'instabilité de ce test.
+  await viseur.scrollIntoViewIfNeeded();
+  await page.waitForTimeout(300);
+  const pastille = await viseur.boundingBox();
+  if (!pastille) continue;
+  await page.mouse.click(pastille.x + pastille.width / 2, pastille.y + pastille.height / 2);
+  await jusqua(surCarmen, 4000);
 }
 ((await page.locator('.adm-name').innerText().catch(() => '')) || '').includes('Carmen')
   ? ok('cliquer une pastille de statut ouvre la fiche, comme le reste de la ligne')
@@ -1880,6 +1893,27 @@ new Set(inscrits.map((p) => p.jeton)).size === inscrits.length
 s.crushRounds.filter((r) => r.soiree_id === soireeC.id).length === 3
   ? ok('les trois manches sont posées')
   : bad('manches manquantes');
+
+// L'heure annoncée est celle du mur de la salle. Le champ de saisie
+// n'emporte aucun fuseau : interprétée par le serveur, « 21:00 » devenait
+// 21 h UTC sur l'hébergement, soit 23 h à Lille — un décalage invisible
+// sur un poste français et bien réel une fois en ligne. On relit donc les
+// manches à l'heure de Paris, quel que soit le fuseau de cette machine.
+const aParis = (iso) =>
+  new Intl.DateTimeFormat('fr-FR', {
+    timeZone: 'Europe/Paris',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(iso));
+
+const horaires = s.crushRounds
+  .filter((r) => r.soiree_id === soireeC.id)
+  .sort((a, b) => a.numero - b.numero)
+  .map((r) => aParis(r.prevu_a));
+
+JSON.stringify(horaires) === JSON.stringify(['21:00', '22:30', '23:45'])
+  ? ok('et aux heures annoncées, lues à Lille et non dans le fuseau du serveur')
+  : bad('horaires décalés', horaires.join(', '));
 
 // --- Ajouter après coup ---------------------------------------------
 await page.waitForTimeout(400);

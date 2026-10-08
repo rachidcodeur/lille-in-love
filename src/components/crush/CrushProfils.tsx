@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import type { Profil } from '@/lib/crush';
-import { nomManche } from '@/lib/crush-regles';
+import { nomManche, heureDeParis } from '@/lib/crush-regles';
 import { Compte } from './Compte';
 import { EVENEMENT_MATCH } from './CrushFete';
 
@@ -33,8 +33,7 @@ function court(texte: string, max = 140): string {
 }
 
 /** « 22h00 » — lisible d'un coup d'œil, au fond d'une salle. */
-const heure = (iso: string) =>
-  new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+const heure = heureDeParis;
 
 export function CrushProfils({
   numero,

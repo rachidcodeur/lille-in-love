@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { BRAND } from '@/lib/brand';
-import { nomManche } from '@/lib/crush-regles';
+import { nomManche, heureDeParis } from '@/lib/crush-regles';
 import { sansAccent } from '@/lib/groupes';
 import { Icone } from './Icones';
 
@@ -40,8 +40,7 @@ async function commander(corps: Record<string, unknown>): Promise<string | null>
   return res?.error ?? 'Le serveur n’a pas répondu.';
 }
 
-const heure = (iso: string) =>
-  new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+const heure = heureDeParis;
 
 /**
  * Le tableau de bord du soir.

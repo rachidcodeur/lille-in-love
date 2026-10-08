@@ -31,7 +31,7 @@ execFileSync(
 // butte sur le premier « export ».
 writeFileSync(join(sortie, 'package.json'), '{ "type": "module" }');
 
-const { peutVoir, age, rang, nomManche, lienWhatsApp } = await import(join(sortie, 'crush-regles.js'));
+const { peutVoir, age, rang, nomManche, lienWhatsApp, instantDepuisParis, heureDeParis } = await import(join(sortie, 'crush-regles.js'));
 const { lireCsv, colonne } = await import(join(sortie, 'csv.js'));
 const { trouve, presque, sansAccent } = await import(join(sortie, 'groupes.js'));
 
@@ -279,6 +279,49 @@ lienWhatsApp('+32 470 12 34 56') === 'https://wa.me/32470123456'
 lienWhatsApp('12 34 56') === null && lienWhatsApp('') === null && lienWhatsApp(null) === null
   ? ok('et ce qui ne ressemble à rien ne donne pas de lien : mieux vaut pas de bouton qu’un inconnu')
   : bad('un numéro douteux a produit un lien', String(lienWhatsApp('12 34 56')));
+
+section('8. L’heure de la soirée est l’heure de Lille');
+
+// L'hôte saisit « 21:00 » dans un champ qui n'emporte aucun fuseau. Cette
+// heure-là est celle du mur de la salle, et rien d'autre.
+instantDepuisParis('2026-07-18T21:00') === '2026-07-18T19:00:00.000Z'
+  ? ok('en été, 21 h à Lille font 19 h UTC')
+  : bad('heure d’été mal convertie', String(instantDepuisParis('2026-07-18T21:00')));
+
+instantDepuisParis('2026-01-17T21:00') === '2026-01-17T20:00:00.000Z'
+  ? ok('en hiver, elles font 20 h UTC — le décalage suit la saison')
+  : bad('heure d’hiver mal convertie', String(instantDepuisParis('2026-01-17T21:00')));
+
+// La nuit où l'on recule les montres : le décalage trouvé sur l'instant de
+// départ n'est plus celui qui s'applique une fois corrigé.
+instantDepuisParis('2026-10-25T03:00') === '2026-10-25T02:00:00.000Z'
+  ? ok('et la nuit du changement d’heure ne décale rien')
+  : bad('bascule d’heure mal gérée', String(instantDepuisParis('2026-10-25T03:00')));
+
+heureDeParis('2026-07-18T19:00:00.000Z') === '21:00'
+  ? ok('et l’affichage refait le chemin inverse')
+  : bad('affichage faux', heureDeParis('2026-07-18T19:00:00.000Z'));
+
+// Le plus important : tout cela doit valoir depuis n'importe où. Le serveur
+// d'hébergement tourne en UTC, le téléphone d'un invité peut être resté sur
+// un autre fuseau, et l'heure annoncée reste celle de la salle.
+const ailleurs = execFileSync(
+  process.execPath,
+  [
+    '-e',
+    `import('${join(sortie, 'crush-regles.js')}').then((m) => {
+      console.log(JSON.stringify([
+        m.instantDepuisParis('2026-07-18T21:00'),
+        m.heureDeParis('2026-07-18T19:00:00.000Z'),
+      ]));
+    })`,
+  ],
+  { env: { ...process.env, TZ: 'America/New_York' }, encoding: 'utf8' },
+).trim();
+
+ailleurs === JSON.stringify(['2026-07-18T19:00:00.000Z', '21:00'])
+  ? ok('depuis un fuseau à six heures de là, le résultat ne bouge pas d’une minute')
+  : bad('le fuseau de la machine déteint encore sur l’heure', ailleurs);
 
 /* ---------------------------------------------------------------- */
 rmSync(sortie, { recursive: true, force: true });
