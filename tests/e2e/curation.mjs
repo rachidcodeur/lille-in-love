@@ -913,9 +913,23 @@ await page.waitForTimeout(500);
 // Un clic à la souris, aux coordonnées exactes de la pastille : Playwright
 // refuserait de « cliquer la pastille » puisqu'elle est recouverte par le
 // lien — et c'est précisément ce recouvrement qu'on veut vérifier.
-const pastille = await page.locator('.adm-row', { hasText: 'Carmen' }).locator('.adm-chip').boundingBox();
-await page.mouse.click(pastille.x + pastille.width / 2, pastille.y + pastille.height / 2);
-await jusqua(async () => page.url().includes('/admin/') && page.url() !== `${BASE}/admin`);
+//
+// La boîte se remesure juste avant chaque essai : les vignettes qui
+// finissent d'arriver décalent les lignes, et un clic parti aux
+// coordonnées d'il y a une seconde tombe à côté. C'est ce qui faisait
+// échouer ce test une fois sur quelques-unes.
+const viseur = page.locator('.adm-row', { hasText: 'Carmen' }).locator('.adm-chip');
+for (let essai = 0; essai < 4; essai += 1) {
+  const avant = await viseur.boundingBox();
+  await page.waitForTimeout(250);
+  const pastille = await viseur.boundingBox();
+  // Deux mesures identiques : la ligne a fini de bouger.
+  if (!avant || !pastille || avant.y !== pastille.y) continue;
+  await page.mouse.click(pastille.x + pastille.width / 2, pastille.y + pastille.height / 2);
+  if (await jusqua(async () => page.url().includes('/admin/') && page.url() !== `${BASE}/admin`, 4000)) {
+    break;
+  }
+}
 ((await page.locator('.adm-name').innerText().catch(() => '')) || '').includes('Carmen')
   ? ok('cliquer une pastille de statut ouvre la fiche, comme le reste de la ligne')
   : bad('la pastille de statut avale le clic', page.url());
@@ -1918,14 +1932,15 @@ ajoutMain?.gender === 'homme' && ajoutMain?.first_name === 'Rachid' && ajoutMain
   ? ok('une personne absente de la billetterie et des candidatures peut être ajoutée')
   : bad('ajout à la main raté', JSON.stringify(ajoutMain));
 
-// --- Son code, affiché pour qu'on puisse le dicter ------------------
-// Le lien personnel ne s'affiche plus ligne par ligne : on entre par le QR
-// de la salle et son code. Celui-ci doit donc être sous les yeux.
+// --- Un seul code, celui de la salle --------------------------------
+// Chacun avait le sien, reçu par mail : il fallait le retrouver dans sa
+// boîte, debout, en musique. Un seul code désormais, annoncé à voix haute,
+// et plus rien à dicter ligne par ligne.
 await page.waitForTimeout(400);
 const ligneRachid = page.locator('.adm-present', { hasText: 'Rachid' });
-(await ligneRachid.locator('.adm-present-code').innerText()) === ajoutMain.code
-  ? ok('le tableau de bord donne son code, prêt à dicter')
-  : bad('code absent du tableau de bord', await ligneRachid.innerText());
+(await ligneRachid.locator('.adm-present-code').count()) === 0
+  ? ok('plus de code par personne dans le tableau de bord')
+  : bad('un code personnel est encore affiché', await ligneRachid.innerText());
 
 (await ligneRachid.locator('button', { hasText: 'Lien' }).count()) === 0
   ? ok('et plus de lien devant chaque profil : il ne sert plus')
@@ -2139,21 +2154,22 @@ const entrer = async (email, code) => {
   ? bad('un code inventé a ouvert la porte')
   : ok('un mauvais code est refusé, sans dire laquelle des deux moitiés est fausse');
 
-// Le code du voisin ne doit pas ouvrir la porte : c'est tout l'intérêt
-// d'en donner un à chacun plutôt qu'un seul pour la salle.
-(await entrer('ines@soiree.test', '1001'))
-  ? bad('le code de quelqu’un d’autre a ouvert la porte')
-  : ok('et le code du voisin ne marche pas non plus');
-
-// Celui de la soirée reste le filet de l'hôte, pour qui a perdu son mail.
-(await entrer('ines@soiree.test', '4812'))
-  ? ok('le code de la soirée dépanne encore celui qui ne retrouve pas son message')
-  : bad('le code de secours ne marche plus');
-
-// Et le sien, celui reçu par mail, qui est le chemin normal depuis le QR.
+// Les codes personnels n'existent plus : un seul code pour toute la salle.
+// Celui qui traînait en base sur la ligne d'Inès ne doit plus ouvrir.
 (await entrer('ines@soiree.test', '1000'))
-  ? ok('son propre code ouvre la porte depuis le QR de la salle')
-  : bad('le code personnel n’ouvre pas');
+  ? bad('un ancien code personnel ouvre encore la porte')
+  : ok('et les anciens codes personnels n’ouvrent plus rien');
+
+// Une adresse qui n'est pas de la soirée reste dehors, code ou pas : le
+// code dit qu'on est dans la salle, l'adresse dit qui l'on est.
+(await entrer('inconnu@ailleurs.test', '4812'))
+  ? bad('une adresse étrangère à la soirée est entrée')
+  : ok('et une adresse hors de la liste reste dehors, même avec le bon code');
+
+// Le code annoncé dans la salle, le même pour tout le monde.
+(await entrer('ines@soiree.test', '4812'))
+  ? ok('le code de la soirée ouvre la porte, depuis le QR de la salle')
+  : bad('le code de la soirée n’ouvre pas');
 
 // --- Changer de profil ----------------------------------------------
 (await tel.locator('.cr-sortir').count()) === 1
@@ -2168,7 +2184,7 @@ await jusqua(async () => (await tel.locator('#cr-email').count()) === 1);
   ? ok('et l’on retombe sur la porte d’entrée')
   : bad('la déconnexion ne ramène pas à l’entrée');
 
-(await entrer('ines@soiree.test', '1000'))
+(await entrer('ines@soiree.test', '4812'))
   ? ok('puis l’on peut revenir, ou entrer avec un autre profil')
   : bad('impossible de se reconnecter après déconnexion');
 
@@ -2192,10 +2208,11 @@ JSON.stringify(vus.map((v) => v.split(' ')[0]).sort()) === JSON.stringify(['Sami
   ? ok('une femme hétéro ne voit que les hommes de la soirée')
   : bad('profils inattendus', vus.join(', ') || '(aucun)');
 
-// Trois lettres du nom : de quoi distinguer deux Thomas sans livrer
-// l'identité de personne. Seul Samir a une candidature, donc un nom.
-vus.includes('Samir Cru.') && vus.includes('Thomas')
-  ? ok('le prénom est accompagné des trois premières lettres du nom')
+// Trois lettres du nom, en capitales : de quoi distinguer deux Thomas sans
+// livrer l'identité de personne, et de quoi voir d'un coup d'œil que c'est
+// le nom et non la fin du prénom. Seul Samir a une candidature, donc un nom.
+vus.includes('Samir CRU.') && vus.includes('Thomas')
+  ? ok('le prénom est accompagné des trois premières lettres du nom, en capitales')
   : bad('nom abrégé absent', vus.join(', '));
 
 (await tel.locator('.cr-grille')).isVisible() &&
@@ -2334,15 +2351,23 @@ await jusqua(async () => (await state()).crushMatches.length === 1);
 (await tel2.locator('.cr-fete-noms').innerText()).includes('Inès')
   ? ok('les deux prénoms sont réunis sous les visages')
   : bad('prénoms manquants', await tel2.locator('.cr-fete-noms').innerText());
-// Le contact est dans l'annonce : c'est ce qu'on vient y chercher.
-(await tel2.locator('.cr-fete-contact').count()) > 0
-  ? ok('les coordonnées sont données dans l’annonce même')
-  : bad('aucune coordonnée dans l’annonce');
+// L'annonce porte elle-même de quoi se retrouver : c'est ce qu'on vient y
+// chercher, et aller le pêcher dans un onglet casserait le moment. Inès
+// n'ayant pas de fiche, c'est ici le repli qui doit s'afficher.
+(await tel2.locator('.cr-fete-contacts, .cr-contact-vide').count()) > 0
+  ? ok('l’annonce dit elle-même comment la retrouver')
+  : bad('aucune coordonnée dans l’annonce', await tel2.locator('.cr-fete-corps').innerText());
 
 s = await state();
 s.crushMatches.length === 1
   ? ok('un seul match en base pour la paire')
   : bad('nombre de matchs inattendu', String(s.crushMatches.length));
+
+// Les deux téléphones sont prévenus, et une seule fois : un match
+// n'appartient pas à celui qui a cliqué en dernier.
+s.crushMatches[0].notifie_at
+  ? ok('et les deux sont prévenus d’un coup, une seule fois')
+  : bad('le match n’a prévenu personne');
 s.crushMatches[0].a_id < s.crushMatches[0].b_id
   ? ok('la paire est rangée : deux clics simultanés ne peuvent pas la dédoubler')
   : bad('paire non ordonnée');
@@ -2404,9 +2429,17 @@ await tel2.getByRole('button', { name: 'Continuer' }).click();
 await tel2.waitForTimeout(600);
 await tel2.locator('.cr-matchs-onglet').click();
 await tel2.waitForTimeout(600);
-(await tel2.locator('.cr-matchs-corps').innerText()).includes('ines@soiree.test')
-  ? ok('l’adresse de la personne n’apparaît qu’une fois le match fait')
-  : bad('contact absent de l’onglet matchs');
+// Inès vient de la billetterie et n'a jamais rempli le formulaire : sa
+// fiche n'a ni numéro ni Instagram. Le match est réel, le moyen de le
+// prolonger manque — et l'écran doit le dire plutôt que de laisser un vide
+// qu'on prend pour un chargement.
+(await tel2.locator('.cr-matchs-corps').innerText()).includes('Inès')
+  ? ok('le match s’affiche dans l’onglet, une fois seulement qu’il est fait')
+  : bad('match absent de l’onglet', await tel2.locator('.cr-matchs-corps').innerText());
+
+(await tel2.locator('.cr-contact-vide').count()) === 1
+  ? ok('et une fiche sans numéro ni Instagram le dit, au lieu d’un bloc vide')
+  : bad('un match sans contact ne dit rien', await tel2.locator('.cr-matchs-corps').innerText());
 
 // Côté Inès, l'écran doit bouger tout seul : c'est l'autre qui vient de
 // faire le match, et personne ne recharge une page au milieu d'une soirée.
@@ -2420,29 +2453,38 @@ await tel2.waitForTimeout(600);
 await tel.locator('.cr-matchs-onglet').click();
 await tel.waitForTimeout(600);
 const contacts = await tel.locator('.cr-matchs-corps').innerText();
-contacts.includes('+33612345678') && contacts.includes('samir@soiree.test')
-  ? ok('et le match donne le numéro de téléphone, pas seulement l’adresse')
-  : bad('numéro absent du match', contacts.replace(/\n+/g, ' | '));
+contacts.includes('+33612345678') && contacts.includes('WhatsApp')
+  ? ok('et le match donne le numéro, avec le bouton WhatsApp qui va avec')
+  : bad('numéro ou WhatsApp absent du match', contacts.replace(/\n+/g, ' | '));
+
+// Le lien WhatsApp est au format international, sans « + » ni espace :
+// c'est le seul que wa.me accepte.
+(await tel.locator('.cr-matchs-corps a[href^="https://wa.me/"]').first().getAttribute('href'))
+  === 'https://wa.me/33612345678'
+  ? ok('et le numéro français est traduit pour wa.me')
+  : bad(
+      'lien WhatsApp mal formé',
+      String(await tel.locator('.cr-matchs-corps a[href^="https://wa.me/"]').first().getAttribute('href')),
+    );
+
+// Plus d'email nulle part : on s'écrit sur WhatsApp ou sur Instagram le
+// lendemain, et une adresse livre souvent l'identité que le formulaire
+// promet de garder.
+!contacts.includes('@soiree.test')
+  ? ok('et jamais d’adresse email, même après le match')
+  : bad('une adresse email est proposée comme contact', contacts.replace(/\n+/g, ' | '));
 await tel.locator('.cr-fermer').click();
 await tel.waitForTimeout(300);
 
-// Le contact de quelqu'un qu'on n'a pas matché ne doit nulle part traîner
-// dans la page — pas plus dans les données que le serveur y dépose que dans
-// ce qui s'affiche : l'avoir suffirait à court-circuiter le jeu.
-//
-// Celui de Samir, lui, y est légitimement : Inès vient de matcher avec lui,
-// l'annonce le lui a donné et l'onglet le garde.
+// Aucune adresse email ne descend jamais jusqu'au navigateur — ni celle
+// d'un profil qu'on n'a pas matché, ni même celle de Samir, qu'Inès vient
+// pourtant de matcher. Ni dans ce qui s'affiche, ni dans les données que le
+// serveur dépose dans la page. Ce qu'on n'envoie pas ne peut pas fuiter.
 const htmlProfils = await tel.content();
-!htmlProfils.includes('thomas@soiree.test')
-  ? ok('et le contact d’un profil non matché ne traîne nulle part dans la page')
-  : bad(
-      'une adresse email fuite dans la liste des profils',
-      htmlProfils
-        .split('thomas@soiree.test')
-        .slice(0, 2)
-        .map((bout) => bout.slice(-260))
-        .join(' <<<ICI>>> '),
-    );
+const fuites = [...htmlProfils.matchAll(/[\w.+-]+@soiree\.test/g)].map((m) => m[0]);
+fuites.length === 0
+  ? ok('et aucune adresse email ne descend jamais jusqu’au navigateur')
+  : bad('des adresses email traînent dans la page', [...new Set(fuites)].join(', '));
 
 // --- La photo de quelqu'un d'une autre soirée est refusée ----------
 const [intruse] = await (
@@ -2712,6 +2754,11 @@ qr?.startsWith('data:image/png')
 (await page.locator('.adm-affiche').innerText()).includes('/crush')
   ? ok('et dit où il mène')
   : bad('adresse du QR absente');
+
+// Un seul code, celui de la salle : plus rien à dicter ligne par ligne.
+(await page.locator('.adm-code').first().innerText()).trim() === '4812'
+  ? ok('le code de la salle est affiché en grand, prêt à annoncer')
+  : bad('le code de la salle est introuvable', await page.locator('.adm-code').first().innerText().catch(() => '(absent)'));
 
 await page.goto(`${BASE}/admin/soirees`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(500);

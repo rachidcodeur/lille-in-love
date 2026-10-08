@@ -21,8 +21,6 @@ export type Participant = {
   gender: Genre | null;
   orientation: Orientation | null;
   jeton: string;
-  /** Les quatre chiffres reçus par email, qui prouvent qui l'on est. */
-  code?: string | null;
   claimed_at: string | null;
   retire_at: string | null;
 };
@@ -78,7 +76,6 @@ async function inscrire(soireeId: string, candidats: Candidat[]): Promise<number
     gender: c.gender ?? null,
     orientation: c.orientation ?? null,
     jeton: jeton(),
-    code: nouveauCode(),
   }));
 
   const { data, error } = await db
@@ -311,15 +308,21 @@ function tropDEssais(email: string): boolean {
 }
 
 /**
- * Entrer avec son adresse et son code.
+ * Entrer avec son adresse et le code de la soirée.
  *
  * Le QR de la salle est le même pour tout le monde — cinquante QR
- * personnels coûtent trop cher à imprimer — alors il mène ici, et c'est le
- * code reçu par mail qui dit qui l'on est.
+ * personnels coûtent trop cher à imprimer — et il mène ici.
  *
- * Le code de la soirée reste accepté : c'est le filet de l'hôte pour celui
- * qui ne retrouve plus son mail au milieu du bruit. À n'annoncer que dans
- * ce cas, puisqu'il ouvre la porte de n'importe quelle adresse de la liste.
+ * Un seul code pour toute la salle, et il faut le savoir : il ouvre la
+ * porte de n'importe quelle adresse de la liste. Quelqu'un qui entend le
+ * code et connaît l'adresse d'un autre peut entrer à sa place et liker en
+ * son nom. C'est le prix d'une porte qu'on ouvre à voix haute, assumé :
+ * chacun avait le sien par mail, il fallait le retrouver dans sa boîte,
+ * debout, en musique, et l'hôte n'avait rien à répondre à qui l'avait
+ * perdu.
+ *
+ * La voie sûre reste le lien personnel, qui porte un jeton impossible à
+ * deviner : c'est lui qu'on envoie, et le code n'est que le filet.
  */
 export async function entrerAvecCode(
   email: string,
@@ -342,12 +345,14 @@ export async function entrerAvecCode(
   const participant = (data as Participant | null) ?? null;
   if (!participant) return null;
 
+  // Un seul code pour toute la soirée, annoncé dans la salle et porté par
+  // le QR. Chacun avait le sien, reçu par mail : il fallait le retrouver
+  // dans sa boîte, debout, en musique, et l'hôte n'avait rien à dire à
+  // quelqu'un qui l'avait perdu. L'adresse email suffit à dire qui l'on
+  // est ; le code dit seulement qu'on est bien dans la salle.
   const propose = code.trim();
-  const sien = (participant.code ?? '').trim();
   const celuiDeLaSoiree = (soiree.crush_code ?? '').trim();
-
-  const bon = (sien && propose === sien) || (celuiDeLaSoiree && propose === celuiDeLaSoiree);
-  if (!bon) return null;
+  if (!celuiDeLaSoiree || propose !== celuiDeLaSoiree) return null;
 
   // Entrée réussie : on rend ses essais à la personne.
   essais.delete(adresse);
@@ -398,8 +403,12 @@ export type Profil = {
   profession: string | null;
   city: string | null;
   about: string | null;
-  /** De quoi se retrouver. Jamais avant le match — sinon le jeu n'en est plus un. */
-  email?: string;
+  /**
+   * De quoi se retrouver. Jamais avant le match — sinon le jeu n'en est
+   * plus un. Pas d'adresse email : on s'écrit sur WhatsApp ou sur
+   * Instagram le lendemain, pas par courrier, et une adresse livre souvent
+   * l'identité complète que le formulaire promet de garder.
+   */
   phone?: string | null;
   instagram?: string | null;
   /** Toutes ses photos, dans l'ordre. Réservé aux matchs, comme le contact. */
@@ -408,11 +417,18 @@ export type Profil = {
   matchId?: string;
 };
 
-/** « Haddad » devient « Had. ». Vide ou trop court, rien du tout. */
+/**
+ * « Haddad » devient « HAD. ». Vide ou trop court, rien du tout.
+ *
+ * En capitales, et c'est le point : à bout de bras dans une salle sombre,
+ * trois lettres bas-de-casse collées à un prénom se lisent comme sa fin.
+ * Les capitales disent « ceci est le nom », et c'est à ça qu'on distingue
+ * deux Thomas.
+ */
 function abreger(nom: string | null | undefined): string | null {
   const propre = (nom ?? '').trim();
   if (propre.length < 2) return null;
-  return propre.length <= 3 ? propre : `${propre.slice(0, 3)}.`;
+  return propre.length <= 3 ? propre.toUpperCase() : `${propre.slice(0, 3).toUpperCase()}.`;
 }
 
 /** Les participants qu'une personne peut voir, avec leur photo. */
@@ -487,7 +503,9 @@ async function habiller(
     about: p.member_id ? (infos.get(p.member_id)?.about ?? null) : null,
     ...(options.contact
       ? {
-          email: p.email,
+          // Pas l'adresse email : personne n'écrit un mail au lendemain
+          // d'une soirée, et une adresse en dit souvent plus sur l'identité
+          // qu'un numéro. Ce qu'on n'envoie pas ne peut pas fuiter.
           phone: p.member_id ? (infos.get(p.member_id)?.phone ?? null) : null,
           instagram: p.member_id ? (infos.get(p.member_id)?.instagram ?? null) : null,
           photos: p.member_id ? (toutes.get(p.member_id) ?? []) : [],
@@ -589,6 +607,11 @@ export async function liker(moi: Participant, versId: string): Promise<ResultatL
 /**
  * Annoncer un match aux deux personnes.
  *
+ * Aux deux, et de la même façon : un match n'appartient pas à celui qui a
+ * cliqué en dernier. Il n'est annoncé qu'une fois — « notifie_at » le
+ * retient — pour qu'un second like déjà rendu ne refasse pas sonner deux
+ * téléphones.
+ *
  * Le prénom de l'autre voyage dans chaque message : « c'est un match »
  * tout seul fait sortir le téléphone pour rien, et la notification
  * s'affiche parfois sur un écran verrouillé que d'autres regardent.
@@ -607,16 +630,21 @@ async function previenirDuMatch(a: Participant, b: Participant): Promise<void> {
 
   if (!match || match.notifie_at) return;
 
+  // Le même message aux deux, au même moment. Celui qui vient de liker a
+  // déjà l'annonce sous les yeux — sur un téléphone, une notification ne
+  // s'affiche pas quand l'application est au premier plan — mais rien ne
+  // dit lequel des deux c'est : le match peut se faire pendant que l'un
+  // range son téléphone. On ne choisit donc pas pour eux.
   await Promise.all([
     notifier([a.id], {
       titre: `C'est un match avec ${b.first_name}`,
-      corps: 'Ses coordonnées sont dans l’application.',
+      corps: 'Ouvre l’application : son profil et son contact t’attendent.',
       lien: '/crush',
       etiquette: `match-${match.id}`,
     }),
     notifier([b.id], {
       titre: `C'est un match avec ${a.first_name}`,
-      corps: 'Ses coordonnées sont dans l’application.',
+      corps: 'Ouvre l’application : son profil et son contact t’attendent.',
       lien: '/crush',
       etiquette: `match-${match.id}`,
     }),

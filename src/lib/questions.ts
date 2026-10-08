@@ -358,8 +358,8 @@ export const STEPS_COMPLET: Step[] = [
     id: 'photos',
     number: '14',
     section: 'Photos',
-    title: 'Ajoute tes photos',
-    help: '1 à 3 photos de toi, visage visible. Elles servent à te reconnaître le soir et restent privées.',
+    title: 'Ajoute tes meilleures photos',
+    help: '1 à 3 photos de toi, visage visible. C’est dessus qu’on se choisira pendant la soirée — prends tes meilleures.',
     note: 'Ta photo pourra éventuellement être utilisée pour t’identifier lors d’un jeu pendant la soirée.',
     fields: [{ name: 'photos', type: 'photos', required: true, min: 1, max: 3 }],
   },
@@ -499,8 +499,8 @@ export const STEPS_COURT: Step[] = [
     id: 'photos',
     number: '03',
     section: 'Photos',
-    title: 'Ajoute tes photos',
-    help: '1 à 3 photos de toi, visage visible. Elles servent à te reconnaître le soir et restent privées.',
+    title: 'Ajoute tes meilleures photos',
+    help: '1 à 3 photos de toi, visage visible. C’est dessus qu’on se choisira pendant la soirée — prends tes meilleures.',
     note: 'Ta photo pourra éventuellement être utilisée pour t’identifier lors d’un jeu pendant la soirée.',
     // Pas de case à cocher ici : la personne choisit ses photos, on ne lui
     // demande pas de cocher un encadré juridique au même moment. L'envoi vaut

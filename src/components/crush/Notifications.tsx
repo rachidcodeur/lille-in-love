@@ -19,14 +19,16 @@ type Etat = 'inconnu' | 'possible' | 'refusee' | 'active' | 'hors-app';
  *
  * La demande part d'un geste, jamais du chargement : un navigateur refuse
  * sèchement une permission réclamée toute seule, sans rien montrer.
+ *
+ * Et l'écran ne propose pas de passer outre. Non pour forcer la main —
+ * refuser dans la demande du système reste possible, et rend aussitôt la
+ * soirée — mais parce qu'un bouton « Plus tard » se prend sans y penser,
+ * et qu'on ne saura alors pas qu'un crush time vient de s'ouvrir.
  */
 export function Notifications({ clePublique }: { clePublique: string }) {
   const [etat, setEtat] = useState<Etat>('inconnu');
   const [busy, setBusy] = useState(false);
   const [souci, setSouci] = useState<string | null>(null);
-  // Remis à plus tard pour cette visite seulement : rien n'est enregistré,
-  // la demande revient en rouvrant l'application.
-  const [remis, setRemis] = useState(false);
 
   useEffect(() => {
     const terrain = regarder();
@@ -79,7 +81,7 @@ export function Notifications({ clePublique }: { clePublique: string }) {
     }
   }
 
-  if (etat === 'hors-app' || etat === 'inconnu' || etat === 'active' || remis) return null;
+  if (etat === 'hors-app' || etat === 'inconnu' || etat === 'active') return null;
 
   // Refusées : plus rien à demander, on explique en passant. Pas de voile :
   // ce serait barrer l'écran avec une impasse.
@@ -109,12 +111,10 @@ export function Notifications({ clePublique }: { clePublique: string }) {
           {busy ? 'Un instant…' : souci ? 'Réessayer' : 'Activer les notifications'}
         </button>
 
-        {/* Pas de piège : qui ne touche rien doit pouvoir regarder la
-            soirée. Mais rien n'est retenu — la demande revient au prochain
-            passage, parce qu'elle décide de la suite. */}
-        <button type="button" className="cr-passer" onClick={() => setRemis(true)}>
-          Plus tard
-        </button>
+        {/* Plus de « Plus tard ». On ne force personne — la demande du
+            système se refuse, et ce refus rend l'écran aussitôt — mais
+            offrir la sortie ici, c'est la faire prendre : toute la soirée
+            repose sur le fait d'être prévenu qu'un crush time s'ouvre. */}
       </div>
     </div>
   );

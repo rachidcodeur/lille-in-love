@@ -62,3 +62,42 @@ export function rang(numero: number): string {
 export function nomManche(numero: number): string {
   return `${rang(numero)} crush time`;
 }
+
+/**
+ * Le lien WhatsApp d'un numéro, ou rien si on n'en est pas sûr.
+ *
+ * WhatsApp n'accepte qu'un numéro au format international, sans « + » ni
+ * espace : wa.me/33612345678. Les numéros arrivent, eux, comme les gens les
+ * écrivent — « 06 12 34 56 78 », « +33 6 12 34 56 78 », « 0033612... ».
+ *
+ * On traduit les trois formes, et on s'arrête là. Deviner l'indicatif d'un
+ * numéro qu'on ne reconnaît pas mènerait à un lien qui ouvre WhatsApp sur
+ * une conversation avec un inconnu — pire que pas de bouton du tout, parce
+ * qu'on ne s'en rendrait compte qu'après avoir écrit. Le numéro reste
+ * affiché à côté : il se copie.
+ */
+export function lienWhatsApp(telephone: string | null | undefined): string | null {
+  const brut = (telephone ?? '').trim();
+  if (!brut) return null;
+
+  // Tout ce qui n'est pas un chiffre est de la mise en forme — espaces,
+  // points, tirets, parenthèses — sauf le « + » de tête, qui porte un sens.
+  const international = brut.startsWith('+');
+  const chiffres = brut.replace(/\D/g, '');
+  if (!chiffres) return null;
+
+  if (international) return chiffres.length >= 8 ? `https://wa.me/${chiffres}` : null;
+  // « 00 » est le « + » composé à l'ancienne.
+  if (chiffres.startsWith('00')) {
+    const sans = chiffres.slice(2);
+    return sans.length >= 8 ? `https://wa.me/${sans}` : null;
+  }
+  // Un numéro français tel qu'on le note : dix chiffres, un zéro devant.
+  if (chiffres.length === 10 && chiffres.startsWith('0')) {
+    return `https://wa.me/33${chiffres.slice(1)}`;
+  }
+  // Déjà en international sans le signe.
+  if (chiffres.length >= 11) return `https://wa.me/${chiffres}`;
+
+  return null;
+}

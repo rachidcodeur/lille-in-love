@@ -475,12 +475,13 @@ poser une icône sur l'écran d'accueil et recevoir une notification
 demandent du HTTPS, que `localhost` n'a pas.
 
 1. **Exécute `supabase/13_crushtime.sql`.** Sans lui, les pages du crush
-   time s'affichent mais disent ce qui manque. Puis `16`, `17` et `18` :
-   sans elles, pas de code personnel, pas de notifications, et un match
-   reçu pendant qu'on n'était pas dans l'application ne se rejoue pas à
-   l'ouverture. Rien ne casse — l'application retombe sur ce qu'elle sait
-   faire — mais la soirée y perd. `14` et `15` peuvent attendre :
-   l'ordre des photos et la durée gardent leurs valeurs par défaut.
+   time s'affichent mais disent ce qui manque. Puis `17` et `18` : sans
+   elles, pas de notifications, et un match reçu pendant qu'on n'était pas
+   dans l'application ne se rejoue pas à l'ouverture. Rien ne casse —
+   l'application retombe sur ce qu'elle sait faire — mais la soirée y perd.
+   `14`, `15` et `16` peuvent attendre : l'ordre des photos et la durée
+   gardent leurs valeurs par défaut, et la colonne du code personnel n'est
+   plus lue depuis qu'un seul code sert à toute la soirée.
 2. **Pousse les commits**, puis redéploie chez Hostinger (section 3).
 3. Dans `/admin/soirees`, crée une soirée, compose-la, et **ajoute-toi par
    l'onglet « À la main »**.

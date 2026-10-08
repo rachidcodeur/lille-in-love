@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Profil } from '@/lib/crush';
 import { alerterMatch } from '@/lib/alerte';
+import { Contacts } from './Contacts';
 
 /** Le nom de l'évènement par lequel un like victorieux appelle la fête. */
 export const EVENEMENT_MATCH = 'lil:match';
@@ -108,28 +109,7 @@ export function CrushFete({ moi, attendus }: { moi: Moi; attendus: Profil[] }) {
           Vous vous êtes choisis. À vous de jouer&nbsp;: voici comment le ou la retrouver.
         </p>
 
-        <div className="cr-fete-contacts">
-          {lui.phone && (
-            <a className="cr-fete-contact" href={`tel:${lui.phone}`}>
-              {lui.phone}
-            </a>
-          )}
-          {lui.email && (
-            <a className="cr-fete-contact" href={`mailto:${lui.email}`}>
-              {lui.email}
-            </a>
-          )}
-          {lui.instagram && (
-            <a
-              className="cr-fete-contact"
-              href={`https://instagram.com/${lui.instagram.replace(/^@/, '')}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              @{lui.instagram.replace(/^@/, '')}
-            </a>
-          )}
-        </div>
+        <Contacts phone={lui.phone} instagram={lui.instagram} classe="cr-fete-contact" />
 
         <button
           type="button"

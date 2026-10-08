@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Profil } from '@/lib/crush';
+import { Contacts } from './Contacts';
 
 /**
  * Mes matchs, en haut à droite.
@@ -70,30 +71,7 @@ export function CrushMatchs({ matchs }: { matchs: Profil[] }) {
                     </p>
                   )}
 
-                  <div className="cr-match-contacts">
-                    {/* Le numéro d'abord : c'est par là qu'on s'écrit le
-                        lendemain, pas par l'email. */}
-                    {m.phone && (
-                      <a className="cr-match-contact" href={`tel:${m.phone}`}>
-                        {m.phone}
-                      </a>
-                    )}
-                    {m.email && (
-                      <a className="cr-match-contact" href={`mailto:${m.email}`}>
-                        {m.email}
-                      </a>
-                    )}
-                    {m.instagram && (
-                      <a
-                        className="cr-match-contact"
-                        href={`https://instagram.com/${m.instagram.replace(/^@/, '')}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {m.instagram}
-                      </a>
-                    )}
-                  </div>
+                  <Contacts phone={m.phone} instagram={m.instagram} classe="cr-match-contact" />
                 </article>
               ))
             )}

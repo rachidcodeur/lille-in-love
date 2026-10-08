@@ -8,6 +8,10 @@ import { CrushAffiche } from './CrushAffiche';
 /**
  * Ouvrir le crush time, et donner le code de la salle.
  *
+ * Un seul code pour toute la soirée. Chacun avait le sien, reçu par mail :
+ * il fallait le retrouver dans sa boîte, debout, en musique, et l'hôte
+ * n'avait rien à répondre à qui l'avait perdu.
+ *
  * Le code se dit à voix haute : c'est par lui qu'on entre quand on n'a pas
  * reçu son lien, et en pratique c'est la porte principale — rien à attendre,
  * rien à recevoir, aucun réseau à partager entre cinquante téléphones.
@@ -57,20 +61,21 @@ export function ActiverCrush({
           {racine && <CrushAffiche racine={racine} />}
 
           <p className="adm-code-label" style={{ marginTop: 22 }}>
-            Code de secours
+            Le code de la salle
           </p>
           <p className="adm-code">{code}</p>
           <p className="adm-hint" style={{ marginTop: 10 }}>
-            Chacun entre avec <strong>son</strong> code à quatre chiffres, reçu par mail. Celui-ci
-            ouvre n’importe quelle adresse de la liste : ne l’annonce que pour dépanner quelqu’un
-            qui ne retrouve plus son message.
+            À annoncer à voix haute et à écrire au mur : c’est le même pour tout le monde. Chacun
+            entre avec son adresse et ces quatre chiffres. Il ouvre n’importe quelle adresse de la
+            liste — quelqu’un qui l’entend et connaît l’adresse d’un autre peut entrer à sa place.
+            Le lien personnel, lui, ne se devine pas : c’est la voie à privilégier.
           </p>
         </>
       ) : (
         <>
           <p className="adm-hint" style={{ margin: '0 0 16px' }}>
             Ouvrir ce crush time referme celui de la soirée précédente. Un code à quatre chiffres
-            sera tiré : c’est celui que tu annonceras dans la salle.
+            sera tiré : c’est celui que tu annonceras dans la salle, le même pour tout le monde.
           </p>
           <button type="button" className="adm-btn adm-btn-yes" disabled={busy} onClick={activer}>
             {busy ? 'Ouverture…' : 'Ouvrir ce crush time'}

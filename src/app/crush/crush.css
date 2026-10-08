@@ -1140,10 +1140,6 @@
   margin-top: 10px;
 }
 
-.cr-notifs .cr-passer {
-  margin-top: 6px;
-}
-
 /* Le message d'un échec d'activation : il doit se lire, pas s'excuser. */
 .cr-notifs-souci {
   margin: 14px 0 0;
@@ -1199,4 +1195,38 @@
 .cr-sortir-confirme button:first-child {
   opacity: 1;
   color: var(--coeur);
+}
+
+/* --- Les contacts d'un match ----------------------------------------
+   Mêmes boutons dans le panneau et dans l'annonce : c'est la même chose
+   qu'on y cherche. Déclarés en dernier pour l'emporter sur les règles de
+   chaque conteneur, qui n'ont pas à connaître ce détail.
+   -------------------------------------------------------------------- */
+
+.cr-contacts .cr-contact {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Un bouton qu'on vise debout, parfois à une main. */
+  min-height: 46px;
+  text-align: left;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+.cr-contact-icone {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  /* L'icône reste dans la couleur du texte : un vert WhatsApp et un dégradé
+     Instagram feraient trois marques étrangères dans un écran qui n'en a
+     qu'une. La forme suffit à les reconnaître. */
+  opacity: 0.75;
+}
+
+.cr-contact-vide {
+  margin: 12px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--creme-doux);
 }

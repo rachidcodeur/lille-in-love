@@ -31,7 +31,7 @@ execFileSync(
 // butte sur le premier « export ».
 writeFileSync(join(sortie, 'package.json'), '{ "type": "module" }');
 
-const { peutVoir, age, rang, nomManche } = await import(join(sortie, 'crush-regles.js'));
+const { peutVoir, age, rang, nomManche, lienWhatsApp } = await import(join(sortie, 'crush-regles.js'));
 const { lireCsv, colonne } = await import(join(sortie, 'csv.js'));
 const { trouve, presque, sansAccent } = await import(join(sortie, 'groupes.js'));
 
@@ -257,6 +257,28 @@ colonne(entetes, 'telephone') === null
 lireCsv('').length === 0 && lireCsv('Email\n').length === 0
   ? ok('un fichier vide ou sans ligne ne casse rien')
   : bad('fichier vide mal géré');
+
+section('7. Le lien WhatsApp');
+
+lienWhatsApp('06 12 34 56 78') === 'https://wa.me/33612345678'
+  ? ok('un numéro français tel qu’on l’écrit devient un lien international')
+  : bad('numéro français mal traduit', String(lienWhatsApp('06 12 34 56 78')));
+
+lienWhatsApp('+33 6 12 34 56 78') === 'https://wa.me/33612345678'
+  ? ok('le « + » et les espaces s’effacent')
+  : bad('format international mal traduit', String(lienWhatsApp('+33 6 12 34 56 78')));
+
+lienWhatsApp('0033612345678') === 'https://wa.me/33612345678'
+  ? ok('et le « 00 » composé à l’ancienne vaut le « + »')
+  : bad('préfixe 00 mal traduit', String(lienWhatsApp('0033612345678')));
+
+lienWhatsApp('+32 470 12 34 56') === 'https://wa.me/32470123456'
+  ? ok('un numéro étranger garde son indicatif, on n’y touche pas')
+  : bad('numéro belge abîmé', String(lienWhatsApp('+32 470 12 34 56')));
+
+lienWhatsApp('12 34 56') === null && lienWhatsApp('') === null && lienWhatsApp(null) === null
+  ? ok('et ce qui ne ressemble à rien ne donne pas de lien : mieux vaut pas de bouton qu’un inconnu')
+  : bad('un numéro douteux a produit un lien', String(lienWhatsApp('12 34 56')));
 
 /* ---------------------------------------------------------------- */
 rmSync(sortie, { recursive: true, force: true });

@@ -46,7 +46,7 @@ export function CrushAffiche({ racine }: { racine: string }) {
         <p className="adm-hint" style={{ margin: '6px 0 0' }}>
           À scanner avec l’appareil photo, pas depuis une application de mail. Il mène à{' '}
           <strong>{adresse}</strong>, où chacun entre avec son adresse et les quatre chiffres
-          reçus par mail.
+          annoncés dans la salle.
         </p>
         <a className="adm-btn" href={image} download="crush-time-qr.png" style={{ marginTop: 12 }}>
           Télécharger pour imprimer

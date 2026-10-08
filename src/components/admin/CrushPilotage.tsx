@@ -302,7 +302,7 @@ export function CrushPilotage({
             onClick={() =>
               copier(
                 presents
-                  .map((p) => `${p.first_name}\t${p.email}\t${p.code ?? ''}\t${lienDe(p)}`)
+                  .map((p) => `${p.first_name}\t${p.email}\t${lienDe(p)}`)
                   .join('\n'),
                 'tous',
               )
@@ -388,10 +388,7 @@ export function CrushPilotage({
                   {!p.gender && <span className="adm-tag">profil incomplet</span>}
                   {p.retire_at && <span className="adm-tag">retiré</span>}
                 </p>
-                <p className="adm-present-mail">
-                  {p.email}
-                  {p.code && <span className="adm-present-code">{p.code}</span>}
-                </p>
+                <p className="adm-present-mail">{p.email}</p>
               </div>
 
               {!p.retire_at && p.notifiable && (

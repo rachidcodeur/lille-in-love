@@ -2614,16 +2614,6 @@ a.adm-btn:hover {
 
 /* Le code de chacun, dans la liste d'émargement : c'est lui qu'on dicte
    quand quelqu'un ne retrouve plus son mail. */
-.adm-present-code {
-  margin-left: 10px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: var(--sand);
-  color: var(--gold-deep);
-  font-weight: 700;
-  font-variant-numeric: lining-nums tabular-nums;
-}
-
 /* --- Qui recevra vraiment les notifications --------------------------- */
 
 .adm-notifiables {

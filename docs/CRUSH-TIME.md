@@ -30,8 +30,10 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
   choisit, sans ouvrir la fiche. La confirmation reste, puisque le geste ne
   se reprend pas.
 - **Les noms** s'affichent avec les trois premières lettres du nom de
-  famille — « Samir Had. ». De quoi distinguer deux Thomas sans livrer
-  l'identité de personne, comme le formulaire le promet en la demandant.
+  famille, **en capitales** — « Samir HAD. ». De quoi distinguer deux Thomas
+  sans livrer l'identité de personne, comme le formulaire le promet en la
+  demandant. Les capitales disent « ceci est le nom » : en bas de casse,
+  trois lettres collées à un prénom se lisent comme sa fin.
 - **Le profil ouvert** donne prénom, âge, métier, ville, et une présentation
   **coupée vers 140 caractères** — personne ne lit dix lignes debout, et une
   fiche qui s'allonge repousse le bouton hors de l'écran.
@@ -57,7 +59,15 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
   fois n'en est plus une, et la note part dès l'affichage, pas à la
   fermeture : un téléphone qu'on repose sans toucher au bouton ne la reverra
   pas demain.
-- **Un match donne les trois photos**, le téléphone, l'email et l'Instagram.
+- **Un match donne les trois photos**, le téléphone avec son bouton WhatsApp,
+  et l'Instagram. **Jamais l'adresse email** : personne n'écrit un mail au
+  lendemain d'une soirée, et une adresse livre souvent l'identité complète
+  que le formulaire promet de garder. Elle ne descend pas jusqu'au
+  navigateur du tout — ce qu'on n'envoie pas ne peut pas fuiter. Le bouton
+  WhatsApp n'apparaît que si le numéro se traduit sans supposition ; le
+  numéro, lui, reste affiché et se copie. Une fiche venue de la billetterie
+  sans candidature n'a ni l'un ni l'autre : l'écran le dit, plutôt que de
+  laisser un vide qu'on prend pour un chargement.
   Un like en attente ne donne rien de tout cela : c'est au match qu'on décide
   si l'on écrit, et un seul visage ne suffit pas.
 - **Le like se montre avant la réponse du serveur.** Une seconde d'écran
@@ -108,17 +118,22 @@ l'appareil photo, il ouvre Safari.** Un lien ouvert depuis l'app Gmail
 s'ouvre dans son navigateur intégré, où « Ajouter à l'écran d'accueil »
 n'existe pas. C'est la seule façon fiable de ne pas s'y retrouver enfermé.
 
-**Chacun a son code à quatre chiffres**, reçu par mail avant la soirée.
-Avec son adresse, il suffit à entrer. Le code de la soirée existe toujours
-mais c'est désormais un **secours** : il ouvre n'importe quelle adresse de
-la liste, et ne doit être annoncé que pour dépanner quelqu'un qui ne
-retrouve plus son message.
+**Un seul code à quatre chiffres pour toute la soirée**, annoncé à voix
+haute et écrit au mur. Avec son adresse, il suffit à entrer.
+
+Chacun avait le sien, reçu par mail. On l'a retiré : il fallait le
+retrouver dans sa boîte, debout, au milieu du bruit, et l'hôte n'avait
+rien à répondre à qui l'avait perdu. Ce que ça coûte, et il faut le
+savoir : **le code ouvre n'importe quelle adresse de la liste.** Quelqu'un
+qui l'entend et connaît l'adresse d'un autre peut entrer à sa place et
+liker en son nom. C'est le prix d'une porte qu'on ouvre à voix haute.
 
 Dix essais par quart d'heure et par adresse : quatre chiffres se devinent
 en dix mille coups, pas en dix.
 
-Le **lien personnel** envoyé par mail reste le chemin le plus court pour
-qui le fait au calme, la veille.
+Le **lien personnel** envoyé par mail reste la voie sûre et le chemin le
+plus court, pour qui le fait au calme la veille : son jeton ne se devine
+pas. C'est lui qu'on envoie ; le code est le filet.
 
 La session tient deux jours, dans un cookie. **Supprimer l'icône de
 l'écran d'accueil ne déconnecte pas** : ce sont deux choses séparées, et
@@ -175,6 +190,16 @@ Un **widget** reste impossible — réservé aux applications natives.
 
 Deux moments, deux seulement : **l'ouverture d'une manche** et **un match**.
 Un like reste muet — le notifier dirait à l'autre qu'il a été choisi.
+
+**Les deux personnes sont prévenues de la même façon**, au même moment, du
+même message. Un match n'appartient pas à celui qui a cliqué en dernier, et
+rien ne dit lequel des deux a encore son téléphone en main.
+
+**L'écran qui demande la permission ne propose pas de passer outre.** Pas
+pour forcer la main — refuser dans la demande du système reste possible, et
+rend aussitôt la soirée — mais parce qu'un bouton « Plus tard » se prend
+sans y penser, et qu'on ne saura alors pas qu'un crush time s'est ouvert.
+Toute la soirée repose là-dessus.
 
 **Rouvrir une manche prévient de nouveau** — c'est ce qu'il faut pour
 essayer, et aussi le soir même : une manche rouverte parce qu'on l'avait
@@ -251,8 +276,9 @@ atteindre la session du back-office. Repli possible sur
 ## Les migrations
 
 `13_crushtime.sql` (le schéma), `14_ordre_photos.sql` (l'ordre des photos),
-`15_duree_manches.sql` (les quinze minutes), `16_code_personnel.sql` (le
-code de chacun), `17_notifications.sql` (la trace des envois),
+`15_duree_manches.sql` (les quinze minutes), `16_code_personnel.sql` (la
+colonne du code de chacun, qui n'est plus lue — un seul code par soirée
+désormais), `17_notifications.sql` (la trace des envois),
 `18_match_vu.sql` (l'annonce vue, de chaque côté).
 
 ## Voir tout ça en local

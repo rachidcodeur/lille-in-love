@@ -24,7 +24,7 @@ export function CrushEntree({
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<string | null>(
-    lienInvalide ? 'Ce lien n’est plus valable. Entre avec ton adresse et le code de la salle.' : null,
+    lienInvalide ? 'Ce lien n’est plus valable. Entre avec ton adresse et le code annoncé dans la salle.' : null,
   );
 
   async function entrer() {
@@ -84,7 +84,7 @@ export function CrushEntree({
           required
         />
 
-        <label htmlFor="cr-code">Ton code à quatre chiffres</label>
+        <label htmlFor="cr-code">Le code de la soirée</label>
         <input
           id="cr-code"
           // « numeric » plutôt que « tel » : le clavier n'affiche que des
@@ -92,7 +92,7 @@ export function CrushEntree({
           inputMode="numeric"
           pattern="[0-9]*"
           maxLength={4}
-          placeholder="4 chiffres"
+          placeholder="les 4 chiffres annoncés"
           className="cr-code-saisie"
           value={code}
           onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
