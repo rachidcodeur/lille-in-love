@@ -93,6 +93,7 @@ export default async function CrushPage({ searchParams }: Props) {
       <CrushFete
         moi={{ prenom: moi.first_name, photo: moiEnProfil?.photo ?? null }}
         attendus={aFeter}
+        matchs={matchs}
       />
 
       <Installation jeton={moi.jeton} prenom={moi.first_name} />

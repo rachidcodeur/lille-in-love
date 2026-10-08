@@ -60,6 +60,13 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
   réunis, les coordonnées en dessous, et une petite fanfare. C'est le moment
   que la soirée promet ; il tenait jusqu'ici dans une carte sobre comme les
   autres.
+- **L'annonce est la même des deux côtés, et arrive sans rien toucher.**
+  Celui qui ferme la boucle la voit dans la seconde ; celui qui avait liké
+  le premier la voit apparaître sur son écran quand l'autre lui rend son
+  like, au plus tard huit secondes après — la veille rafraîchit, la liste
+  des matchs s'allonge, et ce qui s'y ajoute en cours de soirée se fête.
+  Ce chemin-là ne demande rien à la base : il suffit que l'application soit
+  ouverte.
 - **Un match reçu pendant qu'on n'était pas là se rejoue à l'ouverture**, avec
   les mêmes effets. Les deux personnes ne regardent pas leur téléphone au
   même moment, et c'est tout le problème : celui qui ferme la boucle voit
@@ -76,6 +83,11 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
   la manche pour rien, sans pouvoir recommencer. **Ce qui est un supplément
   doit pouvoir échouer seul.** Sans la migration, le match se fait,
   l'annonce s'affiche, et seul le rejeu à l'ouverture manque.
+
+  Les deux chemins se recouvrent exprès : la liste qui s'allonge couvre
+  l'application restée ouverte sans dépendre d'aucune colonne, les
+  « non vus » couvrent le téléphone qu'on avait en poche. Le premier des
+  deux à voir le match le fête, le second le trouve déjà fêté.
 
   Le faux Supabase des tests acceptait n'importe quelle colonne — une table
   n'y est qu'un tableau d'objets — et ne pouvait donc pas voir ce bug. On

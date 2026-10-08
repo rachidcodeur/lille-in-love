@@ -22,13 +22,28 @@ type Moi = { prenom: string; photo: string | null };
  *    — la notification l'a dit, mais une notification se lit d'un œil, et
  *    la nouvelle mérite mieux que de se retrouver dans une liste.
  *
+ * Le second cas arrive par deux chemins, et c'est exprès : la liste des
+ * matchs qui s'allonge sous nos yeux, et ceux que la base dit non vus.
+ * L'un marche sans la migration qui porte les colonnes « vu », l'autre
+ * survit à l'application fermée. Le premier des deux à voir le match le
+ * fête ; le second le trouve déjà fêté.
+ *
  * Le second cas est celui qu'on traitait mal. La base garde donc, de
  * chaque côté, si l'annonce a été vue ; celles qui ne l'ont pas été
  * arrivent ici et se jouent à l'ouverture, avec le même éclat. Celui qui
  * ferme la boucle, lui, est noté comme ayant vu dès l'écriture du match :
  * il l'a sous les yeux, l'annonce n'a pas à lui être rejouée.
  */
-export function CrushFete({ moi, attendus }: { moi: Moi; attendus: Profil[] }) {
+export function CrushFete({
+  moi,
+  attendus,
+  matchs,
+}: {
+  moi: Moi;
+  attendus: Profil[];
+  /** Tous mes matchs. Ce qui s'y ajoute en cours de soirée se fête. */
+  matchs: Profil[];
+}) {
   const [file, setFile] = useState<Profil[]>([]);
   // Ce qu'on a déjà fêté dans cette session : le serveur peut renvoyer un
   // match une fraction de seconde avant que la note « vu » n'arrive, et la
@@ -46,6 +61,32 @@ export function CrushFete({ moi, attendus }: { moi: Moi; attendus: Profil[] }) {
   useEffect(() => {
     ajouter(attendus);
   }, [attendus, ajouter]);
+
+  /**
+   * Et ceux qui apparaissent sous nos yeux.
+   *
+   * La veille rafraîchit la page quand le compte des matchs bouge : un
+   * match qui n'était pas là à l'arrivée est forcément tout neuf, et se
+   * fête — sans rien demander à la base.
+   *
+   * C'est le même moment que celui des « attendus », pris par l'autre
+   * bout, et c'est voulu : les deux chemins se recouvrent. Celui-ci
+   * couvre l'application restée ouverte et ne dépend d'aucune colonne ;
+   * l'autre couvre le téléphone qu'on avait en poche. Le premier des deux
+   * à voir le match le fête, le second le trouve déjà fêté.
+   */
+  const connus = useRef<Set<string> | null>(null);
+  useEffect(() => {
+    // Au premier passage, on ne fête rien : ce qui est déjà là date d'avant
+    // notre arrivée, et c'est à « attendus » de dire ce qui reste à montrer.
+    if (connus.current === null) {
+      connus.current = new Set(matchs.map((m) => m.id));
+      return;
+    }
+    const neufs = matchs.filter((m) => !connus.current!.has(m.id));
+    for (const m of neufs) connus.current!.add(m.id);
+    if (neufs.length > 0) ajouter(neufs);
+  }, [matchs, ajouter]);
 
   // Celui qu'on vient de provoquer d'un clic sur un cœur. Il passe par un
   // évènement et non par le serveur : attendre le redessin de la page

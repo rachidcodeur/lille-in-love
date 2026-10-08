@@ -756,15 +756,32 @@ export async function matchsDe(moi: Participant): Promise<Profil[]> {
   const db = supabaseAdmin();
   const { data } = await db
     .from('lil_crush_matches')
-    .select('a_id, b_id, created_at')
+    .select('id, a_id, b_id, created_at')
     .or(`a_id.eq.${moi.id},b_id.eq.${moi.id}`)
     .order('created_at', { ascending: true });
 
-  const ids = (data ?? []).map((m) => (m.a_id === moi.id ? m.b_id : m.a_id));
-  if (ids.length === 0) return [];
+  const lignes = data ?? [];
+  if (lignes.length === 0) return [];
 
-  const { data: gens } = await db.from('lil_crush_participants').select('*').in('id', ids);
-  return habiller((gens ?? []) as Participant[], { contact: true });
+  const { data: gens } = await db
+    .from('lil_crush_participants')
+    .select('*')
+    .in(
+      'id',
+      lignes.map((m) => (m.a_id === moi.id ? m.b_id : m.a_id)),
+    );
+
+  const profils = await habiller((gens ?? []) as Participant[], { contact: true });
+  const parId = new Map(profils.map((p) => [p.id, p]));
+
+  // L'identifiant du match voyage avec le profil : l'écran s'en sert pour
+  // noter l'annonce comme vue quand c'est lui qui la déclenche.
+  const sortie: Profil[] = [];
+  for (const m of lignes) {
+    const autre = parId.get(m.a_id === moi.id ? m.b_id : m.a_id);
+    if (autre) sortie.push({ ...autre, matchId: m.id });
+  }
+  return sortie;
 }
 
 /* ====================================================================

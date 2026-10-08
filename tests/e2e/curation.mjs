@@ -2553,6 +2553,30 @@ sansMigration.statut === 200 && sansMigration.corps?.match
   ? ok('et il est bien écrit en base, sans la colonne qui manque')
   : bad('aucun match en base', String((await state()).crushMatches.length));
 
+// Et l'annonce chez celui qui avait liké le premier : son écran ne doit
+// rien attendre de la base pour la montrer. On fabrique un match avec
+// quelqu'un qu'Inès n'a encore jamais vu apparaître, colonnes « vu »
+// toujours absentes — seul le compte qui s'allonge peut la déclencher.
+const [pa, pb] = [qui['Inès'].id, qui['Thomas'].id].sort();
+const [matchSurprise] = await (
+  await fetch(`${FAKE}/rest/v1/lil_crush_matches`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Prefer: 'return=representation' },
+    body: JSON.stringify({ soiree_id: soireeCrush.id, round_id: manche1.id, a_id: pa, b_id: pb }),
+  })
+).json();
+
+(await jusqua(async () => (await tel.locator('.cr-fete-tetes').count()) > 0, 25_000))
+  ? ok('celui qui avait liké le premier voit l’annonce arriver sur son écran, sans rien toucher')
+  : bad('aucune annonce chez celui qui attendait le retour');
+(await tel.locator('.cr-fete-noms').innerText()).includes('Thomas')
+  ? ok('et c’est bien la personne qui vient de le liker en retour')
+  : bad('mauvaise personne annoncée', await tel.locator('.cr-fete-noms').innerText());
+
+await tel.locator('.cr-fete-ok').click();
+await tel.waitForTimeout(300);
+await fetch(`${FAKE}/rest/v1/lil_crush_matches?id=eq.${matchSurprise.id}`, { method: 'DELETE' });
+
 await fetch(`${FAKE}/__colonnes-absentes?table=lil_crush_matches&colonnes=`, { method: 'POST' });
 
 // Le marquage n'a pas pu se faire — c'est tout l'objet du test — donc ce
