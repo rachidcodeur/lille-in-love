@@ -2486,6 +2486,59 @@ fuites.length === 0
   ? ok('et aucune adresse email ne descend jamais jusqu’au navigateur')
   : bad('des adresses email traînent dans la page', [...new Set(fuites)].join(', '));
 
+// --- Quand la migration du « vu » n'a pas encore été jouée ----------
+// Le marquage « annonce vue » voyageait dans le même ordre d'écriture que
+// le match. Sur une base où 18_match_vu.sql n'avait pas tourné, la colonne
+// n'existe pas, PostgREST refuse l'ordre entier — et le match ne se faisait
+// plus du tout, alors que le like, lui, venait d'être enregistré. La
+// personne avait dépensé son unique choix pour rien.
+//
+// On rejoue donc le dernier maillon sur une base à qui il manque ces deux
+// colonnes : le match doit se faire quand même.
+await fetch(`${FAKE}/rest/v1/lil_crush_matches?id=eq.${s.crushMatches[0].id}`, { method: 'DELETE' });
+const likeSamir = (await state()).crushLikes.find((l) => l.de_id === qui['Samir'].id);
+await fetch(`${FAKE}/rest/v1/lil_crush_likes?id=eq.${likeSamir.id}`, { method: 'DELETE' });
+await fetch(`${FAKE}/__colonnes-absentes?table=lil_crush_matches&colonnes=vu_a_at,vu_b_at`, {
+  method: 'POST',
+});
+
+const sansMigration = await tel2.evaluate(async (versId) => {
+  const r = await fetch('/api/crush/liker', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ versId }),
+  });
+  return { statut: r.status, corps: await r.json().catch(() => null) };
+}, qui['Inès'].id);
+
+sansMigration.statut === 200 && sansMigration.corps?.match
+  ? ok('sans la migration du « vu », le match se fait quand même et s’annonce')
+  : bad('le match est perdu quand la migration manque', JSON.stringify(sansMigration));
+
+(await state()).crushMatches.length === 1
+  ? ok('et il est bien écrit en base, sans la colonne qui manque')
+  : bad('aucun match en base', String((await state()).crushMatches.length));
+
+await fetch(`${FAKE}/__colonnes-absentes?table=lil_crush_matches&colonnes=`, { method: 'POST' });
+
+// Le marquage n'a pas pu se faire — c'est tout l'objet du test — donc ce
+// match est « jamais vu » des deux côtés, et l'annonce se rejouerait à la
+// première actualisation, par-dessus la suite du parcours. C'est le bon
+// comportement du produit ; on remet seulement la soirée dans l'état où le
+// test l'avait trouvée.
+const refait = (await state()).crushMatches[0];
+await fetch(`${FAKE}/rest/v1/lil_crush_matches?id=eq.${refait.id}`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ vu_a_at: new Date().toISOString(), vu_b_at: new Date().toISOString() }),
+});
+// Si la veille l'a déjà affichée entre-temps, on la referme.
+await tel2.waitForTimeout(400);
+if (await tel2.locator('.cr-fete-ok').count()) {
+  await tel2.locator('.cr-fete-ok').click();
+  await tel2.waitForTimeout(300);
+}
+
 // --- La photo de quelqu'un d'une autre soirée est refusée ----------
 const [intruse] = await (
   await fetch(`${FAKE}/rest/v1/lil_photos`, {

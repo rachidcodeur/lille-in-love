@@ -54,8 +54,23 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
   même moment, et c'est tout le problème : celui qui ferme la boucle voit
   l'annonce dans la seconde, l'autre avait le téléphone en poche. La base
   garde donc, de chaque côté, si l'annonce a été vue — `vu_a_at`, `vu_b_at`.
-  Celui qui like en dernier est noté comme ayant vu dès l'écriture du match ;
-  l'autre déclenche l'annonce en rouvrant. Une bonne nouvelle annoncée deux
+  Celui qui like en dernier est noté comme ayant vu **dans une écriture à
+  part** ; l'autre déclenche l'annonce en rouvrant.
+
+  À part, et c'est tout le point : écrit dans le même ordre que le match, ce
+  marquage emportait le match avec lui. Sur une base où `18_match_vu.sql`
+  n'avait pas encore tourné, la colonne n'existe pas, PostgREST refuse
+  l'ordre entier, et le match ne se faisait plus — alors que le like, lui,
+  venait d'être enregistré : la personne avait dépensé son unique choix de
+  la manche pour rien, sans pouvoir recommencer. **Ce qui est un supplément
+  doit pouvoir échouer seul.** Sans la migration, le match se fait,
+  l'annonce s'affiche, et seul le rejeu à l'ouverture manque.
+
+  Le faux Supabase des tests acceptait n'importe quelle colonne — une table
+  n'y est qu'un tableau d'objets — et ne pouvait donc pas voir ce bug. On
+  peut désormais lui déclarer qu'une colonne n'existe pas
+  (`/__colonnes-absentes`), et un test rejoue ce match-là sur une base à qui
+  il manque les deux colonnes. Une bonne nouvelle annoncée deux
   fois n'en est plus une, et la note part dès l'affichage, pas à la
   fermeture : un téléphone qu'on repose sans toucher au bouton ne la reverra
   pas demain.

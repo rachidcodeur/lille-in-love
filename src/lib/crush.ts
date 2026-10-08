@@ -580,20 +580,23 @@ export async function liker(moi: Participant, versId: string): Promise<ResultatL
   const { error: eMatch } = await db
     .from('lil_crush_matches')
     .upsert(
-      {
-        soiree_id: moi.soiree_id,
-        round_id: manche.id,
-        a_id,
-        b_id,
-        // Mon côté est noté vu dès l'écriture : la fête s'affiche sous mes
-        // yeux dans la seconde, elle n'a pas à m'être rejouée demain. Le
-        // côté de l'autre reste vide — c'est lui qui déclenchera l'annonce
-        // à sa prochaine ouverture.
-        [a_id === moi.id ? 'vu_a_at' : 'vu_b_at']: new Date().toISOString(),
-      },
+      { soiree_id: moi.soiree_id, round_id: manche.id, a_id, b_id },
       { onConflict: 'soiree_id,a_id,b_id', ignoreDuplicates: true },
     );
   if (eMatch) return { ok: false, raison: eMatch.message };
+
+  // Mon côté est noté vu, à part et sans qu'on attende le résultat : la
+  // fête s'affiche sous mes yeux dans la seconde, elle n'a pas à m'être
+  // rejouée demain.
+  //
+  // À part, et c'est tout le point : écrit dans la même requête que le
+  // match, il emportait le match avec lui. Sur une base où 18_match_vu.sql
+  // n'a pas encore tourné, la colonne n'existe pas, l'écriture entière est
+  // refusée — et le like, lui, venait d'être enregistré. La personne avait
+  // dépensé son unique choix de la manche pour un match qui n'existait pas,
+  // sans pouvoir recommencer. Ce qui est un supplément doit pouvoir échouer
+  // seul.
+  await marquerMonCote(moi, a_id, b_id);
 
   // Les deux côtés sont prévenus, une seule fois. Celui qui vient de
   // cliquer le voit déjà à l'écran ; l'autre n'a peut-être pas son
@@ -602,6 +605,22 @@ export async function liker(moi: Participant, versId: string): Promise<ResultatL
 
   const [profil] = await habiller([cible], { contact: true });
   return { ok: true, match: profil ?? null };
+}
+
+/**
+ * Noter que j'ai vu l'annonce, puisque je viens de la déclencher.
+ *
+ * Silencieux par choix : sans la migration qui porte ces colonnes, le match
+ * tient quand même, l'annonce s'affiche quand même, et seul le rejeu à
+ * l'ouverture manque. C'est exactement la dégradation annoncée.
+ */
+async function marquerMonCote(moi: Participant, a_id: string, b_id: string): Promise<void> {
+  await supabaseAdmin()
+    .from('lil_crush_matches')
+    .update({ [a_id === moi.id ? 'vu_a_at' : 'vu_b_at']: new Date().toISOString() })
+    .eq('soiree_id', moi.soiree_id)
+    .eq('a_id', a_id)
+    .eq('b_id', b_id);
 }
 
 /**

@@ -37,6 +37,52 @@ const log = [];
 const record = (entry) => log.push({ at: Date.now(), ...entry });
 
 /* ---------------------------------------------------------------- */
+/* Les colonnes qu'une migration pas encore jouée n'a pas créées     */
+/* ---------------------------------------------------------------- */
+/*
+ * Ce faux serveur accepte par défaut n'importe quelle colonne : une table
+ * n'est qu'un tableau d'objets. La vraie base, elle, refuse tout l'ordre
+ * d'écriture quand une seule colonne manque — et c'est passé entre les
+ * mailles : du code écrivait une colonne portée par une migration qu'on
+ * n'avait pas encore jouée, et c'est le match tout entier qui ne se
+ * faisait plus.
+ *
+ * On peut donc déclarer, le temps d'un test, qu'une colonne n'existe pas,
+ * et vérifier que l'application s'en remet. Piloté par
+ * « /__colonnes-absentes?table=…&colonnes=a,b ».
+ */
+const colonnesAbsentes = new Map();
+
+const absentes = (table) => colonnesAbsentes.get(table) ?? null;
+
+/** Le refus de PostgREST à l'écriture d'une colonne inconnue. */
+function colonneManquanteEnEcriture(table, item) {
+  const manquantes = absentes(table);
+  if (!manquantes) return null;
+  const fautive = Object.keys(item).find((c) => manquantes.has(c));
+  return fautive
+    ? {
+        code: 'PGRST204',
+        message: `Could not find the '${fautive}' column of '${table}' in the schema cache`,
+      }
+    : null;
+}
+
+/** Et son refus à la lecture, qui ne porte pas le même code. */
+function colonneManquanteEnLecture(table, params) {
+  const manquantes = absentes(table);
+  if (!manquantes) return null;
+  const demandees = (params.get('select') ?? '')
+    .split(',')
+    .map((c) => c.trim())
+    .filter(Boolean);
+  const fautive = demandees.find((c) => manquantes.has(c));
+  return fautive
+    ? { code: '42703', message: `column ${table}.${fautive} does not exist` }
+    : null;
+}
+
+/* ---------------------------------------------------------------- */
 /* La vue lil_members_overview, recalculée à la lecture              */
 /* ---------------------------------------------------------------- */
 function overview() {
@@ -263,6 +309,13 @@ async function traiter(req, res) {
     record({ what: 'resend:batch', taille: body.length });
     return json(res, 200, { data: ids });
   }
+  if (path === '/__colonnes-absentes' && req.method === 'POST') {
+    const table = url.searchParams.get('table');
+    const liste = (url.searchParams.get('colonnes') ?? '').split(',').filter(Boolean);
+    if (liste.length === 0) colonnesAbsentes.delete(table);
+    else colonnesAbsentes.set(table, new Set(liste));
+    return json(res, 200, { table, colonnes: liste });
+  }
   if (path === '/__refuse-batch' && req.method === 'POST') {
     refuseBatch = url.searchParams.get('on') === '1';
     return json(res, 200, { refuseBatch });
@@ -367,6 +420,9 @@ async function traiter(req, res) {
     const params = url.searchParams;
 
     if (req.method === 'GET') {
+      const refusLecture = colonneManquanteEnLecture(table, params);
+      if (refusLecture) return json(res, 400, refusLecture);
+
       const rows = applyFilters(readTable(table), params);
 
       if (prefer.includes('count=exact') && String(req.headers['range-unit'] ?? '') !== '') {
@@ -384,6 +440,10 @@ async function traiter(req, res) {
 
     if (req.method === 'POST') {
       const incoming = Array.isArray(body) ? body : [body];
+      for (const item of incoming) {
+        const refus = colonneManquanteEnEcriture(table, item);
+        if (refus) return json(res, 400, refus);
+      }
       const isUpsert = prefer.includes('resolution=merge-duplicates');
       const ignoreDoublons = prefer.includes('resolution=ignore-duplicates');
       // « on_conflict=soiree_id,email » : les colonnes qui font la clé.
@@ -477,6 +537,9 @@ async function traiter(req, res) {
     }
 
     if (req.method === 'PATCH') {
+      const refusPatch = colonneManquanteEnEcriture(table, body ?? {});
+      if (refusPatch) return json(res, 400, refusPatch);
+
       const rows = applyFilters(readTable(table), params);
       for (const row of rows) {
         const target = tables[table].find((r) => r.id === row.id);
@@ -569,6 +632,7 @@ async function traiter(req, res) {
     refuseCancel = false;
     cancelQueuedFois = 0;
     storage.clear();
+    colonnesAbsentes.clear();
     log.length = 0;
     return json(res, 200, { ok: true });
   }
