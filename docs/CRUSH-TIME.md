@@ -97,8 +97,23 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
   Un like en attente ne donne rien de tout cela : c'est au match qu'on décide
   si l'on écrit, et un seul visage ne suffit pas.
 - **Le like se montre avant la réponse du serveur.** Une seconde d'écran
-  immobile après un toucher se lit comme un clic raté, et on retouche. Si le
-  serveur refuse, l'écran reprend ce qu'il avait montré.
+  immobile après un toucher se lit comme un clic raté, et on retouche.
+
+  Mais **seulement quand le like peut aboutir**. Ce rose annonce un choix ;
+  l'afficher pour un choix qui va être refusé, puis l'effacer trois cents
+  millisecondes plus tard, c'est pire que la latence qu'il évitait. Deux
+  garde-fous, pour les deux façons dont une manche s'arrête :
+
+  - **Les quinze minutes qui tombent.** La veille ne repasse que toutes les
+    huit secondes ; l'écran tient donc lui-même l'heure de fin, et les cœurs
+    disparaissent à la seconde où elle arrive, sans rien demander à
+    personne.
+  - **L'hôte qui abrège.** Pendant qu'on lit la demande de confirmation, on
+    vérifie en silence que la manche tient toujours. Ce temps-là serait
+    passé de toute façon — il ne coûte rien et il arrive avant le oui.
+
+  Reste la reprise si le serveur refuse malgré tout : elle existe toujours,
+  mais elle ne sert plus que de dernier filet.
 - **L'écran se met à jour seul**, toutes les huit secondes, quand l'autre rend
   le like ou qu'un crush time s'ouvre. Personne ne recharge une page au
   milieu d'une soirée. La veille se tait quand l'application n'est pas à

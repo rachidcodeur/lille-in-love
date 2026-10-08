@@ -38,6 +38,7 @@ const heure = (iso: string) =>
 
 export function CrushProfils({
   numero,
+  mancheId,
   profils,
   dejaLike,
   matchs,
@@ -45,6 +46,8 @@ export function CrushProfils({
   fin,
 }: {
   numero: number;
+  /** Celle qui est ouverte : de quoi vérifier qu'elle l'est toujours. */
+  mancheId: string;
   profils: Profil[];
   dejaLike: string | null;
   matchs: Profil[];
@@ -77,12 +80,73 @@ export function CrushProfils({
   const [choixLocal, setChoixLocal] = useState<string | null>(dejaLike);
   useEffect(() => setChoixLocal(dejaLike), [dejaLike]);
 
+  /**
+   * La manche a-t-elle expiré sous nos yeux ?
+   *
+   * Quinze minutes passent, et l'écran ne le sait pas tout de suite : la
+   * veille ne repasse que toutes les huit secondes. Dans cet intervalle, un
+   * cœur touché devenait rose, puis redevenait vide quand le serveur
+   * répondait que le crush time était fini. Ce rose-là n'aurait jamais dû
+   * exister : il annonce un choix qui ne peut pas aboutir.
+   *
+   * On tient donc l'heure de fin côté écran, et les cœurs disparaissent à
+   * la seconde où elle tombe — avant même que le serveur ait son mot à
+   * dire.
+   */
+  const [termine, setTermine] = useState(false);
+  useEffect(() => {
+    if (!fin) return setTermine(false);
+    const reste = new Date(fin).getTime() - Date.now();
+    if (reste <= 0) return setTermine(true);
+    setTermine(false);
+    const minuterie = setTimeout(() => setTermine(true), reste);
+    return () => clearTimeout(minuterie);
+  }, [fin]);
+
   const dejaMatche = new Set(matchs.map((m) => m.id));
   const choisi = profils.find((p) => p.id === choixLocal) ?? null;
+  /**
+   * Le like est-il seulement possible ?
+   *
+   * « choixLocal » et non « dejaLike » : entre le oui et la réponse du
+   * serveur, le choix est fait pour qui regarde l'écran, et la fiche d'un
+   * autre profil ne doit plus proposer d'en choisir un second.
+   */
+  const peutLiker = !choixLocal && !termine;
+
+  /**
+   * Pendant qu'on lit la demande, on vérifie que la manche tient toujours.
+   *
+   * L'hôte peut l'abréger, et l'écran ne l'apprendrait qu'à la prochaine
+   * ronde de la veille. Sans ça, le oui peignait un cœur en rose pour un
+   * like que le serveur allait refuser. Le temps de lecture ne coûte rien
+   * à personne : il serait passé de toute façon.
+   */
+  useEffect(() => {
+    if (!aConfirmer) return;
+    let vivant = true;
+
+    fetch('/api/crush/etat', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((etat: { manche?: string | null } | null) => {
+        if (!vivant || !etat) return;
+        if (etat.manche !== mancheId) {
+          setAConfirmer(null);
+          setTermine(true);
+        }
+      })
+      .catch(() => {
+        /* réseau de salle : on laisse passer, le serveur tranchera */
+      });
+
+    return () => {
+      vivant = false;
+    };
+  }, [aConfirmer, mancheId]);
 
   /** Appuyer ne choisit pas : ça demande. Le oui vient après. */
   function demander(profil: Profil) {
-    if (choixLocal) return;
+    if (!peutLiker) return;
     setOuvert(null);
     setErreur(null);
     setAConfirmer(profil);
@@ -91,7 +155,10 @@ export function CrushProfils({
   async function liker(profil: Profil) {
     // Le cœur se remplit avant l'aller-retour : c'est ce qui fait la
     // différence entre « c'est fait » et « est-ce que ça a marché ? ».
-    if (choixLocal) return;
+    // Mais seulement quand le choix peut aboutir — sinon on peindrait en
+    // rose quelque chose qu'il faudrait effacer trois cents millisecondes
+    // plus tard.
+    if (!peutLiker) return;
     setChoixLocal(profil.id);
     setAConfirmer(null);
     setOuvert(null);
@@ -139,7 +206,12 @@ export function CrushProfils({
             <span className="cr-regle-coeur" aria-hidden="true">
               ♥
             </span>
-            {choisi ? (
+            {termine ? (
+              <span>
+                Ce crush time est <strong>terminé</strong>. Les profils disparaissent dans un
+                instant.
+              </span>
+            ) : choisi ? (
               <span>
                 Ton choix : <strong>{choisi.first_name}</strong>
               </span>
@@ -219,7 +291,7 @@ export function CrushProfils({
                   ♥
                 </span>
               ) : (
-                !choixLocal && (
+                peutLiker && (
                   <button
                     type="button"
                     className="cr-coeur-carte"
@@ -266,7 +338,9 @@ export function CrushProfils({
 
             {dejaMatche.has(ouvert.id) ? (
               <p className="cr-fiche-etat">Vous avez matché.</p>
-            ) : dejaLike ? (
+            ) : termine ? (
+              <p className="cr-fiche-etat">Ce crush time est terminé.</p>
+            ) : choixLocal ? (
               <p className="cr-fiche-etat">
                 Ton choix de ce crush time est déjà fait.
               </p>

@@ -114,6 +114,7 @@ export default async function CrushPage({ searchParams }: Props) {
       {manche ? (
         <CrushProfils
           numero={manche.numero}
+          mancheId={manche.id}
           profils={profils}
           dejaLike={dejaLike}
           matchs={matchs}

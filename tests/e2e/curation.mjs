@@ -2591,6 +2591,69 @@ volee === 404
   ? ok('la photo de quelqu’un qui n’est pas de la soirée est introuvable')
   : bad('on peut parcourir les photos de toute la base', String(volee));
 
+// --- Aucun rose pour un like qui ne peut pas aboutir ----------------
+// Le cœur se remplit avant la réponse du serveur, et c'est voulu. Mais
+// quand le like ne peut pas aboutir, ce rose annonce un choix qui n'aura
+// pas lieu : il apparaissait, puis s'effaçait trois cents millisecondes
+// plus tard. On vérifie qu'il n'apparaît plus du tout.
+//
+// Thomas n'a encore rien choisi : c'est le seul qui puisse servir.
+const tel3 = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true });
+await tel3.goto(`${BASE}/crush/c/thomas`, { waitUntil: 'networkidle' });
+await tel3.waitForTimeout(1000);
+await passerInstallation(tel3);
+(await tel3.locator('.cr-coeur-carte').count()) > 0
+  ? ok('Thomas a bien son like à donner')
+  : bad('aucun cœur pour Thomas', await tel3.locator('.cr-main').innerText().catch(() => ''));
+
+// Cas 1 : l'hôte abrège la manche pendant qu'on hésite. L'écran ne le sait
+// pas encore ; la vérification lancée pendant la lecture de la demande le
+// lui apprend avant que le oui ne peigne quoi que ce soit.
+await fetch(`${FAKE}/rest/v1/lil_crush_rounds?id=eq.${manche1.id}`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ ferme_at: new Date().toISOString() }),
+});
+await tel3.locator('.cr-carte', { hasText: 'Inès' }).locator('.cr-coeur-carte').click();
+await jusqua(async () => (await tel3.locator('.cr-confirme').count()) === 0, 8000);
+(await tel3.locator('.cr-carte[data-choisi]').count()) === 0 &&
+(await state()).crushLikes.filter((l) => l.de_id === qui['Thomas'].id).length === 0
+  ? ok('manche abrégée pendant qu’on hésite : aucun cœur rose, aucun like')
+  : bad('un rose est apparu pour un like impossible');
+(await tel3.locator('.cr-regle').innerText()).includes('terminé')
+  ? ok('et l’écran dit pourquoi, au lieu d’effacer en silence')
+  : bad('rien n’explique le refus', await tel3.locator('.cr-regle').innerText());
+
+// Cas 2 : les quinze minutes tombent sous les yeux. La veille ne repasse
+// que toutes les huit secondes ; l'écran tient l'heure de fin lui-même et
+// retire les cœurs à la seconde, sans rien demander à personne.
+await fetch(`${FAKE}/rest/v1/lil_crush_rounds?id=eq.${manche1.id}`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    ferme_at: null,
+    // Ouverte il y a presque quinze minutes : il reste huit secondes.
+    ouvert_at: new Date(Date.now() - (15 * 60 - 8) * 1000).toISOString(),
+  }),
+});
+await tel3.reload({ waitUntil: 'networkidle' });
+await passerInstallation(tel3);
+(await tel3.locator('.cr-coeur-carte').count()) > 0
+  ? ok('tant qu’il reste du temps, le cœur est là')
+  : bad('plus de cœur alors que la manche court encore');
+
+(await jusqua(async () => (await tel3.locator('.cr-coeur-carte').count()) === 0, 15_000))
+  ? ok('l’heure tombée, les cœurs s’en vont d’eux-mêmes — rien à toucher pour rien')
+  : bad('les cœurs restent après la fin de la manche');
+(await tel3.locator('.cr-regle').innerText()).includes('terminé')
+  ? ok('et le bandeau le dit, au lieu de promettre un like qui n’existe plus')
+  : bad('le bandeau promet encore un like', await tel3.locator('.cr-regle').innerText());
+
+(await state()).crushLikes.filter((l) => l.de_id === qui['Thomas'].id).length === 0
+  ? ok('Thomas n’a rien écrit en base de tout ce passage')
+  : bad('un like de Thomas s’est glissé en base');
+await tel3.close();
+
 // --- Quinze minutes passées, la manche est close d'elle-même --------
 const [salome] = (await state()).crushParticipants.filter((p) => p.first_name === 'Salomé');
 await fetch(`${FAKE}/rest/v1/lil_crush_rounds?id=eq.${manche1.id}`, {
