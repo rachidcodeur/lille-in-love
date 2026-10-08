@@ -27,8 +27,11 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
   pile de cartes : dans une salle, on cherche la personne à qui on vient de
   parler, et une grille se parcourt.
 - **Un cœur en haut à droite de chaque carte** : on reconnaît un visage et on
-  choisit, sans ouvrir la fiche. La confirmation reste, puisque le geste ne
-  se reprend pas.
+  désigne, sans ouvrir la fiche. **L'écran redemande ensuite** : un like ne
+  se reprend pas et il n'y en a qu'un par manche, c'est le genre de geste
+  qu'un pouce fait tout seul en marchant. La demande montre le visage,
+  **nomme la personne** — c'est le nom qui fait voir qu'on a visé la
+  mauvaise carte — et rappelle que c'est l'unique like de ce crush time.
 - **Les noms** s'affichent avec les trois premières lettres du nom de
   famille, **en capitales** — « Samir HAD. ». De quoi distinguer deux Thomas
   sans livrer l'identité de personne, comme le formulaire le promet en la
@@ -40,6 +43,14 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
 - **« Mes matchs » est en haut à droite**, pas en bas : c'est la récompense du
   jeu, elle doit se voir sans être cherchée, et le bas de l'écran disparaît
   sous le pouce et les barres du navigateur.
+- **Le bouton ne prend sa couleur que pendant un crush time.** Le rose
+  appelle au jeu ; entre deux manches il n'y a rien à liker, et un bouton
+  qui fait signe vers une action impossible se touche pour rien. Hors
+  manche, il reste parfaitement lisible — bordure, mot, compte, et le cœur
+  repassé au doré de la marque.
+- **Un like refusé le dit.** Manche fermée entre-temps, choix déjà fait,
+  réseau de salle qui lâche : le cœur reprenait sa place en silence, et on
+  ne savait pas lequel des trois c'était.
 - **Le panneau ne montre que les matchs.** Un like reste en sourdine tant
   qu'il n'est pas rendu : l'afficher en attente ne dit rien d'utile et
   installe une surveillance qui n'a pas sa place dans une soirée. Que le
@@ -100,7 +111,8 @@ en vrai, les likes se concentrant. Le choix d'un seul like est assumé.
   et toute la soirée en découle : le genre décide de qui voit qui. La
   correction suit jusque dans les soirées où la personne est déjà inscrite,
   qui en gardent une copie figée à l'inscription.
-- Un like se confirme avant d'être écrit, puisqu'il ne se reprend pas.
+- Un like se confirme avant d'être écrit, puisqu'il ne se reprend pas, et
+  la confirmation nomme la personne.
 
 ## Composer la soirée
 

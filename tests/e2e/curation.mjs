@@ -2266,19 +2266,45 @@ regle.includes('un like à donner')
   ? ok('le temps restant s’affiche en grand, dans le bloc, à droite')
   : bad('pas de compte à rebours', await tel.locator('.cr-compte').innerText().catch(() => ''));
 
-// --- Liker d'un seul geste, sans confirmation ----------------------
-// Le cœur doit se remplir avant que le serveur ait répondu : une seconde
-// d'écran immobile après un toucher se lit comme un clic raté.
+// --- Le cœur demande, il ne choisit pas ----------------------------
+// Un like ne se reprend pas et il n'y en a qu'un par manche : c'est le
+// genre de geste qu'un pouce fait tout seul. L'écran redemande, et il
+// nomme la personne — c'est le nom qui fait voir qu'on a visé à côté.
 await tel.locator('.cr-carte', { hasText: 'Samir' }).locator('.cr-coeur-carte').click();
+await jusqua(async () => (await tel.locator('.cr-confirme').count()) === 1, 5000);
+(await tel.locator('.cr-confirme').count()) === 1
+  ? ok('toucher le cœur demande confirmation, il n’écrit rien tout de suite')
+  : bad('le like est parti sans rien demander');
+
+const demande = await tel.locator('.cr-confirme').innerText();
+demande.includes('Samir') && /seul like/i.test(demande) && /1er crush time/i.test(demande)
+  ? ok('et elle nomme la personne, et rappelle que c’est l’unique like de la manche')
+  : bad('la confirmation ne dit pas l’essentiel', demande.replace(/\n+/g, ' | '));
+
+(await state()).crushLikes.length === 0
+  ? ok('rien n’est écrit tant qu’on n’a pas dit oui')
+  : bad('un like est parti avant la confirmation');
+
+// Annuler ne doit rien laisser derrière : ni like, ni cœur rempli.
+await tel.locator('.cr-annuler').click();
+await tel.waitForTimeout(300);
+(await tel.locator('.cr-confirme').count()) === 0 &&
+(await tel.locator('.cr-carte[data-choisi]').count()) === 0 &&
+(await state()).crushLikes.length === 0
+  ? ok('annuler referme la demande sans rien choisir')
+  : bad('annuler a laissé quelque chose');
+
+// Et le oui : le cœur se remplit avant que le serveur ait répondu, parce
+// qu'une seconde d'écran immobile après un toucher se lit comme un raté.
+await tel.locator('.cr-carte', { hasText: 'Samir' }).locator('.cr-coeur-carte').click();
+await jusqua(async () => (await tel.locator('.cr-confirme').count()) === 1, 5000);
+await tel.getByRole('button', { name: /Oui, je choisis/ }).click();
 await tel.waitForTimeout(120);
 (await tel.locator('.cr-carte[data-choisi]').count()) === 1
-  ? ok('le cœur se remplit tout de suite, sans attendre le serveur')
-  : bad('aucune réaction immédiate au toucher');
+  ? ok('le cœur se remplit dès le oui, sans attendre le serveur')
+  : bad('aucune réaction immédiate au oui');
 
 await jusqua(async () => (await state()).crushLikes.length > 0);
-(await tel.locator('.cr-confirme').count()) === 0
-  ? ok('le cœur de la carte choisit tout de suite, sans étape de confirmation')
-  : bad('une confirmation s’est interposée');
 
 s = await state();
 s.crushLikes.filter((l) => l.de_id === qui['Inès'].id).length === 1
@@ -2333,6 +2359,8 @@ await passerInstallation(tel2);
   : bad('le jeton reste dans la barre d’adresse', tel2.url());
 
 await tel2.locator('.cr-carte', { hasText: 'Inès' }).locator('.cr-coeur-carte').click();
+await jusqua(async () => (await tel2.locator('.cr-confirme').count()) === 1, 5000);
+await tel2.getByRole('button', { name: /Oui, je choisis/ }).click();
 await jusqua(async () => (await state()).crushMatches.length === 1);
 
 (await tel2.locator('.cr-fete-mot').innerText().catch(() => ''))
@@ -2408,6 +2436,12 @@ await passerInstallation(tel);
 (await tel.locator('.cr-fete-tetes').count()) === 0
   ? ok('et elle ne se rejoue pas au rechargement')
   : bad('l’annonce revient alors qu’elle a été vue');
+
+// Pendant la manche, à l'inverse, le bouton prend sa couleur : il y a
+// quelque chose dedans, et ça doit se voir de loin.
+(await tel.locator('.cr-matchs-onglet[data-pleins]').count()) === 1
+  ? ok('pendant le crush time, « Mes matchs » prend le rose dès qu’il y a de quoi')
+  : bad('le bouton reste sobre alors qu’un match attend');
 
 // --- Le match, une fois qu'il est fait -----------------------------
 // La veille redessine la page toutes les huit secondes : on attend que le
@@ -2667,6 +2701,18 @@ await passerInstallation(tel);
 (await tel.locator('.cr-attente').count()) === 1 && (await tel.locator('.cr-carte').count()) === 0
   ? ok('manche fermée : les profils disparaissent, les horaires restent')
   : bad('les profils restent visibles hors manche');
+
+// Le rose appelle au jeu. Entre deux manches il n'y a rien à liker, et un
+// bouton qui fait signe vers une action impossible se touche pour rien.
+(await tel.locator('.cr-matchs-onglet[data-pleins]').count()) === 0 &&
+(await tel.locator('.cr-matchs-onglet[data-sobre]').count()) === 1
+  ? ok('et hors crush time, « Mes matchs » se fait sobre : plus de rose à l’écran')
+  : bad('le bouton reste rose alors qu’on ne peut pas liker');
+
+// Sobre, mais toujours là : les matchs se consultent entre deux manches.
+(await tel.locator('.cr-matchs-onglet').innerText()).includes('1')
+  ? ok('le compte des matchs reste lisible pour autant')
+  : bad('le compte a disparu avec la couleur');
 
 await tel.close();
 await tel2.close();

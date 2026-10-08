@@ -108,7 +108,7 @@ export default async function CrushPage({ searchParams }: Props) {
           <p className="cr-marque">Lille in Love</p>
           <p className="cr-moi">{moi.first_name}</p>
         </div>
-        <CrushMatchs matchs={matchs} />
+        <CrushMatchs matchs={matchs} enManche={Boolean(manche)} />
       </header>
 
       {manche ? (

@@ -55,6 +55,15 @@ export function CrushProfils({
 }) {
   const router = useRouter();
   const [ouvert, setOuvert] = useState<Profil | null>(null);
+  /**
+   * Le profil sur lequel on vient d'appuyer, en attente d'un oui.
+   *
+   * Un like ne se reprend pas et il n'y en a qu'un par manche : c'est
+   * exactement le genre de geste qu'un pouce fait tout seul en marchant.
+   * L'écran redemande, en nommant la personne — c'est le nom qui fait voir
+   * l'erreur quand on a visé la mauvaise carte.
+   */
+  const [aConfirmer, setAConfirmer] = useState<Profil | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
 
   /**
@@ -71,11 +80,20 @@ export function CrushProfils({
   const dejaMatche = new Set(matchs.map((m) => m.id));
   const choisi = profils.find((p) => p.id === choixLocal) ?? null;
 
+  /** Appuyer ne choisit pas : ça demande. Le oui vient après. */
+  function demander(profil: Profil) {
+    if (choixLocal) return;
+    setOuvert(null);
+    setErreur(null);
+    setAConfirmer(profil);
+  }
+
   async function liker(profil: Profil) {
     // Le cœur se remplit avant l'aller-retour : c'est ce qui fait la
     // différence entre « c'est fait » et « est-ce que ça a marché ? ».
     if (choixLocal) return;
     setChoixLocal(profil.id);
+    setAConfirmer(null);
     setOuvert(null);
     setErreur(null);
 
@@ -145,6 +163,15 @@ export function CrushProfils({
         )}
       </div>
 
+      {/* Un like refusé ne disait rien : le cœur reprenait sa place en
+          silence, et on ne savait pas si on avait mal visé, si la manche
+          venait de se fermer, ou si le réseau de la salle avait lâché. */}
+      {erreur && (
+        <p className="cr-souci" role="alert">
+          {erreur}
+        </p>
+      )}
+
       <div className="cr-grille">
         {profils.map((profil) => {
           const estChoisi = profil.id === choixLocal;
@@ -181,8 +208,8 @@ export function CrushProfils({
               </button>
 
               {/* Le cœur se touche sans ouvrir le profil : on reconnaît un
-                  visage, on choisit, c'est tout. La confirmation reste —
-                  elle protège d'un geste qui ne se reprend pas. */}
+                  visage, on désigne, c'est tout. L'écran redemande ensuite —
+                  il protège d'un geste qui ne se reprend pas. */}
               {aMatche ? (
                 <span className="cr-coeur-carte" data-etat="match" aria-label="Vous avez matché">
                   ♥
@@ -197,7 +224,7 @@ export function CrushProfils({
                     type="button"
                     className="cr-coeur-carte"
                     aria-label={`Choisir ${profil.first_name}`}
-                    onClick={() => liker(profil)}
+                    onClick={() => demander(profil)}
                   >
                     ♡
                   </button>
@@ -244,7 +271,7 @@ export function CrushProfils({
                 Ton choix de ce crush time est déjà fait.
               </p>
             ) : (
-              <button type="button" className="cr-bouton cr-coeur" onClick={() => liker(ouvert)}>
+              <button type="button" className="cr-bouton cr-coeur" onClick={() => demander(ouvert)}>
                 ♥ Je choisis {ouvert.first_name}
               </button>
             )}
@@ -252,6 +279,52 @@ export function CrushProfils({
         </div>
       )}
 
+      {/* --- Le oui, avant d'écrire --- */}
+      {aConfirmer && (
+        <div
+          className="cr-voile"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Confirmer ton choix : ${aConfirmer.first_name}`}
+          onClick={() => setAConfirmer(null)}
+        >
+          <div className="cr-fiche cr-confirme" onClick={(e) => e.stopPropagation()}>
+            {aConfirmer.photo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img className="cr-confirme-photo" src={aConfirmer.photo} alt="" />
+            ) : (
+              <span className="cr-confirme-photo cr-confirme-initiale" aria-hidden="true">
+                {aConfirmer.first_name.slice(0, 1).toUpperCase()}
+              </span>
+            )}
+
+            <h2 className="cr-fiche-nom">
+              {aConfirmer.first_name}
+              {aConfirmer.nom ? ` ${aConfirmer.nom}` : ''}
+            </h2>
+
+            <p className="cr-confirme-mot">
+              C’est ton <strong>seul like</strong> du {nomManche(numero)}, et il ne se reprend pas.
+            </p>
+
+            <button
+              type="button"
+              className="cr-bouton cr-coeur"
+              onClick={() => liker(aConfirmer)}
+            >
+              ♥ Oui, je choisis {aConfirmer.first_name}
+            </button>
+
+            <button
+              type="button"
+              className="cr-fermer cr-annuler"
+              onClick={() => setAConfirmer(null)}
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

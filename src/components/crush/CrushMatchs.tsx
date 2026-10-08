@@ -15,8 +15,11 @@ import { Contacts } from './Contacts';
  * Les coordonnées et les trois photos n'apparaissent qu'au match : pendant
  * le crush time, pouvoir écrire à qui l'on vient de repérer viderait le jeu
  * de son sens.
+ *
+ * Le bouton ne prend sa couleur qu'en crush time : le rose appelle au jeu,
+ * et entre deux manches il n'y a rien à liker.
  */
-export function CrushMatchs({ matchs }: { matchs: Profil[] }) {
+export function CrushMatchs({ matchs, enManche }: { matchs: Profil[]; enManche: boolean }) {
   const [ouvert, setOuvert] = useState(false);
 
   return (
@@ -24,7 +27,12 @@ export function CrushMatchs({ matchs }: { matchs: Profil[] }) {
       <button
         type="button"
         className="cr-matchs-onglet"
-        data-pleins={matchs.length > 0 || undefined}
+        // Le rose appelle au jeu. Entre deux crush times, il n'y a rien à
+        // liker : un bouton qui fait signe vers une action impossible se
+        // touche pour rien. Les matchs restent là, le bouton se fait
+        // seulement sobre — bordure, mot et compte suffisent à le trouver.
+        data-pleins={(matchs.length > 0 && enManche) || undefined}
+        data-sobre={!enManche || undefined}
         onClick={() => setOuvert(true)}
         aria-expanded={ouvert}
       >
