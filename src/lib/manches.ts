@@ -30,8 +30,23 @@ export function finPrevue(m: Minutee): Date | null {
  * règle du choix unique par manche. Cette fonction sert aussi côté serveur,
  * au moment d'écrire un like — l'écran n'est pas le gardien.
  */
-export function estOuverte(m: Minutee, maintenant = Date.now()): boolean {
+/**
+ * Pas de second paramètre, et c'est délibéré.
+ *
+ * Il y en a eu un — « maintenant », pour éprouver la règle à une heure
+ * choisie. Il a suffi d'un « rounds.find(estOuverte) » pour que tout
+ * bascule : « find » passe l'index au deuxième argument, la première
+ * manche recevait donc « maintenant = 0 », et une manche ouverte depuis
+ * longtemps se croyait encore ouverte. En pleine soirée, cinquante
+ * personnes sont restées bloquées sur le premier crush time avec leur
+ * like déjà donné.
+ *
+ * Un argument optionnel qui change le sens de la réponse n'a rien à faire
+ * dans une fonction qu'on passe à « find », « some » ou « filter ». Les
+ * tests posent les heures dans « ouvert_at », ce qui suffit.
+ */
+export function estOuverte(m: Minutee): boolean {
   if (!m.ouvert_at || m.ferme_at) return false;
   const fin = finPrevue(m);
-  return fin === null || maintenant < fin.getTime();
+  return fin === null || Date.now() < fin.getTime();
 }

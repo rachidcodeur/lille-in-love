@@ -73,7 +73,7 @@ export default async function CrushPage({ searchParams }: Props) {
     matchsNonVus(moi),
     monProfil(moi),
   ]);
-  const manche = rounds.find(estOuverte) ?? null;
+  const manche = rounds.find((m) => estOuverte(m)) ?? null;
   // Celui d'après : savoir qu'il reste un tour, et à quelle heure, change
   // la façon dont on dépense son unique like.
   const suivante = manche

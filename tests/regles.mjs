@@ -210,6 +210,23 @@ estOuverte({ ouvert_at: t(20), ferme_at: null, duree_minutes: 30 })
   ? ok('une durée différente est respectée')
   : bad('duree_minutes ignorée');
 
+// Le piège qui a coûté un crush time entier : « rounds.find(estOuverte) ».
+// « find » passe l'index au deuxième argument, et la première manche
+// recevait « maintenant = 0 » — une manche close depuis une heure se
+// croyait ouverte, et cinquante personnes sont restées bloquées dessus
+// avec leur like déjà donné. La fonction ne prend plus qu'un argument.
+{
+  const finie = { ouvert_at: t(60), ferme_at: null };
+  const encours = { ouvert_at: t(3), ferme_at: null };
+  [finie, encours].find(estOuverte) === encours
+    ? ok('passée directement à « find », elle ne confond plus l’index avec l’heure')
+    : bad('« find » rend une manche close : le second argument est revenu');
+
+  estOuverte.length === 1
+    ? ok('et elle ne prend qu’un argument, pour que ça ne puisse plus arriver')
+    : bad('estOuverte accepte encore un second argument', String(estOuverte.length));
+}
+
 (() => {
   const fin = finPrevue({ ouvert_at: '2026-10-18T21:00:00.000Z', ferme_at: null });
   return fin && fin.toISOString() === '2026-10-18T21:15:00.000Z';
