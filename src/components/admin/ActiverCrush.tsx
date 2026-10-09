@@ -75,7 +75,9 @@ export function ActiverCrush({
         <>
           <p className="adm-hint" style={{ margin: '0 0 16px' }}>
             Ouvrir ce crush time referme celui de la soirée précédente. Un code à quatre chiffres
-            sera tiré : c’est celui que tu annonceras dans la salle, le même pour tout le monde.
+            sera tiré : c’est celui que tu annonceras dans la salle, le même pour tout le monde. Il
+            ne changera plus ensuite, même si tu rouvres le crush time — une affiche imprimée reste
+            valable.
           </p>
           <button type="button" className="adm-btn adm-btn-yes" disabled={busy} onClick={activer}>
             {busy ? 'Ouverture…' : 'Ouvrir ce crush time'}

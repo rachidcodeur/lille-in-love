@@ -3157,6 +3157,46 @@ qr?.startsWith('data:image/png')
   ? ok('le code de la salle est affiché en grand, prêt à annoncer')
   : bad('le code de la salle est introuvable', await page.locator('.adm-code').first().innerText().catch(() => '(absent)'));
 
+// --- Un code imprimé ne doit plus jamais bouger ---------------------
+// Rouvrir un crush time tirait un nouveau code à chaque appui, et
+// écrasait celui qui était déjà sur l'affiche, le QR et les tables. On
+// ne s'en apercevait qu'à la porte, le soir même, cinquante personnes
+// devant soi. Le code posé est désormais gardé tel quel.
+const reActiver = await (
+  await fetch(`${BASE}/api/admin/crush`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'activer', soireeId: soireePleine.id }),
+  })
+).json();
+
+reActiver.code === '4812'
+  ? ok('rouvrir un crush time garde le code déjà annoncé')
+  : bad('le code a changé à la réouverture', JSON.stringify(reActiver));
+
+(await state()).soirees.find((x) => x.id === soireePleine.id)?.crush_code === '4812'
+  ? ok('et la base porte toujours celui de l’affiche')
+  : bad('code écrasé en base', JSON.stringify((await state()).soirees.find((x) => x.id === soireePleine.id)?.crush_code));
+
+// L'hôte garde la main : un code donné explicitement remplace l'ancien.
+const impose = await (
+  await fetch(`${BASE}/api/admin/crush`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'activer', soireeId: soireePleine.id, code: '2024' }),
+  })
+).json();
+impose.code === '2024'
+  ? ok('mais un code choisi à la main remplace bien le précédent')
+  : bad('impossible d’imposer un code', String(impose.code));
+
+// Et on remet celui de l'affiche pour la suite du parcours.
+await fetch(`${BASE}/api/admin/crush`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ action: 'activer', soireeId: soireePleine.id, code: '4812' }),
+});
+
 await page.goto(`${BASE}/admin/soirees`, { waitUntil: 'networkidle' });
 await page.waitForTimeout(500);
 

@@ -265,12 +265,17 @@ export async function creerCrushTime(options: {
    ==================================================================== */
 
 export async function soireeActive() {
+  // Pas de « maybeSingle » : s'il y avait deux soirées actives — une
+  // mauvaise manipulation, une écriture à la main —, PostgREST refuserait
+  // la requête et l'application entière afficherait « aucune soirée », en
+  // pleine salle. On prend la plus récente et la soirée a lieu.
   const { data } = await supabaseAdmin()
     .from('lil_soirees')
     .select('id, nom, date_soiree, lieu, crush_code, crush_actif')
     .eq('crush_actif', true)
-    .maybeSingle();
-  return data;
+    .order('created_at', { ascending: false })
+    .limit(1);
+  return data?.[0] ?? null;
 }
 
 export async function participantParJeton(jetonRecu: string): Promise<Participant | null> {
@@ -1012,19 +1017,39 @@ export async function fermerManche(mancheId: string): Promise<void> {
  * voudraient dire deux salles, et ce n'est jamais arrivé. On éteint donc
  * avant d'allumer.
  */
-export async function activerCrushTime(soireeId: string, code: string): Promise<void> {
+export async function activerCrushTime(soireeId: string, code?: string): Promise<string> {
   const db = supabaseAdmin();
+
+  // Les autres s'éteignent, pas celle-ci : sans le « neq », il y avait un
+  // instant où aucune soirée n'était active, et un QR scanné pile à ce
+  // moment-là tombait sur une porte close.
   const { error: extinction } = await db
     .from('lil_soirees')
     .update({ crush_actif: false })
-    .eq('crush_actif', true);
+    .eq('crush_actif', true)
+    .neq('id', soireeId);
   if (extinction) throw new Error(extinction.message);
+
+  // Le code déjà en place a peut-être été imprimé sur une affiche, dicté
+  // à cinquante personnes, collé sur les tables. On ne le remplace jamais
+  // de notre propre chef : rouvrir un crush time tirait jusqu'ici un
+  // nouveau code à chaque appui, et le carton imprimé devenait faux sans
+  // que personne ne s'en aperçoive avant la porte.
+  const { data: soiree } = await db
+    .from('lil_soirees')
+    .select('crush_code')
+    .eq('id', soireeId)
+    .maybeSingle();
+
+  const retenu = (code ?? '').trim() || (soiree?.crush_code ?? '').trim() || nouveauCode();
 
   const { error } = await db
     .from('lil_soirees')
-    .update({ crush_actif: true, crush_code: code })
+    .update({ crush_actif: true, crush_code: retenu })
     .eq('id', soireeId);
   if (error) throw new Error(error.message);
+
+  return retenu;
 }
 
 /**

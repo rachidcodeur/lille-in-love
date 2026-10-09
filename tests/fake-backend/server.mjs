@@ -180,6 +180,14 @@ function applyFilters(rows, params) {
         if (key.includes('email')) return String(actual).toLowerCase() === value.toLowerCase();
         return String(actual) === value;
       });
+    } else if (op === 'neq') {
+      // « neq » : tout sauf celle-là. Sert à éteindre les autres soirées
+      // sans éteindre celle qu'on est en train d'allumer.
+      out = out.filter((row) => {
+        const actual = row[key];
+        if (actual === null || actual === undefined) return true;
+        return String(actual) !== value;
+      });
     } else if (op === 'in') {
       const list = value.replace(/^\(|\)$/g, '').split(',').map((v) => v.replace(/^"|"$/g, ''));
       out = out.filter((row) => list.includes(String(row[key])));

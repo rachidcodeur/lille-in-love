@@ -196,6 +196,15 @@ savoir : **le code ouvre n'importe quelle adresse de la liste.** Quelqu'un
 qui l'entend et connaît l'adresse d'un autre peut entrer à sa place et
 liker en son nom. C'est le prix d'une porte qu'on ouvre à voix haute.
 
+**Un code posé ne bouge plus.** Rouvrir un crush time en tirait un
+nouveau à chaque appui et écrasait celui qui était déjà sur l'affiche, le
+QR et les tables — on ne s'en apercevait qu'à la porte, cinquante
+personnes devant soi. L'activation garde désormais le code en place ;
+seul un code saisi à la main le remplace. Le QR, lui, n'a jamais porté de
+code : il mène à `/crush`, et c'est la page d'entrée qui sait quelle
+soirée est ouverte. Une affiche imprimée reste donc valable d'une soirée
+à l'autre.
+
 Dix essais par quart d'heure et par adresse : quatre chiffres se devinent
 en dix mille coups, pas en dix.
 

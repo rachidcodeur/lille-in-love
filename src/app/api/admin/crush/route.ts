@@ -8,7 +8,6 @@ import {
   creerCrushTime,
   essaiNotification,
   fermerManche,
-  nouveauCode,
   ouvrirManche,
   reglerLesManches,
   remettre,
@@ -117,8 +116,11 @@ export async function POST(request: Request) {
         return NextResponse.json({ ok: true, bilan });
       }
       case 'activer': {
-        const code = commande.code ?? nouveauCode();
-        await activerCrushTime(commande.soireeId, code);
+        // C'est « activerCrushTime » qui décide : il garde le code déjà
+        // posé plutôt que d'en tirer un nouveau, puisqu'il a pu être
+        // imprimé. On renvoie celui qu'il a retenu, pas celui qu'on
+        // croyait lui donner.
+        const code = await activerCrushTime(commande.soireeId, commande.code);
         return NextResponse.json({ ok: true, code });
       }
       case 'ajouter': {
