@@ -16,7 +16,7 @@ l'application** sur `app.in-love.fr`.
 | Scripts SQL passés | `01` à `05`, et `08` |
 | **À passer d'urgence** | **`10_accompagnant.sql`** — sans lui, toute candidature « je viens accompagné » est refusée |
 | **À passer aussi** | **`09_simplification.sql`** (groupe G), **`11_corbeille.sql`**, **`12_anciennes.sql`** |
-| **Pour le Crush Time** | **`13_crushtime.sql`** (indispensable), **`14_ordre_photos.sql`**, **`15_duree_manches.sql`**, **`16_code_personnel.sql`**, **`17_notifications.sql`**, **`18_match_vu.sql`** |
+| **Pour le Crush Time** | **`13_crushtime.sql`** (indispensable), **`14_ordre_photos.sql`**, **`15_duree_manches.sql`**, **`16_code_personnel.sql`**, **`17_notifications.sql`**, **`18_match_vu.sql`**, **`19_questionnaire.sql`** |
 | Resend | domaine **`in-love.fr` vérifié**, clé en place |
 | Expéditeur / réponse | `Lille in Love <info@in-love.fr>` |
 | `.env.local` | rempli et valide — `/api/health` répond `ok: true` |
@@ -475,9 +475,10 @@ poser une icône sur l'écran d'accueil et recevoir une notification
 demandent du HTTPS, que `localhost` n'a pas.
 
 1. **Exécute `supabase/13_crushtime.sql`.** Sans lui, les pages du crush
-   time s'affichent mais disent ce qui manque. Puis `17` et `18` : sans
+   time s'affichent mais disent ce qui manque. Puis `17`, `18` et `19` : sans
    elles, pas de notifications, et un match reçu pendant qu'on n'était pas
-   dans l'application ne se rejoue pas à l'ouverture. Rien ne casse —
+   dans l'application ne se rejoue pas à l'ouverture, et le questionnaire
+   de fin de soirée ne recueille aucun avis. Rien ne casse —
    l'application retombe sur ce qu'elle sait faire — mais la soirée y perd.
    `14`, `15` et `16` peuvent attendre : l'ordre des photos et la durée
    gardent leurs valeurs par défaut, et la colonne du code personnel n'est

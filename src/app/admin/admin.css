@@ -2873,3 +2873,90 @@ a.adm-btn:hover {
 .adm-corriger .adm-hint {
   margin-bottom: 14px;
 }
+
+/* --- Le dépouillement du questionnaire -------------------------------
+   Ce bloc se lit le lendemain matin, au calme : des barres plutôt que des
+   pourcentages, et les mots des gens tels qu'ils les ont écrits.
+   ---------------------------------------------------------------------- */
+
+.adm-bilan-compte {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: var(--text-2, #5b5048);
+}
+
+.adm-bilan-q {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.adm-bilan-titre {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.adm-bilan-num {
+  color: var(--gold-deep, #a8946e);
+  font-variant-numeric: lining-nums tabular-nums;
+  margin-right: 7px;
+}
+
+.adm-bilan-ligne {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 10px;
+  margin-bottom: 7px;
+  font-size: 13.5px;
+}
+
+/* La barre passe derrière le libellé, sur toute la largeur : on compare
+   d'un coup d'œil sans lire un seul chiffre. */
+.adm-bilan-barre {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(168, 148, 110, 0.12);
+  overflow: hidden;
+}
+
+.adm-bilan-barre span {
+  display: block;
+  height: 100%;
+  background: rgba(168, 148, 110, 0.34);
+}
+
+.adm-bilan-label {
+  grid-column: 1;
+  grid-row: 1;
+  padding-left: 9px;
+  z-index: 1;
+}
+
+.adm-bilan-ligne b {
+  grid-column: 2;
+  grid-row: 1;
+  padding-right: 9px;
+  z-index: 1;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.adm-bilan-note {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+}
+
+.adm-bilan-mot {
+  margin: 8px 0 0;
+  padding: 9px 12px;
+  border-left: 3px solid var(--gold-deep, #a8946e);
+  background: rgba(168, 148, 110, 0.07);
+  border-radius: 0 8px 8px 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  font-style: italic;
+}

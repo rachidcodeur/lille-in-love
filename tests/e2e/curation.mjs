@@ -2876,6 +2876,133 @@ await passerInstallation(tel);
   ? ok('le compte des matchs reste lisible pour autant')
   : bad('le compte a disparu avec la couleur');
 
+// --- Le questionnaire de fin de soirée ------------------------------
+// Les trois manches passées, il n'y a plus rien à liker : la place revient
+// au questionnaire, tant que les téléphones sont encore en main. Un
+// formulaire envoyé le lendemain ne revient pas.
+for (const m of (await state()).crushRounds.filter((r) => r.soiree_id === soireeCrush.id)) {
+  await fetch(`${FAKE}/rest/v1/lil_crush_rounds?id=eq.${m.id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ouvert_at: new Date(Date.now() - 60 * 60_000).toISOString(), ferme_at: new Date().toISOString() }),
+  });
+}
+await tel.goto(`${BASE}/crush`, { waitUntil: 'networkidle' });
+await tel.waitForTimeout(800);
+await passerInstallation(tel);
+
+(await tel.locator('.cr-quiz').count()) === 1
+  ? ok('les crush times finis, le questionnaire prend la place des profils')
+  : bad('pas de questionnaire en fin de soirée', await tel.locator('.cr-main').innerText().catch(() => ''));
+
+// Ce qu'on a gagné dans la soirée ne disparaît pas derrière le questionnaire.
+(await tel.locator('.cr-matchs-onglet').count()) === 1
+  ? ok('et « Mes matchs » reste en haut : on peut revoir qui on a matché')
+  : bad('le bouton des matchs a disparu');
+await tel.locator('.cr-matchs-onglet').click();
+await tel.waitForTimeout(500);
+(await tel.locator('.cr-matchs-corps').innerText()).includes('Samir')
+  ? ok('le match est toujours consultable pendant le questionnaire')
+  : bad('les matchs ne sont plus accessibles');
+await tel.locator('.cr-fermer').click();
+await tel.waitForTimeout(300);
+
+// Trois sections plutôt qu'une page de quinze questions : debout, dans une
+// salle qui se vide, une liste qui n'en finit pas se ferme.
+(await tel.locator('.cr-quiz-chapeau').innerText()).includes('01')
+  ? ok('on commence par la première section, pas par les quinze questions')
+  : bad('mauvaise section au départ', await tel.locator('.cr-quiz-chapeau').innerText());
+
+await tel.locator('.cr-quiz-option', { hasText: 'Excellente' }).click();
+await tel.waitForTimeout(200);
+(await tel.locator('.cr-quiz-option[data-coche]').count()) >= 1
+  ? ok('une réponse cochée se voit tout de suite')
+  : bad('la case ne réagit pas');
+
+// « jusqu'à 3 réponses » : la quatrième ne doit pas pouvoir se cocher.
+for (const libelle of ['L’ambiance générale', 'Les jeux d’équipe', 'Le lieu']) {
+  await tel.locator('.cr-quiz-bloc', { hasText: 'le plus aimé' }).locator('.cr-quiz-option', { hasText: libelle }).click();
+  await tel.waitForTimeout(120);
+}
+const blocQ2 = tel.locator('.cr-quiz-bloc', { hasText: 'le plus aimé' });
+await blocQ2.locator('.cr-quiz-option', { hasText: 'L’événement surprise' }).click();
+await tel.waitForTimeout(200);
+(await blocQ2.locator('.cr-quiz-option[data-coche]').count()) === 3
+  ? ok('la quatrième case ne se coche pas : trois réponses, pas plus')
+  : bad('plus de trois cases cochées', String(await blocQ2.locator('.cr-quiz-option[data-coche]').count()));
+
+// Le brouillon part au changement de section : un téléphone rangé en route
+// ne doit rien faire recommencer.
+await tel.getByRole('button', { name: 'Continuer' }).click();
+await jusqua(async () => (await state()).crushQuestionnaires.length === 1, 8000);
+let quizEnBase = (await state()).crushQuestionnaires[0];
+quizEnBase.reponses.q01 === 'excellente' && !quizEnBase.envoye_at
+  ? ok('le brouillon est gardé à chaque section, sans être compté comme un avis')
+  : bad('brouillon mal enregistré', JSON.stringify(quizEnBase.reponses));
+
+(await tel.locator('.cr-quiz-chapeau').innerText()).includes('02')
+  ? ok('et l’on passe à la section suivante')
+  : bad('la section n’a pas changé');
+
+await tel.getByRole('button', { name: 'Continuer' }).click();
+await tel.waitForTimeout(600);
+
+// La note de recommandation, de 0 à 10.
+await tel.locator('.cr-quiz-note', { hasText: /^9$/ }).click();
+await tel.locator('.cr-quiz-texte').fill('Super soirée, le lieu était parfait');
+await tel.waitForTimeout(200);
+
+await tel.getByRole('button', { name: 'Envoyer mes réponses' }).click();
+await jusqua(async () => Boolean((await state()).crushQuestionnaires[0]?.envoye_at), 8000);
+
+quizEnBase = (await state()).crushQuestionnaires[0];
+quizEnBase.envoye_at && quizEnBase.reponses.q14 === 9 && quizEnBase.reponses.q15.includes('Super soirée')
+  ? ok('l’envoi clôt le questionnaire, note et commentaire compris')
+  : bad('envoi incomplet', JSON.stringify(quizEnBase.reponses));
+quizEnBase.reponses.q02.length === 3
+  ? ok('et les trois choix multiples sont bien arrivés')
+  : bad('choix multiples perdus', JSON.stringify(quizEnBase.reponses.q02));
+
+(await tel.locator('.cr-quiz-merci').innerText()).includes('Merci')
+  ? ok('la personne est remerciée, et le questionnaire se ferme')
+  : bad('pas d’écran de remerciement');
+
+// Un avis donné ne se reprend pas : le dépouillement serait faussé.
+const avisRejoue = await tel.evaluate(async () => {
+  const r = await fetch('/api/crush/questionnaire', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reponses: { q01: 'tres_decevante' }, envoyer: true }),
+  });
+  return r.status;
+});
+avisRejoue === 409
+  ? ok('et un questionnaire déjà envoyé ne se réécrit pas')
+  : bad('on peut réécrire son avis après coup', String(avisRejoue));
+
+// --- Ce que l'hôte en retire ----------------------------------------
+await page.goto(`${BASE}/admin/soirees/${soireeCrush.id}`, { waitUntil: 'networkidle' });
+await page.waitForTimeout(700);
+const bloc = await page.locator('.adm-card', { hasText: 'Questionnaire de fin de soirée' }).innerText();
+bloc.includes('1 réponse')
+  ? ok('le tableau de bord annonce les réponses reçues')
+  : bad('les réponses ne sont pas annoncées', bloc.replace(/\n+/g, ' | '));
+bloc.includes('Excellente') && bloc.includes('Super soirée')
+  ? ok('et les dépouille sur place : les comptes et les mots des gens')
+  : bad('dépouillement absent', bloc.replace(/\n+/g, ' | '));
+/9(\.0)?\s*\/\s*10/.test(bloc)
+  ? ok('avec la note de recommandation moyenne')
+  : bad('pas de moyenne', bloc.replace(/\n+/g, ' | '));
+
+const csvBilan = await fetch(`${BASE}/api/admin/questionnaire?soiree=${soireeCrush.id}`);
+const texteCsv = await csvBilan.text();
+csvBilan.ok && texteCsv.split('\n')[0].includes('Globalement')
+  ? ok('et le CSV se télécharge avec les intitulés en toutes lettres')
+  : bad('export CSV cassé', texteCsv.slice(0, 120));
+texteCsv.includes('"Super soirée, le lieu était parfait"')
+  ? ok('la virgule d’un commentaire y est échappée, les colonnes tiennent')
+  : bad('CSV mal échappé', texteCsv.slice(0, 200));
+
 await tel.close();
 await tel2.close();
 

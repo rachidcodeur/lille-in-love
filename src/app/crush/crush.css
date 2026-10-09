@@ -1285,3 +1285,193 @@
 .cr-confirme-mot strong {
   color: var(--creme);
 }
+
+/* --- Le questionnaire de fin de soirée --------------------------------
+   Debout, dans une salle qui se vide : des cibles larges, une question
+   par bloc, et jamais l'impression d'une liste qui n'en finit pas.
+   ---------------------------------------------------------------------- */
+
+.cr-quiz {
+  margin-top: 10px;
+}
+
+.cr-quiz-chapeau {
+  margin: 0;
+  font-size: 11.5px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--or);
+}
+
+.cr-quiz-titre {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.15;
+  margin: 4px 0 14px;
+}
+
+.cr-quiz-intro {
+  margin: 0 0 16px;
+}
+
+.cr-quiz-jauge {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(246, 240, 228, 0.12);
+  overflow: hidden;
+}
+
+.cr-quiz-jauge span {
+  display: block;
+  height: 100%;
+  background: var(--or);
+  transition: width 0.3s ease-out;
+}
+
+.cr-quiz-avancee {
+  margin: 7px 0 22px;
+  font-size: 12.5px;
+  color: var(--creme-doux);
+}
+
+.cr-quiz-bloc {
+  border-top: 1px solid rgba(246, 240, 228, 0.1);
+  padding: 20px 0 4px;
+}
+
+.cr-quiz-legende {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.cr-quiz-num {
+  color: var(--or);
+  font-variant-numeric: lining-nums tabular-nums;
+  margin-right: 8px;
+}
+
+.cr-quiz-aide {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--creme-doux);
+}
+
+.cr-quiz-choix {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.cr-quiz-option {
+  font: inherit;
+  text-align: left;
+  /* Le pouce vise mal dans une salle sombre : jamais moins de 46 px. */
+  min-height: 46px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  border: 1px solid #3a302d;
+  background: var(--nuit-2);
+  color: var(--creme);
+  font-size: 15px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.cr-quiz-option[data-coche] {
+  border-color: var(--or);
+  background: rgba(195, 178, 145, 0.16);
+  color: var(--creme);
+  font-weight: 600;
+}
+
+/* Trois cases déjà cochées : les autres s'effacent au lieu de refuser le
+   toucher sans rien dire. */
+.cr-quiz-option[data-plein] {
+  opacity: 0.4;
+}
+
+.cr-quiz-notes {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.cr-quiz-note {
+  font: inherit;
+  min-height: 46px;
+  border-radius: 10px;
+  border: 1px solid #3a302d;
+  background: var(--nuit-2);
+  color: var(--creme);
+  font-size: 15px;
+  font-variant-numeric: lining-nums tabular-nums;
+  cursor: pointer;
+}
+
+.cr-quiz-note[data-coche] {
+  border-color: var(--or);
+  background: rgba(195, 178, 145, 0.2);
+  font-weight: 700;
+}
+
+.cr-quiz-texte,
+.cr-quiz-ligne {
+  font: inherit;
+  width: 100%;
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-radius: 12px;
+  border: 1px solid #3a302d;
+  background: var(--nuit-2);
+  color: var(--creme);
+  /* 16 px au moins : en dessous, iOS zoome à la saisie. */
+  font-size: 16px;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.cr-quiz-intervalle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 12px 0 0;
+  font-size: 15px;
+  color: var(--creme-doux);
+}
+
+.cr-quiz-intervalle input {
+  font: inherit;
+  width: 76px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid #3a302d;
+  background: var(--nuit-2);
+  color: var(--creme);
+  font-size: 16px;
+}
+
+.cr-quiz-pied {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 26px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(246, 240, 228, 0.1);
+}
+
+.cr-quiz-merci {
+  text-align: center;
+  padding: 40px 10px;
+}
+
+.cr-quiz-coeur {
+  font-size: 40px;
+  line-height: 1;
+  color: var(--coeur);
+  margin: 0 0 14px;
+}

@@ -362,6 +362,49 @@ aussi à l'autre.
 L'ouverture d'une manche reste un geste de l'hôte, même si l'heure est
 annoncée : une soirée ne tient jamais son horaire.
 
+## Le questionnaire de fin de soirée
+
+Les trois manches passées, l'application n'a plus rien à proposer : elle
+affiche le questionnaire de satisfaction, repris mot pour mot de la
+feuille papier — quinze questions, trois sections.
+
+**C'est le moment qui décide du taux de réponse.** Tout le monde a encore
+son téléphone en main et la soirée en tête ; un formulaire envoyé le
+lendemain ne revient pas. On ne regarde donc pas l'horloge mais la
+soirée : avec le déroulé habituel — 21 h, 22 h 30, 23 h 45, quinze minutes
+chacune — cela tombe à minuit sans qu'on ait à écrire cette heure-là nulle
+part, et une soirée qui décale emmène le questionnaire avec elle au lieu
+de l'ouvrir au milieu du troisième crush time.
+
+- **« Mes matchs » reste en haut.** Ce qu'on a gagné dans la soirée ne
+  disparaît pas derrière un questionnaire, et personne n'est pris en otage.
+- **Trois sections, pas quinze questions d'affilée.** Debout, dans une
+  salle qui se vide, une liste qui n'en finit pas se ferme.
+- **Tout est facultatif**, et le bouton d'envoi est là dès la première
+  section. Une réponse arrachée ne vaut rien.
+- **Le brouillon part à chaque section**, et aussi quand on quitte
+  l'application en cours de route. Un téléphone rangé ne doit rien faire
+  recommencer. Un brouillon n'est pas un avis : il ne compte pas dans les
+  résultats tant qu'on n'a pas appuyé sur « Envoyer ».
+- **Un avis envoyé ne se reprend pas.** On a la réponse de la personne ;
+  la réécrire après coup brouillerait le dépouillement.
+- **Les règles de la feuille sont tenues en base, pas seulement à
+  l'écran** : trois cases au maximum là où c'est écrit, « Rien de
+  particulier » qui annule les reproches cochés à côté, une note de 0 à 10,
+  et rien d'inventé qui rentre — une option inconnue tombe en silence
+  plutôt que de faire échouer tout un envoi.
+
+Côté hôte, le tableau de bord de la soirée dépouille les réponses sur
+place — les comptes par option, la moyenne de recommandation, et les
+commentaires tels qu'ils ont été écrits — avec le CSV à côté pour qui veut
+croiser. **Les prénoms n'y figurent pas.** Ils sont en base, il faut bien
+distinguer deux réponses et empêcher qu'on réponde deux fois, mais un avis
+se donne plus librement quand il ne s'affiche pas à côté de son nom.
+
+Les réponses tiennent dans un champ JSON et non en colonnes : un
+questionnaire se réécrit d'une soirée à l'autre, et chaque question
+ajoutée aurait demandé une migration.
+
 ## Où ça vit
 
 `crush.in-love.fr` — même application, second domaine. Deux origines
@@ -375,7 +418,8 @@ atteindre la session du back-office. Repli possible sur
 `15_duree_manches.sql` (les quinze minutes), `16_code_personnel.sql` (la
 colonne du code de chacun, qui n'est plus lue — un seul code par soirée
 désormais), `17_notifications.sql` (la trace des envois),
-`18_match_vu.sql` (l'annonce vue, de chaque côté).
+`18_match_vu.sql` (l'annonce vue, de chaque côté),
+`19_questionnaire.sql` (le questionnaire de fin de soirée).
 
 ## Voir tout ça en local
 

@@ -6,6 +6,8 @@ import {
   matchsNonVus,
   monLike,
   monProfil,
+  questionnaireDe,
+  questionnaireOuvert,
   profilsPour,
   soireeActive,
 } from '@/lib/crush';
@@ -15,6 +17,7 @@ import { CrushProfils } from '@/components/crush/CrushProfils';
 import { CrushMatchs } from '@/components/crush/CrushMatchs';
 import { CrushFete } from '@/components/crush/CrushFete';
 import { CrushAttente } from '@/components/crush/CrushAttente';
+import { CrushQuestionnaire } from '@/components/crush/CrushQuestionnaire';
 import { Veille } from '@/components/crush/Veille';
 import { Installation } from '@/components/crush/Installation';
 import { Notifications } from '@/components/crush/Notifications';
@@ -77,6 +80,12 @@ export default async function CrushPage({ searchParams }: Props) {
   const suivante = manche
     ? (rounds.find((m) => m.numero > manche.numero && !m.ferme_at) ?? null)
     : null;
+  // Les trois manches passées, il n'y a plus rien à liker : la place
+  // revient au questionnaire de fin de soirée, tant que les téléphones
+  // sont encore en main.
+  const bilanOuvert = questionnaireOuvert(rounds);
+  const monBilan = bilanOuvert ? await questionnaireDe(moi) : null;
+
   const [profils, dejaLike] = await Promise.all([
     manche ? profilsPour(moi) : Promise.resolve([]),
     manche ? monLike(moi, manche.id) : Promise.resolve(null),
@@ -112,7 +121,12 @@ export default async function CrushPage({ searchParams }: Props) {
         <CrushMatchs matchs={matchs} enManche={Boolean(manche)} />
       </header>
 
-      {manche ? (
+      {bilanOuvert ? (
+        <CrushQuestionnaire
+          reponsesInitiales={monBilan?.reponses ?? {}}
+          dejaEnvoye={monBilan?.envoye ?? false}
+        />
+      ) : manche ? (
         <CrushProfils
           numero={manche.numero}
           mancheId={manche.id}

@@ -1,6 +1,7 @@
 import { randomBytes, randomInt } from 'node:crypto';
 import { colonne, lireCsv } from './csv';
 import { age, peutVoir, type Genre, type Orientation } from './crush-regles';
+import { nettoyer, type Reponses } from './questionnaire';
 import { DUREE_PAR_DEFAUT, estOuverte, finPrevue } from './manches';
 import { notifier } from './notifications';
 import { nomManche } from './crush-regles';
@@ -1089,4 +1090,110 @@ export async function reglerLesManches(options: {
   );
 
   return toutes.length;
+}
+
+/* ====================================================================
+   Le questionnaire de fin de soirée
+   ==================================================================== */
+
+/**
+ * Le questionnaire s'ouvre quand il n'y a plus rien à liker.
+ *
+ * On ne regarde pas l'horloge mais la soirée : les trois manches passées,
+ * le jeu est fini, et c'est le moment où tout le monde a encore son
+ * téléphone en main. Avec le déroulé habituel — 21 h, 22 h 30, 23 h 45,
+ * quinze minutes chacune — cela tombe à minuit, sans qu'on ait à écrire
+ * cette heure-là nulle part ; et une soirée qui décale emmène le
+ * questionnaire avec elle, au lieu de l'ouvrir au milieu du troisième
+ * crush time.
+ */
+export function questionnaireOuvert(rounds: Manche[]): boolean {
+  if (rounds.length === 0) return false;
+  return rounds.every((m) => Boolean(m.ferme_at) || (Boolean(m.ouvert_at) && !estOuverte(m)));
+}
+
+export type MonQuestionnaire = { reponses: Reponses; envoye: boolean };
+
+/** Ce que j'ai déjà répondu, brouillon compris. */
+export async function questionnaireDe(moi: Participant): Promise<MonQuestionnaire | null> {
+  const { data } = await supabaseAdmin()
+    .from('lil_crush_questionnaires')
+    .select('reponses, envoye_at')
+    .eq('participant_id', moi.id)
+    .maybeSingle();
+
+  if (!data) return null;
+  return { reponses: (data.reponses ?? {}) as Reponses, envoye: Boolean(data.envoye_at) };
+}
+
+/**
+ * Garder ce qui vient d'être répondu.
+ *
+ * À chaque section plutôt qu'à la fin : quinze questions debout, dans une
+ * salle qui se vide, c'est long — un téléphone rangé en route ne doit pas
+ * tout faire recommencer. L'envoi final ne fait que poser la date.
+ *
+ * Un questionnaire déjà envoyé ne se réécrit pas : on a l'avis de la
+ * personne, et le reprendre après coup brouillerait le dépouillement.
+ */
+export async function enregistrerQuestionnaire(
+  moi: Participant,
+  brut: unknown,
+  envoyer: boolean,
+): Promise<{ ok: boolean; raison?: string }> {
+  const db = supabaseAdmin();
+  const dejaLa = await questionnaireDe(moi);
+  if (dejaLa?.envoye) return { ok: false, raison: 'Ton questionnaire est déjà envoyé. Merci !' };
+
+  const reponses = nettoyer(brut);
+  const { error } = await db.from('lil_crush_questionnaires').upsert(
+    {
+      soiree_id: moi.soiree_id,
+      participant_id: moi.id,
+      reponses,
+      envoye_at: envoyer ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'participant_id' },
+  );
+
+  return error ? { ok: false, raison: error.message } : { ok: true };
+}
+
+export type ReponseRecue = {
+  participantId: string;
+  prenom: string;
+  envoyeA: string;
+  reponses: Reponses;
+};
+
+/** Les questionnaires envoyés d'une soirée. Les brouillons restent dehors. */
+export async function questionnairesDe(soireeId: string): Promise<ReponseRecue[]> {
+  const db = supabaseAdmin();
+  const { data } = await db
+    .from('lil_crush_questionnaires')
+    .select('participant_id, reponses, envoye_at')
+    .eq('soiree_id', soireeId)
+    .not('envoye_at', 'is', null)
+    .order('envoye_at', { ascending: true });
+
+  const lignes = data ?? [];
+  if (lignes.length === 0) return [];
+
+  const { data: gens } = await db
+    .from('lil_crush_participants')
+    .select('id, first_name')
+    .in(
+      'id',
+      lignes.map((l) => l.participant_id),
+    );
+
+  const prenoms = new Map((gens ?? []).map((p) => [p.id, p.first_name as string]));
+
+  return lignes.map((l) => ({
+    participantId: l.participant_id,
+    prenom: prenoms.get(l.participant_id) ?? '—',
+    envoyeA: l.envoye_at as string,
+    reponses: (l.reponses ?? {}) as Reponses,
+  }));
 }

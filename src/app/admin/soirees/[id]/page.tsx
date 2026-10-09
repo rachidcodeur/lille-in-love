@@ -3,7 +3,9 @@ import { notFound } from 'next/navigation';
 import { CrushComposer, type Candidat } from '@/components/admin/CrushComposer';
 import { CrushPilotage } from '@/components/admin/CrushPilotage';
 import { ActiverCrush } from '@/components/admin/ActiverCrush';
-import { manches, ouvrirCeQuiDoitLEtre, participants } from '@/lib/crush';
+import { manches, ouvrirCeQuiDoitLEtre, participants, questionnairesDe } from '@/lib/crush';
+import { depouiller } from '@/lib/questionnaire';
+import { CrushBilan } from '@/components/admin/CrushBilan';
 import { notificationsPossibles } from '@/lib/notifications';
 import { facettes, vignettes } from '@/lib/admin';
 import { getSoiree } from '@/lib/soirees';
@@ -23,6 +25,7 @@ export default async function CrushPage({ params }: Props) {
   let gens: Awaited<ReturnType<typeof participants>> = [];
   let rounds: Awaited<ReturnType<typeof manches>> = [];
   let candidats: Candidat[] = [];
+  let bilans: Awaited<ReturnType<typeof questionnairesDe>> = [];
   let indisponible: string | null = null;
 
   try {
@@ -30,7 +33,10 @@ export default async function CrushPage({ params }: Props) {
     // L'écran de l'hôte fait avancer la soirée au même titre que les
     // téléphones : c'est souvent le seul ouvert pendant qu'on fait l'appel.
     await ouvrirCeQuiDoitLEtre(id).catch(() => {});
+    // Le questionnaire vit dans sa propre table, apportée par une
+    // migration à part : s'il manque, la soirée se pilote quand même.
     [gens, rounds] = await Promise.all([participants(id), manches(id)]);
+    bilans = await questionnairesDe(id).catch(() => []);
 
     // Qui est déjà de la soirée, pour le montrer sans permettre de le
     // recocher. Le rapprochement se fait sur l'email : c'est lui qui a servi
@@ -104,6 +110,14 @@ export default async function CrushPage({ params }: Props) {
                 soireeId={id}
                 code={soiree.crush_code ?? null}
                 actif={Boolean(soiree.crush_actif)}
+                participants={gens.filter((p) => !p.retire_at).length}
+              />
+
+              {/* Le lendemain matin, c'est ce bloc qu'on vient lire. */}
+              <CrushBilan
+                soireeId={id}
+                reponses={bilans.length}
+                depouillement={depouiller(bilans)}
                 participants={gens.filter((p) => !p.retire_at).length}
               />
 

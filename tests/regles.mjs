@@ -23,6 +23,7 @@ const sortie = mkdtempSync(join(tmpdir(), 'lil-regles-'));
 execFileSync(
   'npx',
   ['tsc', 'src/lib/crush-regles.ts', 'src/lib/csv.ts', 'src/lib/groupes.ts', 'src/lib/manches.ts',
+   'src/lib/questionnaire.ts',
    '--outDir', sortie, '--target', 'ES2022', '--module', 'esnext',
    '--moduleResolution', 'bundler', '--strict'],
   { stdio: 'inherit' },
@@ -323,7 +324,108 @@ ailleurs === JSON.stringify(['2026-07-18T19:00:00.000Z', '21:00'])
   ? ok('depuis un fuseau à six heures de là, le résultat ne bouge pas d’une minute')
   : bad('le fuseau de la machine déteint encore sur l’heure', ailleurs);
 
-section('9. Le modèle de configuration n’oublie personne');
+section('9. Le questionnaire de fin de soirée');
+
+{
+  const { QUESTIONS, nettoyer, depouiller, reponsesVersCsv } = await import(
+    join(sortie, 'questionnaire.js')
+  );
+
+  QUESTIONS.length === 15
+    ? ok('les quinze questions du questionnaire papier sont là')
+    : bad('nombre de questions inattendu', String(QUESTIONS.length));
+
+  new Set(QUESTIONS.map((q) => q.id)).size === QUESTIONS.length
+    ? ok('et chacune a son identifiant, sans doublon')
+    : bad('deux questions partagent un identifiant');
+
+  // Les réponses arrivent d'un navigateur : rien d'inventé ne doit entrer.
+  const bricole = nettoyer({
+    q01: 'excellente',
+    q04: 'option_inventee',
+    q14: 9,
+    q15: '  Super soirée  ',
+    question_inconnue: 'coucou',
+  });
+  bricole.q01 === 'excellente' && bricole.q14 === 9 && bricole.q15 === 'Super soirée'
+    ? ok('ce qui est valide passe, et le texte est débarrassé de ses espaces')
+    : bad('réponses valides mal reprises', JSON.stringify(bricole));
+  bricole.q04 === undefined && bricole.question_inconnue === undefined
+    ? ok('une option inventée et une question inconnue sont écartées en silence')
+    : bad('des valeurs inventées sont entrées', JSON.stringify(bricole));
+
+  // Trois cases au maximum : c'est écrit sur la feuille, la base doit le tenir.
+  const trop = nettoyer({ q02: ['ambiance', 'rencontres', 'jeux', 'lieu', 'accueil'] });
+  trop.q02.length === 3
+    ? ok('« jusqu’à 3 réponses » est tenu côté serveur, pas seulement à l’écran')
+    : bad('plus de trois cases acceptées', JSON.stringify(trop.q02));
+
+  // « Rien de particulier » coché avec trois reproches ne veut rien dire.
+  const contradictoire = nettoyer({ q03: ['musique', 'rien', 'lieu'] });
+  JSON.stringify(contradictoire.q03) === JSON.stringify(['rien'])
+    ? ok('et « Rien de particulier » annule les reproches cochés à côté')
+    : bad('réponse contradictoire conservée', JSON.stringify(contradictoire.q03));
+
+  // Une note hors barème, un doublon : rien ne doit passer.
+  Object.keys(nettoyer({ q14: 42 })).length === 0 &&
+  JSON.stringify(nettoyer({ q02: ['lieu', 'lieu'] }).q02) === JSON.stringify(['lieu'])
+    ? ok('une note hors barème tombe, un doublon est réduit')
+    : bad('note ou doublon mal filtrés');
+
+  // Les champs rattachés ne valent que si leur option est cochée.
+  const sansAutre = nettoyer({ q02: ['lieu'], q02_autre: 'le DJ' });
+  const avecAutre = nettoyer({ q02: ['autre'], q02_autre: 'le DJ' });
+  sansAutre.q02_autre === undefined && avecAutre.q02_autre === 'le DJ'
+    ? ok('le « Autre » précisé n’est gardé que si la case Autre est cochée')
+    : bad('précision mal rattachée', JSON.stringify([sansAutre, avecAutre]));
+
+  const tranche = nettoyer({ q12: ['autre_tranche'], q12_tranche_de: 30, q12_tranche_a: 40 });
+  tranche.q12_tranche_de === 30 && tranche.q12_tranche_a === 40
+    ? ok('la tranche d’âge libre est gardée quand elle tient debout')
+    : bad('tranche perdue', JSON.stringify(tranche));
+  Object.keys(nettoyer({ q12: ['autre_tranche'], q12_tranche_de: 50, q12_tranche_a: 20 }))
+    .filter((k) => k.startsWith('q12_tranche')).length === 0
+    ? ok('et refusée quand elle est à l’envers')
+    : bad('tranche incohérente acceptée');
+
+  // Le dépouillement : c'est ce que l'hôte lit le lendemain matin.
+  const lignes = [
+    { prenom: 'Inès', envoyeA: '2026-10-18T23:00:00Z', reponses: nettoyer({ q01: 'excellente', q14: 10 }) },
+    { prenom: 'Samir', envoyeA: '2026-10-18T23:05:00Z', reponses: nettoyer({ q01: 'excellente', q14: 8 }) },
+    { prenom: 'Thomas', envoyeA: '2026-10-18T23:09:00Z', reponses: nettoyer({ q01: 'bien', q15: 'Le lieu était parfait' }) },
+  ];
+  const bilan = depouiller(lignes);
+  const q01 = bilan.find((d) => d.question.id === 'q01');
+  q01.comptes.find((c) => c.libelle === 'Excellente').nombre === 2
+    ? ok('le dépouillement compte les réponses par option')
+    : bad('comptes faux', JSON.stringify(q01.comptes));
+  bilan.find((d) => d.question.id === 'q14').moyenne === 9
+    ? ok('et fait la moyenne de la note de recommandation')
+    : bad('moyenne fausse', String(bilan.find((d) => d.question.id === 'q14').moyenne));
+  bilan.find((d) => d.question.id === 'q15').textes.includes('Le lieu était parfait')
+    ? ok('les mots des gens sont rendus tels qu’ils les ont écrits')
+    : bad('texte libre perdu');
+
+  // Le CSV s'ouvre dans un tableur et se lit à l'œil.
+  const csv = reponsesVersCsv(lignes);
+  const [entete, premiere] = csv.split('\n');
+  entete.startsWith('Prénom,Envoyé le,') && entete.includes('Globalement')
+    ? ok('le CSV porte les intitulés en toutes lettres, pas les codes')
+    : bad('en-tête du CSV illisible', entete.slice(0, 90));
+  premiere.includes('Excellente') && !premiere.includes('excellente')
+    ? ok('et les libellés des réponses aussi')
+    : bad('le CSV rend les codes internes', premiere.slice(0, 90));
+
+  // Une virgule dans un avis ne doit pas décaler les colonnes.
+  const piege = reponsesVersCsv([
+    { prenom: 'Zoé', envoyeA: 'x', reponses: nettoyer({ q15: 'Bien, mais bruyant' }) },
+  ]);
+  piege.includes('"Bien, mais bruyant"')
+    ? ok('une virgule dans un commentaire ne décale pas les colonnes')
+    : bad('échappement CSV manquant');
+}
+
+section('10. Le modèle de configuration n’oublie personne');
 
 // « .env.example » est ce qu'on copie pour démarrer, et ce qu'on relit pour
 // remplir l'hébergeur. Une variable lue par le code mais absente du modèle

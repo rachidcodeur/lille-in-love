@@ -74,6 +74,12 @@ const MIGRATIONS: { fichier: string; table: string; colonne: string; sans: strin
     colonne: 'vu_a_at',
     sans: 'un match reçu hors de l’application ne se rejoue pas à l’ouverture',
   },
+  {
+    fichier: '19_questionnaire.sql',
+    table: 'lil_crush_questionnaires',
+    colonne: 'reponses',
+    sans: 'le questionnaire de fin de soirée ne s’affiche pas et aucun avis n’est recueilli',
+  },
 ];
 
 /** Ce que la base ne connaît pas encore. */
