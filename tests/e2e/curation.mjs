@@ -3086,6 +3086,44 @@ await page.waitForTimeout(600);
 
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
+/* ====================================================================
+   20. Le bilan de santé du déploiement
+   ==================================================================== */
+section('20. Le bilan de santé du déploiement');
+
+// Une migration oubliée ne se voit nulle part : l'application démarre, les
+// pages s'affichent, et ça casse au moment précis où on s'en sert — le
+// soir, dans la salle. C'est arrivé. La page de santé doit donc poser la
+// question à la base, et pas seulement compter les variables.
+const sante = async () => (await fetch(`${BASE}/api/health`)).json();
+
+let bilan = await sante();
+bilan.configured?.migrationsAJour === true
+  ? ok('base à jour : le bilan de santé le dit')
+  : bad('des migrations sont signalées manquantes à tort', JSON.stringify(bilan.problemes));
+
+await fetch(`${FAKE}/__colonnes-absentes?table=lil_crush_matches&colonnes=vu_a_at`, {
+  method: 'POST',
+});
+bilan = await sante();
+bilan.configured?.migrationsAJour === false &&
+bilan.problemes.some((p) => p.includes('18_match_vu.sql'))
+  ? ok('et il nomme le fichier SQL qui manque, pas « une erreur est survenue »')
+  : bad('la migration manquante passe inaperçue', JSON.stringify(bilan.problemes));
+
+bilan.problemes.some((p) => p.includes('ne se rejoue pas'))
+  ? ok('avec ce qu’on perd sans elle, en français')
+  : bad('la conséquence n’est pas dite', JSON.stringify(bilan.problemes));
+
+// Une migration du crush time n'empêche ni le formulaire ni la curation de
+// tourner : on la signale sans faire passer le site pour cassé.
+bilan.ok === true
+  ? ok('mais le site n’est pas déclaré en panne pour autant')
+  : bad('une migration en attente fait passer le déploiement pour cassé');
+
+await fetch(`${FAKE}/__colonnes-absentes?table=lil_crush_matches&colonnes=`, { method: 'POST' });
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
 await browser.close();
 console.log('\n' + (failures.length === 0
   ? '[32mTout est vert.[0m'

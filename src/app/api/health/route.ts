@@ -31,6 +31,81 @@ function lireCle(cle: string): { role?: string; projet?: string } {
   }
 }
 
+/**
+ * Les colonnes que chaque migration du crush time apporte.
+ *
+ * Une migration oubliée ne se voit nulle part : l'application démarre,
+ * les pages s'affichent, et ça casse au moment précis où on s'en sert —
+ * le soir, dans la salle. C'est exactement ce qui est arrivé avec le
+ * marquage des annonces vues. Autant poser la question à la base.
+ *
+ * On demande une colonne par migration, avec « limit 0 » : PostgREST
+ * refuse la requête si la colonne n'existe pas, sans lire une seule
+ * ligne.
+ */
+const MIGRATIONS: { fichier: string; table: string; colonne: string; sans: string }[] = [
+  {
+    fichier: '13_crushtime.sql',
+    table: 'lil_crush_participants',
+    colonne: 'jeton',
+    sans: 'le crush time ne marche pas du tout',
+  },
+  {
+    fichier: '14_ordre_photos.sql',
+    table: 'lil_photos',
+    colonne: 'position',
+    sans: 'les photos ne se rangent pas, la photo de tête est au hasard',
+  },
+  {
+    fichier: '15_duree_manches.sql',
+    table: 'lil_crush_rounds',
+    colonne: 'duree_minutes',
+    sans: 'toutes les manches durent quinze minutes, sans réglage possible',
+  },
+  {
+    fichier: '17_notifications.sql',
+    table: 'lil_crush_matches',
+    colonne: 'notifie_at',
+    sans: 'aucune notification ne part, ni à l’ouverture ni au match',
+  },
+  {
+    fichier: '18_match_vu.sql',
+    table: 'lil_crush_matches',
+    colonne: 'vu_a_at',
+    sans: 'un match reçu hors de l’application ne se rejoue pas à l’ouverture',
+  },
+];
+
+/** Ce que la base ne connaît pas encore. */
+async function migrationsManquantes(url: string, cle: string): Promise<string[]> {
+  if (!url || !cle) return [];
+
+  const absentes = await Promise.all(
+    MIGRATIONS.map(async ({ fichier, table, colonne, sans }) => {
+      try {
+        const reponse = await fetch(
+          `${url.replace(/\/$/, '')}/rest/v1/${table}?select=${colonne}&limit=0`,
+          {
+            headers: { apikey: cle, Authorization: `Bearer ${cle}` },
+            cache: 'no-store',
+          },
+        );
+        if (reponse.ok) return null;
+        const corps = (await reponse.json().catch(() => null)) as { code?: string } | null;
+        // 42703 : colonne inconnue. 42P01 : table inconnue.
+        return corps?.code === '42703' || corps?.code === '42P01'
+          ? `${fichier} n’a pas été exécutée — sans elle, ${sans}.`
+          : null;
+      } catch {
+        // Base injoignable : les autres contrôles le diront déjà.
+        return null;
+      }
+    }),
+  );
+
+  return absentes.filter((x): x is string => x !== null);
+}
+
 export async function GET() {
   const supabaseUrl = process.env.SUPABASE_URL ?? '';
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
@@ -109,6 +184,11 @@ export async function GET() {
     problemes.push('IP_HASH_SALT est vide : aucune trace d’IP ne sera conservée (facultatif).');
   }
 
+  // Les migrations en attente : signalées, mais jamais bloquantes. Le
+  // formulaire et la curation tournent sans celles du crush time.
+  const migrations = await migrationsManquantes(supabaseUrl, serviceKey);
+  problemes.push(...migrations.map((m) => `${m} (facultatif tant que tu n’ouvres pas de soirée)`));
+
   const bloquants = problemes.filter((p) => !p.includes('facultatif'));
 
   return NextResponse.json(
@@ -127,6 +207,7 @@ export async function GET() {
         notifications: Boolean(
           process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY,
         ),
+        migrationsAJour: migrations.length === 0,
       },
       problemes,
       at: new Date().toISOString(),

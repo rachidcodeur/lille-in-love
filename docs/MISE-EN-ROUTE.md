@@ -514,6 +514,11 @@ sur l'adresse qu'on a sous les yeux.
 - [ ] `supabase/10_accompagnant.sql` exécuté (bloquant)
 - [ ] `supabase/09_simplification.sql`, `11_corbeille.sql` et `12_anciennes.sql` exécutés
 - [ ] `supabase/13_crushtime.sql` exécuté si tu veux le Crush Time
+- [ ] **`/api/health` ouvert une fois en ligne** : il relit les variables et
+      interroge la base migration par migration. `"ok": true` et
+      `"migrationsAJour": true`, et il n'y a plus rien à vérifier à la main.
+      Une migration manquante y est nommée par son fichier, avec ce qu'on
+      perd sans elle.
 - [ ] La reprise des anciennes candidatures lancée (section 8)
 - [ ] Une inscription en répondant **« oui, je viens avec quelqu'un »**
 - [ ] `DELAI_REPONSE_MINUTES=360` en production
