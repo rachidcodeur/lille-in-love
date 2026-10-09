@@ -323,6 +323,52 @@ ailleurs === JSON.stringify(['2026-07-18T19:00:00.000Z', '21:00'])
   ? ok('depuis un fuseau à six heures de là, le résultat ne bouge pas d’une minute')
   : bad('le fuseau de la machine déteint encore sur l’heure', ailleurs);
 
+section('9. Le modèle de configuration n’oublie personne');
+
+// « .env.example » est ce qu'on copie pour démarrer, et ce qu'on relit pour
+// remplir l'hébergeur. Une variable lue par le code mais absente du modèle
+// ne manque à personne jusqu'au jour où elle manque à tout le monde : rien
+// ne la réclame, et le réglage se découvre en panne.
+{
+  const { readFileSync, readdirSync, statSync } = await import('node:fs');
+
+  const fichiers = [];
+  const parcourir = (dossier) => {
+    for (const entree of readdirSync(dossier)) {
+      const chemin = join(dossier, entree);
+      if (statSync(chemin).isDirectory()) parcourir(chemin);
+      else if (/\.tsx?$/.test(entree)) fichiers.push(chemin);
+    }
+  };
+  parcourir('src');
+
+  const lues = new Set();
+  for (const fichier of fichiers) {
+    for (const trouve of readFileSync(fichier, 'utf8').matchAll(/process\.env\.([A-Z0-9_]+)/g)) {
+      lues.add(trouve[1]);
+    }
+  }
+
+  // Ce que le modèle n'a pas à porter : NODE_ENV appartient à Next, et
+  // DELAI_BIENVENUE_MINUTES n'est lu que pour honorer l'ancien nom de
+  // DELAI_REPONSE_MINUTES — le documenter inviterait à s'en servir.
+  const horsModele = new Set(['NODE_ENV', 'DELAI_BIENVENUE_MINUTES']);
+
+  const modele = readFileSync('.env.example', 'utf8');
+  // Commentée ou non : ce qui compte est que le nom soit écrit quelque
+  // part, puisque certaines variables doivent rester absentes du fichier
+  // pour garder leur valeur par défaut — une ligne vide les couperait.
+  // Ce contrôle attrape donc l'oubli complet, pas la ligne mal placée.
+  const oubliees = [...lues]
+    .filter((v) => !horsModele.has(v))
+    .filter((v) => !new RegExp(`^#?\\s*${v}=`, 'm').test(modele))
+    .sort();
+
+  oubliees.length === 0
+    ? ok('toute variable lue par le code est nommée dans .env.example')
+    : bad('variables absentes du modèle', oubliees.join(', '));
+}
+
 /* ---------------------------------------------------------------- */
 rmSync(sortie, { recursive: true, force: true });
 console.log(
