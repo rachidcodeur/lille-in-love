@@ -205,8 +205,16 @@ pas. C'est lui qu'on envoie ; le code est le filet.
 
 La session tient deux jours, dans un cookie. **Supprimer l'icône de
 l'écran d'accueil ne déconnecte pas** : ce sont deux choses séparées, et
-Safari garde ce qu'il sait. D'où « Connecté en tant que X — changer » tout
-en bas, pour essayer plusieurs profils depuis un seul téléphone.
+Safari garde ce qu'il sait.
+
+**Et il n'y a pas de bouton pour sortir.** Il a existé, le temps
+d'éprouver plusieurs profils depuis un seul téléphone. Le soir même, un
+téléphone appartient à une personne : un « me déconnecter » au bas de
+l'écran n'a plus que des inconvénients, à commencer par le toucher par
+mégarde qui renvoie à la porte au milieu d'un crush time. La route qui le
+servait a été retirée avec lui — un bouton enlevé de l'écran mais
+joignable à la main reste une porte ouverte. Pour changer de profil en
+développement, on vide les cookies.
 
 ## L'heure de la soirée est l'heure de Lille
 

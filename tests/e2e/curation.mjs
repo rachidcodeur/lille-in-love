@@ -2205,22 +2205,31 @@ const entrer = async (email, code) => {
   ? ok('le code de la soirée ouvre la porte, depuis le QR de la salle')
   : bad('le code de la soirée n’ouvre pas');
 
-// --- Changer de profil ----------------------------------------------
-(await tel.locator('.cr-sortir').count()) === 1
-  ? ok('on peut changer de profil — un raccourci supprimé ne déconnecte pas')
-  : bad('aucun moyen de se déconnecter');
+// --- Plus de porte de sortie ----------------------------------------
+// La déconnexion n'a servi qu'à éprouver plusieurs profils depuis un seul
+// téléphone. Le soir même, un téléphone appartient à une personne, et un
+// bouton « me déconnecter » au bas de l'écran n'a que des inconvénients :
+// touché par mégarde, il renvoie à la porte au milieu d'un crush time.
+(await tel.locator('.cr-sortir').count()) === 0 &&
+(await tel.getByRole('button', { name: 'Se déconnecter' }).count()) === 0
+  ? ok('aucune porte de sortie dans l’application : un téléphone, une personne')
+  : bad('la déconnexion est encore là');
 
-await tel.locator('.cr-sortir').click();
-await tel.waitForTimeout(300);
-await tel.getByRole('button', { name: 'Se déconnecter' }).click();
-await jusqua(async () => (await tel.locator('#cr-email').count()) === 1);
-(await tel.locator('#cr-email').count()) === 1
-  ? ok('et l’on retombe sur la porte d’entrée')
-  : bad('la déconnexion ne ramène pas à l’entrée');
+// Et la route qui la servait n'est plus desservie non plus : un bouton
+// retiré de l'écran mais joignable à la main reste une porte ouverte.
+const sortiePossible = await tel.evaluate(async () =>
+  (await fetch('/api/crush/sortir', { method: 'POST' })).status,
+);
+sortiePossible === 404 || sortiePossible === 405
+  ? ok('et la route qui la servait a disparu avec elle')
+  : bad('la route de déconnexion répond encore', String(sortiePossible));
 
-(await entrer('ines@soiree.test', '4812'))
-  ? ok('puis l’on peut revenir, ou entrer avec un autre profil')
-  : bad('impossible de se reconnecter après déconnexion');
+// La session tient : on est toujours la même personne après un rechargement.
+await tel.reload({ waitUntil: 'networkidle' });
+await passerInstallation(tel);
+(await tel.locator('.cr-moi').innerText()).toLowerCase().includes('inès')
+  ? ok('la session tient d’un bout à l’autre de la soirée')
+  : bad('la session a sauté', await tel.locator('.cr-moi').innerText().catch(() => ''));
 
 // --- Le service worker doit couvrir la page elle-même ---------------
 // « /crush », sans barre oblique finale, était hors de la portée

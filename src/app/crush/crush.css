@@ -1172,37 +1172,6 @@
 /* --- Changer de profil ------------------------------------------------- */
 
 /* Tout en bas, en retrait : ce n'est pas un geste de soirée. */
-.cr-sortir,
-.cr-sortir-confirme button {
-  font: inherit;
-  background: transparent;
-  border: 0;
-  color: var(--creme-doux);
-  opacity: 0.5;
-  font-size: 12.5px;
-  padding: 14px 10px;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-.cr-sortir {
-  display: block;
-  margin: 36px auto 0;
-}
-
-.cr-sortir-confirme {
-  display: flex;
-  justify-content: center;
-  gap: 18px;
-  margin: 36px 0 0;
-}
-
-.cr-sortir-confirme button:first-child {
-  opacity: 1;
-  color: var(--coeur);
-}
-
 /* --- Les contacts d'un match ----------------------------------------
    Mêmes boutons dans le panneau et dans l'annonce : c'est la même chose
    qu'on y cherche. Déclarés en dernier pour l'emporter sur les règles de

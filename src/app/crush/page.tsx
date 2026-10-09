@@ -21,7 +21,6 @@ import { CrushQuestionnaire } from '@/components/crush/CrushQuestionnaire';
 import { Veille } from '@/components/crush/Veille';
 import { Installation } from '@/components/crush/Installation';
 import { Notifications } from '@/components/crush/Notifications';
-import { Sortir } from '@/components/crush/Sortir';
 
 export const dynamic = 'force-dynamic';
 
@@ -148,7 +147,6 @@ export default async function CrushPage({ searchParams }: Props) {
         />
       )}
 
-      <Sortir prenom={moi.first_name} />
     </main>
   );
 }
