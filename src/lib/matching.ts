@@ -117,8 +117,6 @@ export const BLOCS: BlocMatching[] = [
   {
     id: 'origines',
     titre: 'Culture et origines',
-    intro:
-      'Ces questions touchent à tes origines : la loi les range parmi les informations sensibles, et tu es libre de les laisser de côté.',
     sensible: true,
     champs: [
       {
@@ -152,7 +150,6 @@ export const BLOCS: BlocMatching[] = [
   {
     id: 'religion',
     titre: 'La religion',
-    intro: 'Sensible elle aussi, et tout aussi facultative.',
     sensible: true,
     champs: [
       {

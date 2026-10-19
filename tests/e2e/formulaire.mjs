@@ -300,8 +300,33 @@ section('Parcours complet et envoi');
     : bad('la puce de sélection manque');
 
 
+  // La case se tient juste devant ce qu'elle ouvre. Tout en bas, on
+  // cochait et les questions apparaissaient au milieu, hors de l'écran.
+  const porte = page.locator('.lil-matching-porte');
+  (await porte.count()) === 1
+    ? ok('la case de consentement a son propre encadré, dans le fil des questions')
+    : bad('pas de porte pour les sujets sensibles');
+
+  const avantPorte = await porte.evaluate((el) => {
+    const blocs = [...document.querySelectorAll('.lil-matching-bloc')];
+    const suivant = blocs.find((b) => el.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    return suivant ? suivant.querySelector('legend')?.textContent?.toLowerCase() : null;
+  });
+  avantPorte && !avantPorte.includes('origines')
+    ? ok('et les blocs qu’elle commande ne sont pas là tant qu’elle est décochée')
+    : bad('un bloc sensible se glisse avant la case', String(avantPorte));
+
   await page.locator('.lil-matching-consent input').check();
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(350);
+
+  const apresPorte = await porte.evaluate((el) => {
+    const blocs = [...document.querySelectorAll('.lil-matching-bloc')];
+    const suivant = blocs.find((b) => el.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    return suivant ? suivant.querySelector('legend')?.textContent?.toLowerCase() : null;
+  });
+  apresPorte?.includes('origines')
+    ? ok('cochée, le bloc qu’elle ouvre apparaît juste en dessous d’elle')
+    : bad('le bloc ouvert n’est pas sous la case', String(apresPorte));
   (await titres()).includes('religion') && (await titres()).includes('origines')
     ? ok('la case de consentement les ouvre, et elle seule')
     : bad('le consentement n’ouvre pas les blocs sensibles', await titres());

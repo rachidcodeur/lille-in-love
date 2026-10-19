@@ -932,21 +932,36 @@ body {
 .lil-matching-bloc {
   border: 0;
   border-top: 1px solid rgba(0, 0, 0, 0.09);
-  margin: 0;
-  padding: 18px 0 2px;
+  /* Le souffle est au-dessus du trait, pas en dessous : c'est la distance
+     avec la question précédente qui dit qu'on change de sujet. Collé, le
+     titre se lisait comme la suite de la réponse qu'on venait de donner. */
+  margin: 38px 0 0;
+  padding: 4px 0 2px;
+}
+
+.lil-matching-bloc:first-of-type {
+  margin-top: 26px;
 }
 
 .lil-matching-bloc legend {
-  padding: 0;
-  font-size: 12px;
+  /* La « legend » se pose à cheval sur le trait du haut : le creux à
+     droite du titre prolonge la ligne, et l'ensemble sépare mieux que ne
+     le ferait un simple blanc. */
+  padding: 0 14px 0 0;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--gold-deep, #a8946e);
 }
 
+/* L'intro d'un bloc, quand il y en a une : sous le titre, détachée. */
+.lil-matching-bloc > .lil-field-help {
+  margin-top: 10px;
+}
+
 .lil-matching-champ {
-  margin-top: 14px;
+  margin-top: 22px;
 }
 
 .lil-matching-champ .lil-field-label {
@@ -976,4 +991,39 @@ body {
 
 .lil-matching-consent {
   margin-top: 22px;
+}
+
+/* --- La porte des deux sujets sensibles -------------------------------
+   Elle se pose juste avant les blocs qu'elle ouvre. Tout en bas, on
+   cochait et des questions apparaissaient au milieu, hors de l'écran :
+   une case qui commande quelque chose doit être à côté de ce qu'elle
+   commande.
+   ---------------------------------------------------------------------- */
+
+.lil-matching-porte {
+  margin-top: 38px;
+  padding: 18px 18px 6px;
+  border-radius: 14px;
+  background: rgba(168, 148, 110, 0.09);
+  border: 1px solid rgba(168, 148, 110, 0.3);
+}
+
+.lil-matching-porte-titre {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.lil-matching-porte .lil-field-help {
+  margin-top: 6px;
+}
+
+.lil-matching-porte .lil-matching-consent {
+  margin-top: 14px;
+}
+
+/* Le premier bloc qui suit la porte n'a pas besoin de reprendre son
+   élan : la porte vient déjà de séparer. */
+.lil-matching-porte + .lil-matching-bloc {
+  margin-top: 26px;
 }

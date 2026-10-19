@@ -1,5 +1,6 @@
 'use client';
 
+import { Fragment } from 'react';
 import { BLOCS, type ChampMatching } from '@/lib/matching';
 
 /**
@@ -38,42 +39,55 @@ export function MatchingAvance({
   const consent = valeurs.consentSensible === true;
   const poser = (nom: string, valeur: unknown) => onChange({ ...valeurs, [nom]: valeur });
 
+  // La case se pose juste avant le premier bloc qu'elle ouvre. Elle était
+  // tout en bas : on cochait, et des questions apparaissaient au milieu,
+  // hors de l'écran. Une case qui commande quelque chose doit être à côté
+  // de ce qu'elle commande.
+  const premierSensible = BLOCS.findIndex((b) => b.sensible);
+
   return (
     <div className="lil-matching">
-      {BLOCS.map((bloc) => {
-        if (bloc.sensible && !consent) return null;
+      {BLOCS.map((bloc, index) => {
+        const porte =
+          index === premierSensible ? (
+            <div className="lil-matching-porte" key="porte">
+              <p className="lil-matching-porte-titre">Deux sujets de plus, si tu veux bien</p>
+              <p className="lil-field-help">
+                Les origines et la religion. La loi les range parmi les informations sensibles&nbsp;:
+                on ne les affiche que si tu le demandes, elles ne servent qu’à la mise en relation,
+                et tu peux les retirer quand tu veux.
+              </p>
+              <label className="lil-consent lil-matching-consent">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  onChange={(e) => poser('consentSensible', e.target.checked)}
+                />
+                <span>J’accepte de répondre à ces deux sujets.</span>
+              </label>
+            </div>
+          ) : null;
+
+        if (bloc.sensible && !consent) return porte;
 
         return (
-          <fieldset className="lil-matching-bloc" key={bloc.id}>
+          <Fragment key={bloc.id}>
+            {porte}
+            <fieldset className="lil-matching-bloc">
             <legend>{bloc.titre}</legend>
             {bloc.intro && <p className="lil-field-help">{bloc.intro}</p>}
-            {bloc.champs.map((champ) => (
-              <Champ
-                key={champ.nom}
-                champ={champ}
-                valeur={valeurs[champ.nom]}
-                poser={poser}
-              />
-            ))}
-          </fieldset>
+              {bloc.champs.map((champ) => (
+                <Champ
+                  key={champ.nom}
+                  champ={champ}
+                  valeur={valeurs[champ.nom]}
+                  poser={poser}
+                />
+              ))}
+            </fieldset>
+          </Fragment>
         );
       })}
-
-      {/* La case qui ouvre les deux blocs sensibles. Elle est placée après
-          les questions ordinaires : on ne demande pas un consentement
-          avant d'avoir montré ce à quoi il sert. */}
-      <label className="lil-consent lil-matching-consent">
-        <input
-          type="checkbox"
-          checked={consent}
-          onChange={(e) => poser('consentSensible', e.target.checked)}
-        />
-        <span>
-          J’accepte de répondre, si je le souhaite, à deux questions supplémentaires sur mes
-          origines et sur la religion. La loi les considère comme des informations sensibles&nbsp;:
-          elles ne servent qu’à la mise en relation, et je peux les retirer quand je veux.
-        </span>
-      </label>
     </div>
   );
 }

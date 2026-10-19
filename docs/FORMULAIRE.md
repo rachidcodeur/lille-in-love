@@ -69,6 +69,11 @@ jauger ce qui reste et de sauter ce qu'on ne veut pas dire.
 Tout y est facultatif. Le service est un bonus ; une question sans
 réponse n'empêche personne d'être mis en relation.
 
+Les titres de section respirent : le souffle est **au-dessus** du trait,
+pas en dessous — c'est la distance avec la question précédente qui dit
+qu'on change de sujet. Collés, ils se lisaient comme la suite de la
+réponse qu'on venait de donner.
+
 Ses choix portent `aria-checked` et la puce du reste du formulaire, et
 non un `aria-pressed` à part : c'est sur eux que repose tout le style de
 la sélection, et sans eux on cliquait sans que rien ne bouge à l'œil.
@@ -99,6 +104,14 @@ du reste (art. 9.2.a).
 D'où la case à cocher qui ouvre ces deux blocs, et la date conservée dans
 `matching_consent_at` : si l'on nous demande un jour sur quelle base ces
 informations ont été recueillies, la réponse est à côté d'elles.
+
+**La case se tient juste devant ce qu'elle ouvre**, dans son propre
+encadré, entre « Ton parcours » et « Ton partenaire idéal ». Elle a
+d'abord été placée tout en bas, après les questions ordinaires, avec
+l'idée qu'on ne demande pas un consentement avant d'avoir montré à quoi
+il sert. À l'usage c'était l'inverse : on cochait en bas et des questions
+apparaissaient au milieu, hors de l'écran. Une case qui commande quelque
+chose doit être à côté de ce qu'elle commande.
 
 Trois précautions, qui tiennent toutes dans le code :
 
