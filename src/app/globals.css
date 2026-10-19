@@ -895,3 +895,85 @@ body {
   font-size: 0.84em;
   letter-spacing: 0.02em;
 }
+
+/* --- La date de naissance, en trois cases -----------------------------
+   Un sélecteur de date oblige à remonter de 1990 au doigt : on tape le
+   jour et l'année, et seul le mois reste une liste.
+   ---------------------------------------------------------------------- */
+
+.lil-naissance {
+  display: grid;
+  grid-template-columns: 4.5rem 1fr 6rem;
+  gap: 8px;
+  align-items: center;
+}
+
+.lil-naissance input,
+.lil-naissance select {
+  /* 16 px au moins : en dessous, iOS zoome à la saisie. */
+  font-size: 16px;
+  text-align: center;
+}
+
+.lil-naissance-mois {
+  text-align: left;
+}
+
+/* --- Le formulaire de matching, d'un seul tenant ----------------------
+   Trente questions à la suite : tout l'enjeu est qu'on en voie le bout.
+   Les choix courts tiennent sur une ligne, les blocs se distinguent, et
+   l'on garde le fil du haut vers le bas.
+   ---------------------------------------------------------------------- */
+
+.lil-matching {
+  margin-top: 6px;
+}
+
+.lil-matching-bloc {
+  border: 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.09);
+  margin: 0;
+  padding: 18px 0 2px;
+}
+
+.lil-matching-bloc legend {
+  padding: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold-deep, #a8946e);
+}
+
+.lil-matching-champ {
+  margin-top: 14px;
+}
+
+.lil-matching-champ .lil-field-label {
+  margin-bottom: 6px;
+}
+
+/* « Oui / Non » et « Peu importe / Oui / Non » n'ont aucune raison
+   d'occuper trois lignes : empilés, ils doublaient la hauteur de la page
+   et on n'en voyait plus la fin. */
+.lil-choices-serrees {
+  display: flex;
+  /* « .lil-choices » met la colonne : sans cette ligne, le « wrap » ne
+     sert à rien et les boutons restent empilés. */
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.lil-choices-serrees .lil-choice {
+  flex: 0 1 auto;
+  width: auto;
+  min-height: 44px;
+  padding: 10px 15px;
+  gap: 9px;
+  font-size: 15.5px;
+}
+
+.lil-matching-consent {
+  margin-top: 22px;
+}

@@ -23,7 +23,7 @@ const sortie = mkdtempSync(join(tmpdir(), 'lil-regles-'));
 execFileSync(
   'npx',
   ['tsc', 'src/lib/crush-regles.ts', 'src/lib/csv.ts', 'src/lib/groupes.ts', 'src/lib/manches.ts',
-   'src/lib/questionnaire.ts',
+   'src/lib/questionnaire.ts', 'src/lib/matching.ts',
    '--outDir', sortie, '--target', 'ES2022', '--module', 'esnext',
    '--moduleResolution', 'bundler', '--strict'],
   { stdio: 'inherit' },
@@ -442,7 +442,52 @@ section('9. Le questionnaire de fin de soirée');
     : bad('échappement CSV manquant');
 }
 
-section('10. Le modèle de configuration n’oublie personne');
+section('10. Le formulaire de matching sur mesure');
+
+{
+  const { CHAMPS, nettoyerMatching } = await import(join(sortie, 'matching.js'));
+
+  new Set(CHAMPS.map((c) => c.nom)).size === CHAMPS.length
+    ? ok('chaque champ a son nom, sans doublon')
+    : bad('deux champs partagent un nom');
+
+  // Sans consentement explicite, les données sensibles ne s'écrivent pas —
+  // même si le navigateur les envoie. Une case décochée à l'écran ne
+  // prouve rien côté serveur : c'est ici que la promesse se tient.
+  const envoye = {
+    sport: 'oui',
+    origines: 'franco-marocaines',
+    religionImportance: 'tres',
+    personnalite: '  curieuse  ',
+  };
+  const sans = nettoyerMatching(envoye, false);
+  sans.sport === 'oui' && sans.personnalite === 'curieuse'
+    ? ok('les réponses ordinaires passent, et les textes sont nettoyés')
+    : bad('réponses ordinaires perdues', JSON.stringify(sans));
+  sans.origines === undefined && sans.religionImportance === undefined
+    ? ok('sans consentement, origines et religion sont écartées côté serveur')
+    : bad('des données sensibles sont entrées sans consentement', JSON.stringify(sans));
+
+  const avec = nettoyerMatching(envoye, true);
+  avec.origines === 'franco-marocaines' && avec.religionImportance === 'tres'
+    ? ok('avec le consentement, elles sont gardées')
+    : bad('données sensibles perdues malgré le consentement', JSON.stringify(avec));
+
+  // « Aucune préférence » cochée avec trois origines ne veut rien dire.
+  const contradictoire = nettoyerMatching(
+    { originesRecherchees: ['europeenne', 'aucune', 'asiatique'] },
+    true,
+  );
+  JSON.stringify(contradictoire.originesRecherchees) === JSON.stringify(['aucune'])
+    ? ok('« aucune préférence » annule les cases cochées à côté')
+    : bad('réponse contradictoire conservée', JSON.stringify(contradictoire));
+
+  Object.keys(nettoyerMatching({ sport: 'parfois', champInvente: 'x' }, true)).length === 0
+    ? ok('une option inventée et un champ inconnu tombent en silence')
+    : bad('des valeurs inventées sont entrées');
+}
+
+section('11. Le modèle de configuration n’oublie personne');
 
 // « .env.example » est ce qu'on copie pour démarrer, et ce qu'on relit pour
 // remplir l'hébergeur. Une variable lue par le code mais absente du modèle

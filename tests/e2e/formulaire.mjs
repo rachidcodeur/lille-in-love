@@ -170,8 +170,10 @@ section('Parcours complet et envoi');
   await page.fill('#postalCode', '59000');
   await next();
   await pick('Hétéro');
-  await pick('Non');
   await pick('Une relation sérieuse');
+  // « Depuis quand es-tu célibataire ? » remplace la question sur les
+  // enfants, partie dans le formulaire avancé.
+  await pick('Plus de 2 ans');
   await page.fill('#heightCm', '168');
   await next();
   // Plus de longueur minimale : deux mots suffisent.
@@ -232,12 +234,51 @@ section('Parcours complet et envoi');
   await page.fill('#phone', '06 12 34 56 78');
   await next();
   await page.fill('#email', 'camille.dupont@example.com');
-  await page.fill('#birthDate', '1993-04-17');
+
+  // Trois cases plutôt qu'un sélecteur : sur un téléphone, remonter de
+  // 1993 au doigt dans un calendrier décourage.
+  (await page.locator('.lil-naissance input').count()) === 2 &&
+  (await page.locator('.lil-naissance select').count()) === 1
+    ? ok('la date de naissance se saisit en trois cases, le mois en liste')
+    : bad('la date de naissance n’est pas en trois cases');
+  await page.fill('#birthDate', '17');
+  await page.selectOption('.lil-naissance select', '04');
+  await page.fill('.lil-naissance-annee', '1993');
   // La case finale ne porte plus de lien : texte seul, et on coche pour passer.
   (await page.locator('.lil-consent a').count()) === 0
     ? ok('la case d’acceptation ne contient plus aucun lien')
     : bad('un lien subsiste dans la case d’acceptation');
-  await page.locator('.lil-consent input').check();
+  await page.locator('.lil-consent input').first().check();
+  await next();
+
+  // --- Le service de matching, proposé en dernier -------------------
+  ((await page.locator('.lil-question').innerText().catch(() => '')) || '').includes('cherche')
+    ? ok('le service de matching est proposé après la dernière question')
+    : bad('pas d’étape de matching', await page.locator('.lil-question').innerText().catch(() => ''));
+
+  (await page.locator('.lil-matching').count()) === 0
+    ? ok('et ses questions restent repliées tant qu’on n’a pas dit oui')
+    : bad('les questions avancées s’affichent sans qu’on ait accepté');
+
+  await pick('Oui, je veux en savoir plus');
+  await page.waitForTimeout(400);
+  (await page.locator('.lil-matching-bloc').count()) >= 5
+    ? ok('« oui » déroule toutes les questions d’un coup, sans nouvelle étape')
+    : bad('les questions avancées ne s’affichent pas', String(await page.locator('.lil-matching-bloc').count()));
+
+  // Les deux blocs sensibles restent fermés tant que la case n'est pas cochée.
+  const titres = async () => (await page.locator('.lil-matching-bloc legend').allInnerTexts()).join(' | ');
+  !(await titres()).includes('religion')
+    ? ok('les blocs sensibles restent fermés sans consentement explicite')
+    : bad('origines et religion affichées sans consentement', await titres());
+
+  await page.locator('.lil-matching-consent input').check();
+  await page.waitForTimeout(300);
+  (await titres()).includes('religion') && (await titres()).includes('origines')
+    ? ok('la case de consentement les ouvre, et elle seule')
+    : bad('le consentement n’ouvre pas les blocs sensibles', await titres());
+
+  await page.getByRole('button', { name: 'Oui' }).last().click();
   await next();
   await page.waitForTimeout(900);
 
@@ -251,6 +292,21 @@ section('Parcours complet et envoi');
     sent.photos?.length === 3 ? ok('3 chemins de photos transmis') : bad('photos mal transmises');
     typeof sent.heightCm === 'number' ? ok('taille envoyée en nombre') : bad('taille non numérique');
     sent.consent === true ? ok('consentement transmis') : bad('consentement manquant');
+    sent.birthDate === '1993-04-17'
+      ? ok('les trois cases se recomposent en une date exploitable pour l’âge')
+      : bad('date de naissance mal recomposée', String(sent.birthDate));
+    sent.singleSince === 'plus_2_ans'
+      ? ok('« depuis quand célibataire » part avec le reste')
+      : bad('réponse célibat manquante', String(sent.singleSince));
+    sent.hasChildren === undefined
+      ? ok('et la question sur les enfants a bien quitté le formulaire')
+      : bad('la question sur les enfants est encore envoyée');
+    sent.matchingOptin === 'oui'
+      ? ok('le choix du service de matching est transmis')
+      : bad('choix de matching manquant', String(sent.matchingOptin));
+    sent.matching?.consentSensible === true
+      ? ok('avec le consentement aux données sensibles')
+      : bad('consentement sensible manquant', JSON.stringify(sent.matching ?? null));
     sent.elapsedMs > 0 ? ok('durée de remplissage transmise') : bad('durée manquante');
     sent.lil_ref_url === '' && sent.lil_extra_1 === ''
       ? ok('les pièges anti-robot partent vides')

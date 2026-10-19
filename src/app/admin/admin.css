@@ -2960,3 +2960,65 @@ a.adm-btn:hover {
   line-height: 1.5;
   font-style: italic;
 }
+
+/* --- Le matching sur mesure, sur la fiche ----------------------------- */
+
+.adm-matching summary {
+  cursor: pointer;
+}
+
+.adm-matching-non {
+  margin: 14px 0 0;
+  font-style: italic;
+}
+
+.adm-matching-consent {
+  margin: 10px 0 0;
+}
+
+.adm-matching-bloc {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.adm-matching-bloc h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gold-deep, #a8946e);
+}
+
+/* Les réponses sensibles portent leur mention : on sait ce qu'on lit. */
+.adm-matching-tag {
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(168, 148, 110, 0.16);
+  color: #6b5c3f;
+}
+
+.adm-matching dl {
+  margin: 0;
+}
+
+.adm-matching dl div {
+  margin-bottom: 8px;
+}
+
+.adm-matching dt {
+  font-size: 12.5px;
+  color: var(--text-2, #5b5048);
+}
+
+.adm-matching dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+}

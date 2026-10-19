@@ -33,7 +33,6 @@ export const inscriptionSchema = z
     postalCode: trimmed.regex(/^\d{5}$/, 'Code postal à 5 chiffres'),
 
     orientation: z.enum(['hetero', 'gay']),
-    hasChildren: z.enum(['oui', 'non']),
     lookingFor: z.enum(['relation_serieuse', 'bons_moments']),
 
     heightCm: z.coerce
@@ -75,6 +74,25 @@ export const inscriptionSchema = z
     birthDate: z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date attendue au format jj/mm/aaaa'),
+
+    singleSince: z.enum([
+      'moins_6_mois',
+      'six_mois_2_ans',
+      'plus_2_ans',
+      'toujours',
+      'prefere_pas',
+    ]),
+
+    /** Le service de matching : proposé à la fin, accepté ou non. */
+    matchingOptin: z.enum(['oui', 'non']),
+
+    /**
+     * Les réponses du formulaire avancé, telles que l'écran les a
+     * rassemblées. Pas de schéma détaillé ici : « nettoyerMatching » les
+     * passe au tamis champ par champ, et une clé inattendue ne doit pas
+     * faire échouer une candidature entière.
+     */
+    matching: z.record(z.unknown()).optional(),
 
     consent: z.literal(true, {
       errorMap: () => ({ message: 'Il faut accepter le règlement pour continuer' }),

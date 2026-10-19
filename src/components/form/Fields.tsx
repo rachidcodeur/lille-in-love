@@ -1,6 +1,23 @@
 'use client';
 
 import type { Field } from '@/lib/questions';
+import { MatchingAvance, type BrouillonMatching } from './MatchingAvance';
+
+/** Les mois en toutes lettres : « 09 » se retient mal, « septembre » non. */
+const MOIS = [
+  'janvier',
+  'février',
+  'mars',
+  'avril',
+  'mai',
+  'juin',
+  'juillet',
+  'août',
+  'septembre',
+  'octobre',
+  'novembre',
+  'décembre',
+];
 
 export type Values = Record<string, unknown>;
 export type Errors = Record<string, string>;
@@ -158,6 +175,84 @@ export function FieldControl({ field, value, error, onChange, onAdvance }: Field
         </div>
       );
     }
+
+    /* ---- Date de naissance, en trois cases ----------------------- */
+    case 'naissance': {
+      // Un sélecteur de date oblige à remonter de 1990 au doigt, mois par
+      // mois, dans un calendrier qui s'ouvre sur aujourd'hui. Plusieurs
+      // personnes s'y sont arrêtées. On tape le jour et l'année ; seul le
+      // mois, qui se mémorise mal en chiffres, reste une liste.
+      const [an = '', mois = '', jour = ''] =
+        typeof value === 'string' && value ? value.split('-') : [];
+
+      const recomposer = (j: string, m: string, a: string) => {
+        // Tant que les trois ne sont pas là, on garde le brouillon tel
+        // quel : valider à chaque frappe ferait clignoter une erreur dès
+        // le premier chiffre de l'année.
+        if (!j && !m && !a) return onChange(field.name, '');
+        onChange(field.name, `${a.padStart(4, '0')}-${m.padStart(2, '0')}-${j.padStart(2, '0')}`);
+      };
+
+      const chiffres = (v: string, max: number) => v.replace(/\D/g, '').slice(0, max);
+
+      return (
+        <div>
+          {label}
+          <div className="lil-naissance">
+            <input
+              id={field.name}
+              className="lil-input lil-naissance-jour"
+              type="text"
+              inputMode="numeric"
+              autoComplete="bday-day"
+              placeholder="JJ"
+              aria-label="Jour de naissance"
+              aria-invalid={Boolean(error)}
+              aria-describedby={describedBy}
+              value={jour === '00' ? '' : jour.replace(/^0/, '')}
+              onChange={(e) => recomposer(chiffres(e.target.value, 2), mois, an)}
+            />
+            <select
+              className="lil-input lil-naissance-mois"
+              autoComplete="bday-month"
+              aria-label="Mois de naissance"
+              aria-invalid={Boolean(error)}
+              value={mois === '00' ? '' : mois}
+              onChange={(e) => recomposer(jour, e.target.value, an)}
+            >
+              <option value="">Mois</option>
+              {MOIS.map((nom, i) => (
+                <option key={nom} value={String(i + 1).padStart(2, '0')}>
+                  {nom}
+                </option>
+              ))}
+            </select>
+            <input
+              className="lil-input lil-naissance-annee"
+              type="text"
+              inputMode="numeric"
+              autoComplete="bday-year"
+              placeholder="AAAA"
+              aria-label="Année de naissance"
+              aria-invalid={Boolean(error)}
+              value={an === '0000' ? '' : an}
+              onChange={(e) => recomposer(jour, mois, chiffres(e.target.value, 4))}
+            />
+          </div>
+          {field.help && <p className="lil-field-help">{field.help}</p>}
+          {error && <ErrorLine id={errorId} message={error} />}
+        </div>
+      );
+    }
+
+    /* ---- Le formulaire avancé, d'un seul tenant ------------------ */
+    case 'matching':
+      return (
+        <MatchingAvance
+          valeurs={(value ?? {}) as BrouillonMatching}
+          onChange={(v) => onChange(field.name, v)}
+        />
+      );
 
     /* ---- Consentement ------------------------------------------- */
     case 'consent':
