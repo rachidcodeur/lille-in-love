@@ -636,8 +636,7 @@ const memeNumero = await (
     body: JSON.stringify({
       formVersion: 'complet',
       gender: 'homme', birthDate: '1992-05-14', city: 'Lille', postalCode: '59000',
-      orientation: 'hetero', lookingFor: 'relation_serieuse',
-      singleSince: 'plus_2_ans', matchingOptin: 'non',
+      orientation: 'hetero', hasChildren: 'non', lookingFor: 'relation_serieuse',
       heightCm: 180, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
       profession: 'Essai', referral: 'instagram', comesWith: 'non',
       firstName: 'Premier', lastName: 'Numero', phone: '06 12 34 56 78',
@@ -655,8 +654,7 @@ const secondEnvoi = await (
     body: JSON.stringify({
       formVersion: 'complet',
       gender: 'homme', birthDate: '1992-05-14', city: 'Lille', postalCode: '59000',
-      orientation: 'hetero', lookingFor: 'relation_serieuse',
-      singleSince: 'plus_2_ans', matchingOptin: 'non',
+      orientation: 'hetero', hasChildren: 'non', lookingFor: 'relation_serieuse',
       heightCm: 180, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
       profession: 'Essai', referral: 'instagram', comesWith: 'non',
       firstName: 'Second', lastName: 'Numero',
@@ -863,8 +861,7 @@ const lignes = lignesCsv(csv);
 
 const ENTETE =
   'soiree_group,first_name,gender,age,birth_date,email,phone,city,postal_code,profession,' +
-  'instagram,looking_for,orientation,has_children,single_since,matching_optin,' +
-  'children_preference,height_cm,zodiac_sign,' +
+  'instagram,looking_for,orientation,has_children,children_preference,height_cm,zodiac_sign,' +
   'about_you,ideal_evening,interests,friend_name,friend_email,source,created_at,id';
 
 lignes[0] === ENTETE
@@ -884,10 +881,7 @@ const bea = lignes[1] ?? '';
 bea.startsWith('C,Bea,F,28,1998-02-05,bea@example.com,')
   ? ok('groupe, prénom, sexe en F/M, âge et date de naissance au bon format')
   : bad('début de ligne inattendu', bea.slice(0, 80));
-// Les deux colonnes neuves se glissent entre has_children et la
-// préférence de l'ancien formulaire : « single_since » et
-// « matching_optin », vides pour une fiche posée directement en base.
-bea.includes(',serieux,hetero,False,,,,167,verseau,')
+bea.includes(',serieux,hetero,False,,167,verseau,')
   ? ok('« relation sérieuse » devient serieux, has_children devient False')
   : bad('valeurs converties', bea);
 bea.includes('"Rencontrer,\nautrement."')

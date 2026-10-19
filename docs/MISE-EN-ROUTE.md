@@ -17,7 +17,6 @@ l'application** sur `app.in-love.fr`.
 | **À passer d'urgence** | **`10_accompagnant.sql`** — sans lui, toute candidature « je viens accompagné » est refusée |
 | **À passer aussi** | **`09_simplification.sql`** (groupe G), **`11_corbeille.sql`**, **`12_anciennes.sql`** |
 | **Pour le Crush Time** | **`13_crushtime.sql`** (indispensable), **`14_ordre_photos.sql`**, **`15_duree_manches.sql`**, **`16_code_personnel.sql`**, **`17_notifications.sql`**, **`18_match_vu.sql`**, **`19_questionnaire.sql`** |
-| **Indispensable au formulaire** | **`20_matching.sql`** — sans elle, plus aucune inscription ne passe |
 | Resend | domaine **`in-love.fr` vérifié**, clé en place |
 | Expéditeur / réponse | `Lille in Love <info@in-love.fr>` |
 | `.env.local` | rempli et valide — `/api/health` répond `ok: true` |
@@ -481,10 +480,6 @@ demandent du HTTPS, que `localhost` n'a pas.
    dans l'application ne se rejoue pas à l'ouverture, et le questionnaire
    de fin de soirée ne recueille aucun avis. Rien ne casse —
    l'application retombe sur ce qu'elle sait faire — mais la soirée y perd.
-   **`20_matching.sql`, elle, ne peut pas attendre** : le formulaire
-   d'inscription écrit ses colonnes à chaque envoi, et sans elles plus
-   aucune candidature ne passe. `/api/health` la signale comme bloquante.
-
    `14`, `15` et `16` peuvent attendre : l'ordre des photos et la durée
    gardent leurs valeurs par défaut, et la colonne du code personnel n'est
    plus lue depuis qu'un seul code sert à toute la soirée.

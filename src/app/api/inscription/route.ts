@@ -12,7 +12,6 @@ import {
   type InscriptionCourteInput,
   type InscriptionInput,
 } from '@/lib/validation';
-import { nettoyerMatching } from '@/lib/matching';
 import { HONEYPOT_FIELDS, MIN_FILL_SECONDS } from '@/lib/questions';
 import { previenirEquipe, sendSequenceEmail } from '@/lib/mailer';
 
@@ -42,8 +41,8 @@ function fullRow(data: InscriptionInput) {
     city: data.city,
     postal_code: data.postalCode,
     orientation: data.orientation,
+    has_children: data.hasChildren === 'oui',
     looking_for: data.lookingFor,
-    single_since: data.singleSince,
     height_cm: data.heightCm,
     about: data.about,
     motivation: data.motivation,
@@ -58,27 +57,6 @@ function fullRow(data: InscriptionInput) {
     referral: data.referral,
     phone: normalizePhone(data.phone),
     birth_date: data.birthDate,
-    ...matchingRow(data),
-  };
-}
-
-/**
- * Le service de matching, et ses réponses.
- *
- * Le tamis est ici, côté serveur, et nulle part ailleurs : une case
- * décochée à l'écran ne prouve rien. Sans le consentement explicite, les
- * champs sensibles — origines, religion — ne sont pas écrits, même si le
- * navigateur les envoie.
- */
-function matchingRow(data: InscriptionInput) {
-  const accepte = data.matchingOptin === 'oui';
-  const brut = (data.matching ?? {}) as Record<string, unknown>;
-  const consent = accepte && brut.consentSensible === true;
-
-  return {
-    matching_optin: accepte,
-    matching: accepte ? nettoyerMatching(brut, consent) : {},
-    matching_consent_at: consent ? new Date().toISOString() : null,
   };
 }
 

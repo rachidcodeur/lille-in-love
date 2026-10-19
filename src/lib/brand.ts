@@ -53,8 +53,8 @@ export const SOIREE = {
   titre: 'Soirée célibataires',
   precision: 'La date et le lieu seront communiqués aux membres inscrits.',
   reperes: ['Profils sélectionnés', 'Lieu privatisé'],
-  // Plus de prix dans l'en-tête : il variera d'une soirée à l'autre, et
-  // l'annoncer avant même de savoir à laquelle la personne ira revenait à
-  // s'engager sur un chiffre qu'on ne maîtrise pas. Il se dit avec la date
-  // et le lieu, une fois la candidature retenue.
+  prix: '20 €',
+  prixDetail: 'par personne',
+  /** Sous le prix, en une ligne : pourquoi s'inscrire maintenant. */
+  prixMention: 'Tarif exceptionnel pour cette soirée — il est susceptible de changer pour les suivantes.',
 } as const;
