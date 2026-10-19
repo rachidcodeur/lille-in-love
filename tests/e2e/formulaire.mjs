@@ -177,6 +177,12 @@ section('Parcours complet et envoi');
   await page.fill('#about', 'Deux mots.');
   await page.fill('#motivation', 'Marre des applis, envie de rencontrer des gens en vrai.');
   await next();
+  // Elle vient après qu'on s'est raconté, pas entre l'orientation et la
+  // taille : à cet endroit elle prolonge ce qu'on vient d'écrire.
+  (await page.locator('.lil-question').innerText()).includes('célibataire')
+    ? ok('« depuis quand célibataire » suit la présentation, pas les premières étapes')
+    : bad('la question du célibat n’est pas à sa place', await page.locator('.lil-question').innerText());
+  await pick('Plus de 2 ans');
   await page.getByRole('button', { name: 'Culture & spectacles' }).click();
   await page.getByRole('button', { name: 'Voyages & découvertes' }).click();
   await next();
@@ -332,11 +338,9 @@ section('Parcours complet et envoi');
     sent.birthDate === '1993-04-17'
       ? ok('les trois cases se recomposent en une date exploitable pour l’âge')
       : bad('date de naissance mal recomposée', String(sent.birthDate));
-    // L'inscription elle-même n'a gagné aucune question : seules celles
-    // sur les enfants l'ont quittée, pour le formulaire avancé.
-    sent.singleSince === undefined
-      ? ok('aucune nouvelle question ajoutée au formulaire classique')
-      : bad('une question s’est glissée dans le parcours ordinaire');
+    sent.singleSince === 'plus_2_ans'
+      ? ok('« depuis quand célibataire » est posée dans le formulaire classique')
+      : bad('réponse célibat manquante', String(sent.singleSince));
     sent.hasChildren === undefined
       ? ok('et la question sur les enfants a bien quitté le formulaire')
       : bad('la question sur les enfants est encore envoyée');

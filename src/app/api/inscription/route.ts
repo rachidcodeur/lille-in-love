@@ -43,6 +43,7 @@ function fullRow(data: InscriptionInput) {
     postal_code: data.postalCode,
     orientation: data.orientation,
     looking_for: data.lookingFor,
+    single_since: data.singleSince,
     height_cm: data.heightCm,
     about: data.about,
     motivation: data.motivation,
@@ -74,15 +75,10 @@ function matchingRow(data: InscriptionInput) {
   const brut = (data.matching ?? {}) as Record<string, unknown>;
   const consent = accepte && brut.consentSensible === true;
 
-  const reponses = accepte ? nettoyerMatching(brut, consent) : {};
-
   return {
     matching_optin: accepte,
-    matching: reponses,
+    matching: accepte ? nettoyerMatching(brut, consent) : {},
     matching_consent_at: consent ? new Date().toISOString() : null,
-    // Celle-là sort du JSON pour rejoindre sa propre colonne : la curation
-    // la filtre et l'export la sort, comme les autres réponses du profil.
-    single_since: typeof reponses.singleSince === 'string' ? reponses.singleSince : null,
   };
 }
 

@@ -33,6 +33,15 @@ export const inscriptionSchema = z
     postalCode: trimmed.regex(/^\d{5}$/, 'Code postal à 5 chiffres'),
 
     orientation: z.enum(['hetero', 'gay']),
+
+    singleSince: z.enum([
+      'moins_6_mois',
+      'six_mois_2_ans',
+      'plus_2_ans',
+      'toujours',
+      'prefere_pas',
+    ]),
+
     lookingFor: z.enum(['relation_serieuse', 'bons_moments']),
 
     heightCm: z.coerce

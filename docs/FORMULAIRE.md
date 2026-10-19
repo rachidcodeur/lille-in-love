@@ -16,12 +16,17 @@ des centaines de candidatures y ont répondu, et une donnée recueillie ne
 s'efface pas parce qu'on cesse de la demander. La fiche les affiche
 encore, quand elles existent.
 
-**Rien n'a été ajouté en échange.** L'inscription ordinaire est le moment
-où l'on peut perdre quelqu'un : chaque question de plus est une occasion
-de fermer l'onglet. « Depuis quand es-tu célibataire ? » est donc dans le
-formulaire avancé, avec les autres — mais sa réponse rejoint sa propre
-colonne, `single_since`, pour rester filtrable en curation et sortir dans
-l'export comme n'importe quel champ du profil.
+**« Depuis quand es-tu célibataire ? »** rejoint le formulaire ordinaire,
+**après la présentation** — une fois que la personne s'est racontée et a
+dit pourquoi elle venait. La question prolonge alors ce qu'elle vient
+d'écrire ; placée en cinquième, entre l'orientation et la taille, elle
+tombait comme un interrogatoire.
+
+Dans le formulaire ordinaire et pas dans le formulaire avancé : elle se répond d'un geste, elle éclaire la curation pour tout le
+monde, et elle n'aurait servi qu'à la moitié des candidatures si elle
+avait suivi les autres. Sa réponse a sa propre colonne, `single_since`,
+filtrable en curation et sortie dans l'export comme les autres champs du
+profil.
 
 **Le prix a quitté l'en-tête.** Il variera d'une soirée à l'autre, et
 l'annoncer avant même de savoir à laquelle la personne ira revenait à

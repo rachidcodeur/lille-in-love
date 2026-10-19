@@ -226,6 +226,31 @@ const ETAPES: Step[] = [
     ],
   },
   {
+    id: 'single-since',
+    section: 'Toi, en quelques mots',
+    title: 'Depuis quand es-tu célibataire ?',
+    // Posée ici, et non dans les premières étapes : la personne vient de
+    // se raconter et de dire pourquoi elle vient. La question prolonge ce
+    // qu'elle écrivait ; placée en cinquième, entre l'orientation et la
+    // taille, elle tombait comme un interrogatoire.
+    help: 'Une idée suffit — personne ne vérifie.',
+    fields: [
+      {
+        name: 'singleSince',
+        type: 'radio',
+        required: true,
+        advanceOnSelect: true,
+        options: [
+          { value: 'moins_6_mois', label: 'Moins de 6 mois' },
+          { value: 'six_mois_2_ans', label: 'Entre 6 mois et 2 ans' },
+          { value: 'plus_2_ans', label: 'Plus de 2 ans' },
+          { value: 'toujours', label: 'Je n’ai jamais été en couple' },
+          { value: 'prefere_pas', label: 'Je préfère ne pas le dire' },
+        ],
+      },
+    ],
+  },
+  {
     id: 'interests',
     section: 'Toi, en quelques mots',
     title: "Quels sont tes centres d'intérêt ?",
