@@ -107,18 +107,23 @@ function Champ({
       <p className="lil-field-label">{champ.libelle}</p>
       {champ.aide && <p className="lil-field-help">{champ.aide}</p>}
 
+      {/* « aria-checked » et la puce, comme partout ailleurs dans le
+          formulaire : c'est sur eux que repose tout le style de la
+          sélection. Avec « aria-pressed » et sans puce, on cliquait et
+          rien ne bougeait à l'œil — le choix était pris, mais invisible. */}
       {champ.type === 'radio' && (
-        <div className="lil-choices lil-choices-serrees">
+        <div className="lil-choices lil-choices-serrees" role="radiogroup">
           {champ.options?.map((o) => (
             <button
               key={o.valeur}
               type="button"
+              role="radio"
+              aria-checked={valeur === o.valeur}
               className="lil-choice"
-              aria-pressed={valeur === o.valeur}
-              data-selected={valeur === o.valeur || undefined}
               onClick={() => poser(champ.nom, valeur === o.valeur ? '' : o.valeur)}
             >
-              {o.libelle}
+              <span className="lil-choice-mark" aria-hidden="true" />
+              <span>{o.libelle}</span>
             </button>
           ))}
         </div>
@@ -130,12 +135,13 @@ function Champ({
             <button
               key={o.valeur}
               type="button"
+              role="checkbox"
+              aria-checked={choisies.includes(o.valeur)}
               className="lil-choice"
-              aria-pressed={choisies.includes(o.valeur)}
-              data-selected={choisies.includes(o.valeur) || undefined}
               onClick={() => basculer(o.valeur)}
             >
-              {o.libelle}
+              <span className="lil-choice-mark" aria-hidden="true" />
+              <span>{o.libelle}</span>
             </button>
           ))}
         </div>

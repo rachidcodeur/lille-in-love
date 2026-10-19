@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import type { Field } from '@/lib/questions';
 import { MatchingAvance, type BrouillonMatching } from './MatchingAvance';
 
@@ -47,6 +48,111 @@ function Counter({ length, max }: { length: number; max: number }) {
     <span className="lil-counter" data-over={length > max}>
       {length} / {max}
     </span>
+  );
+}
+
+/**
+ * La date de naissance, en trois cases.
+ *
+ * Un sélecteur de date ouvre un calendrier sur aujourd'hui et oblige à
+ * remonter de 1990 au doigt, mois par mois. Plusieurs personnes s'y sont
+ * arrêtées. On tape le jour et l'année ; seul le mois, qui se mémorise
+ * mal en chiffres, reste une liste.
+ *
+ * Les trois morceaux vivent ici, et non dans la valeur du formulaire.
+ * C'était l'erreur de la première version : elle recomposait une date à
+ * chaque frappe, et « 1 » tapé dans l'année devenait « 0001 » sous les
+ * doigts. On laisse écrire, et on ne compose que lorsque les trois cases
+ * tiennent debout.
+ */
+function ChampNaissance({
+  field,
+  value,
+  error,
+  onChange,
+  label,
+}: Pick<FieldProps, 'field' | 'value' | 'error' | 'onChange'> & { label: React.ReactNode }) {
+  const errorId = `${field.name}-error`;
+  const depuisIso = (v: unknown) => {
+    const m = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v.split('-') : null;
+    return m ? { jour: String(Number(m[2])), mois: m[1]!, annee: m[0]! } : { jour: '', mois: '', annee: '' };
+  };
+
+  const [parts, setParts] = useState(() => depuisIso(value));
+
+  // Le brouillon restauré au rechargement arrive par la valeur : on se
+  // recale dessus, sans écraser ce qu'on est en train de taper.
+  useEffect(() => {
+    const venu = depuisIso(value);
+    if (!venu.annee) return;
+    setParts((avant) =>
+      avant.jour || avant.mois || avant.annee ? avant : venu,
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  const poser = (suite: { jour: string; mois: string; annee: string }) => {
+    setParts(suite);
+    const { jour, mois, annee } = suite;
+    // Rien ne remonte tant que la date n'est pas complète : une date à
+    // moitié écrite n'est pas une date, et la valider ferait clignoter
+    // une erreur dès le premier chiffre de l'année.
+    const complete = jour && mois && annee.length === 4;
+    onChange(
+      field.name,
+      complete ? `${annee}-${mois}-${jour.padStart(2, '0')}` : '',
+    );
+  };
+
+  const chiffres = (v: string, max: number) => v.replace(/\D/g, '').slice(0, max);
+
+  return (
+    <div>
+      {label}
+      <div className="lil-naissance">
+        <input
+          id={field.name}
+          className="lil-input lil-naissance-jour"
+          type="text"
+          inputMode="numeric"
+          autoComplete="bday-day"
+          placeholder="JJ"
+          aria-label="Jour de naissance"
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? errorId : undefined}
+          value={parts.jour}
+          onChange={(e) => poser({ ...parts, jour: chiffres(e.target.value, 2) })}
+        />
+        <select
+          className="lil-input lil-naissance-mois"
+          autoComplete="bday-month"
+          aria-label="Mois de naissance"
+          aria-invalid={Boolean(error)}
+          value={parts.mois}
+          onChange={(e) => poser({ ...parts, mois: e.target.value })}
+        >
+          <option value="">Mois</option>
+          {MOIS.map((nom, i) => (
+            <option key={nom} value={String(i + 1).padStart(2, '0')}>
+              {nom}
+            </option>
+          ))}
+        </select>
+        <input
+          className="lil-input lil-naissance-annee"
+          type="text"
+          inputMode="numeric"
+          autoComplete="bday-year"
+          placeholder="AAAA"
+          aria-label="Année de naissance"
+          aria-invalid={Boolean(error)}
+          value={parts.annee}
+          onChange={(e) => poser({ ...parts, annee: chiffres(e.target.value, 4) })}
+        />
+      </div>
+      {field.help && <p className="lil-field-help">{field.help}</p>}
+      {error && <ErrorLine id={errorId} message={error} />}
+    </div>
   );
 }
 
@@ -177,73 +283,16 @@ export function FieldControl({ field, value, error, onChange, onAdvance }: Field
     }
 
     /* ---- Date de naissance, en trois cases ----------------------- */
-    case 'naissance': {
-      // Un sélecteur de date oblige à remonter de 1990 au doigt, mois par
-      // mois, dans un calendrier qui s'ouvre sur aujourd'hui. Plusieurs
-      // personnes s'y sont arrêtées. On tape le jour et l'année ; seul le
-      // mois, qui se mémorise mal en chiffres, reste une liste.
-      const [an = '', mois = '', jour = ''] =
-        typeof value === 'string' && value ? value.split('-') : [];
-
-      const recomposer = (j: string, m: string, a: string) => {
-        // Tant que les trois ne sont pas là, on garde le brouillon tel
-        // quel : valider à chaque frappe ferait clignoter une erreur dès
-        // le premier chiffre de l'année.
-        if (!j && !m && !a) return onChange(field.name, '');
-        onChange(field.name, `${a.padStart(4, '0')}-${m.padStart(2, '0')}-${j.padStart(2, '0')}`);
-      };
-
-      const chiffres = (v: string, max: number) => v.replace(/\D/g, '').slice(0, max);
-
+    case 'naissance':
       return (
-        <div>
-          {label}
-          <div className="lil-naissance">
-            <input
-              id={field.name}
-              className="lil-input lil-naissance-jour"
-              type="text"
-              inputMode="numeric"
-              autoComplete="bday-day"
-              placeholder="JJ"
-              aria-label="Jour de naissance"
-              aria-invalid={Boolean(error)}
-              aria-describedby={describedBy}
-              value={jour === '00' ? '' : jour.replace(/^0/, '')}
-              onChange={(e) => recomposer(chiffres(e.target.value, 2), mois, an)}
-            />
-            <select
-              className="lil-input lil-naissance-mois"
-              autoComplete="bday-month"
-              aria-label="Mois de naissance"
-              aria-invalid={Boolean(error)}
-              value={mois === '00' ? '' : mois}
-              onChange={(e) => recomposer(jour, e.target.value, an)}
-            >
-              <option value="">Mois</option>
-              {MOIS.map((nom, i) => (
-                <option key={nom} value={String(i + 1).padStart(2, '0')}>
-                  {nom}
-                </option>
-              ))}
-            </select>
-            <input
-              className="lil-input lil-naissance-annee"
-              type="text"
-              inputMode="numeric"
-              autoComplete="bday-year"
-              placeholder="AAAA"
-              aria-label="Année de naissance"
-              aria-invalid={Boolean(error)}
-              value={an === '0000' ? '' : an}
-              onChange={(e) => recomposer(jour, mois, chiffres(e.target.value, 4))}
-            />
-          </div>
-          {field.help && <p className="lil-field-help">{field.help}</p>}
-          {error && <ErrorLine id={errorId} message={error} />}
-        </div>
+        <ChampNaissance
+          field={field}
+          value={value}
+          error={error}
+          onChange={onChange}
+          label={label}
+        />
       );
-    }
 
     /* ---- Le formulaire avancé, d'un seul tenant ------------------ */
     case 'matching':

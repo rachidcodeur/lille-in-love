@@ -75,13 +75,6 @@ export const inscriptionSchema = z
       .string()
       .regex(/^\d{4}-\d{2}-\d{2}$/, 'Date attendue au format jj/mm/aaaa'),
 
-    singleSince: z.enum([
-      'moins_6_mois',
-      'six_mois_2_ans',
-      'plus_2_ans',
-      'toujours',
-      'prefere_pas',
-    ]),
 
     /** Le service de matching : proposé à la fin, accepté ou non. */
     matchingOptin: z.enum(['oui', 'non']),

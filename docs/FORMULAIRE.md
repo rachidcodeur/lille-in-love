@@ -16,7 +16,17 @@ des centaines de candidatures y ont répondu, et une donnée recueillie ne
 s'efface pas parce qu'on cesse de la demander. La fiche les affiche
 encore, quand elles existent.
 
-**« Depuis quand es-tu célibataire ? »** prend la place laissée libre.
+**Rien n'a été ajouté en échange.** L'inscription ordinaire est le moment
+où l'on peut perdre quelqu'un : chaque question de plus est une occasion
+de fermer l'onglet. « Depuis quand es-tu célibataire ? » est donc dans le
+formulaire avancé, avec les autres — mais sa réponse rejoint sa propre
+colonne, `single_since`, pour rester filtrable en curation et sortir dans
+l'export comme n'importe quel champ du profil.
+
+**Le prix a quitté l'en-tête.** Il variera d'une soirée à l'autre, et
+l'annoncer avant même de savoir à laquelle la personne ira revenait à
+s'engager sur un chiffre qu'on ne maîtrise pas. Il se dit avec la date et
+le lieu, une fois la candidature retenue.
 
 **Les numéros d'étape se calculent.** Ils étaient écrits à la main,
 repris de Tally. Retirer une question en plein milieu a suffi pour que
@@ -31,9 +41,14 @@ doigt, mois par mois. Plusieurs personnes s'y sont arrêtées.
 
 Le jour et l'année se tapent au clavier numérique ; seul le mois reste
 une liste, parce que « 09 » se retient mal là où « septembre » se
-reconnaît. Les trois se recomposent en une date ISO : rien ne change pour
-l'âge, la curation ou les tranches de soirée, qui lisent la même colonne
-qu'avant.
+reconnaît. Les trois morceaux vivent dans le composant, et non dans la valeur du
+formulaire. C'était l'erreur de la première version : elle recomposait
+une date à chaque frappe, et « 1 » tapé dans l'année devenait « 0001 »
+sous les doigts. On laisse écrire, et on ne compose que lorsque les trois
+cases tiennent debout.
+
+Le résultat est la même date ISO qu'avant : rien ne change pour l'âge, la
+curation ou les tranches de soirée, qui lisent la même colonne.
 
 ## Le matching sur mesure
 
@@ -48,6 +63,10 @@ jauger ce qui reste et de sauter ce qu'on ne veut pas dire.
 
 Tout y est facultatif. Le service est un bonus ; une question sans
 réponse n'empêche personne d'être mis en relation.
+
+Ses choix portent `aria-checked` et la puce du reste du formulaire, et
+non un `aria-pressed` à part : c'est sur eux que repose tout le style de
+la sélection, et sans eux on cliquait sans que rien ne bouge à l'œil.
 
 Les réponses tiennent dans un champ JSON et non en colonnes : elles sont
 nombreuses, elles bougeront, et chaque question ajoutée aurait demandé

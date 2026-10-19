@@ -186,27 +186,6 @@ const ETAPES: Step[] = [
     ],
   },
   {
-    id: 'single-since',
-    section: 'Profil',
-    title: 'Depuis quand es-tu célibataire ?',
-    help: 'Une idée suffit — personne ne vérifie.',
-    fields: [
-      {
-        name: 'singleSince',
-        type: 'radio',
-        required: true,
-        advanceOnSelect: true,
-        options: [
-          { value: 'moins_6_mois', label: 'Moins de 6 mois' },
-          { value: 'six_mois_2_ans', label: 'Entre 6 mois et 2 ans' },
-          { value: 'plus_2_ans', label: 'Plus de 2 ans' },
-          { value: 'toujours', label: 'Je n’ai jamais été en couple' },
-          { value: 'prefere_pas', label: 'Je préfère ne pas le dire' },
-        ],
-      },
-    ],
-  },
-  {
     id: 'height',
     section: 'Profil',
     title: 'Quelle est ta taille ?',

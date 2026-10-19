@@ -94,6 +94,19 @@ export const BLOCS: BlocMatching[] = [
     titre: 'Ton parcours',
     champs: [
       {
+        nom: 'singleSince',
+        libelle: 'Depuis quand es-tu célibataire ?',
+        aide: 'Une idée suffit — personne ne vérifie.',
+        type: 'radio',
+        options: [
+          { valeur: 'moins_6_mois', libelle: 'Moins de 6 mois' },
+          { valeur: 'six_mois_2_ans', libelle: 'Entre 6 mois et 2 ans' },
+          { valeur: 'plus_2_ans', libelle: 'Plus de 2 ans' },
+          { valeur: 'toujours', libelle: 'Jamais été en couple' },
+          { valeur: 'prefere_pas', libelle: 'Je préfère ne pas le dire' },
+        ],
+      },
+      {
         nom: 'etudes',
         libelle: 'Niveau d’études',
         type: 'radio',
