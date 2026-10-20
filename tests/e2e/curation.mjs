@@ -637,7 +637,7 @@ const memeNumero = await (
       formVersion: 'complet',
       gender: 'homme', birthDate: '1992-05-14', city: 'Lille', postalCode: '59000',
       orientation: 'hetero', lookingFor: 'relation_serieuse',
-      singleSince: 'plus_2_ans', matchingOptin: 'non',
+      singleSince: '8_mois', matchingOptin: 'non',
       heightCm: 180, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
       profession: 'Essai', referral: 'instagram', comesWith: 'non',
       firstName: 'Premier', lastName: 'Numero', phone: '06 12 34 56 78',
@@ -656,7 +656,7 @@ const secondEnvoi = await (
       formVersion: 'complet',
       gender: 'homme', birthDate: '1992-05-14', city: 'Lille', postalCode: '59000',
       orientation: 'hetero', lookingFor: 'relation_serieuse',
-      singleSince: 'plus_2_ans', matchingOptin: 'non',
+      singleSince: '8_mois', matchingOptin: 'non',
       heightCm: 180, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
       profession: 'Essai', referral: 'instagram', comesWith: 'non',
       firstName: 'Second', lastName: 'Numero',
@@ -865,7 +865,7 @@ const ENTETE =
   'soiree_group,first_name,gender,age,birth_date,email,phone,city,postal_code,profession,' +
   'instagram,looking_for,orientation,has_children,single_since,matching_optin,' +
   'children_preference,height_cm,zodiac_sign,' +
-  'about_you,ideal_evening,interests,friend_name,friend_email,source,created_at,id';
+  'about_you,ideal_evening,interests,friend_name,friend_email,source,referral_other,created_at,id';
 
 lignes[0] === ENTETE
   ? ok('l’en-tête reprend exactement les colonnes de l’export existant')

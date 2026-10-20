@@ -1027,3 +1027,71 @@ body {
 .lil-matching-porte + .lil-matching-bloc {
   margin-top: 26px;
 }
+
+/* --- Depuis combien de temps célibataire ------------------------------
+   Un nombre et une unité : quatre tranches toutes faites mettaient
+   « huit mois » et « sept ans » dans le même panier.
+   ---------------------------------------------------------------------- */
+
+.lil-celibat {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.lil-celibat input,
+.lil-celibat select {
+  /* 16 px au moins : en dessous, iOS zoome à la saisie. */
+  font-size: 16px;
+}
+
+.lil-celibat-nombre {
+  text-align: center;
+}
+
+.lil-celibat-jamais {
+  margin-top: 12px;
+}
+
+/* --- Le lien à envoyer à qui l'on amène -------------------------------
+   On prenait le prénom de l'autre, et c'est tout : il n'était au courant
+   de rien. Le lien s'affiche en entier — on ne remplace pas ce qu'on
+   peut lire par un bouton qui promet de faire quelque chose.
+   ---------------------------------------------------------------------- */
+
+.lil-partage {
+  margin-top: 18px;
+  padding: 16px 16px 18px;
+  border-radius: 14px;
+  background: rgba(168, 148, 110, 0.09);
+  border: 1px solid rgba(168, 148, 110, 0.3);
+}
+
+.lil-partage-titre {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.lil-partage-lien {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.lil-btn-secondaire {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  min-height: 46px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  background: #fff;
+  cursor: pointer;
+}

@@ -92,7 +92,13 @@ export default async function FichePage({ params }: Props) {
     { terme: 'Profession', valeur: member.profession, icone: 'mallette' },
     { terme: 'Signe', valeur: label.zodiac(member.zodiac), icone: 'etoile' },
     { terme: 'Instagram', valeur: member.instagram, icone: 'instagram' },
-    { terme: 'Nous a connus par', valeur: label.referral(member.referral), icone: 'avion' },
+    {
+      terme: 'Nous a connus par',
+      valeur: [label.referral(member.referral), member.referral_other]
+        .filter(Boolean)
+        .join(' · '),
+      icone: 'avion',
+    },
     {
       terme: 'Vient avec',
       valeur: member.comes_with

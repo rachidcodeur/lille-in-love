@@ -34,13 +34,16 @@ export const inscriptionSchema = z
 
     orientation: z.enum(['hetero', 'gay']),
 
-    singleSince: z.enum([
-      'moins_6_mois',
-      'six_mois_2_ans',
-      'plus_2_ans',
-      'toujours',
-      'prefere_pas',
-    ]),
+    /**
+     * « jamais », ou une durée : « 8_mois », « 3_ans ».
+     *
+     * Quatre tranches toutes faites mettaient « huit mois » et « sept
+     * ans » dans le même panier. Le format reste lisible à l'œil dans la
+     * base et se range en une colonne de texte.
+     */
+    singleSince: z
+      .string()
+      .regex(/^(jamais|\d{1,2}_(mois|ans))$/, 'Indique depuis combien de temps'),
 
     lookingFor: z.enum(['relation_serieuse', 'bons_moments']),
 
@@ -55,10 +58,9 @@ export const inscriptionSchema = z
     about: trimmed.min(1, 'Dis-nous un mot').max(600, 'Un peu plus court, si tu veux bien'),
     motivation: trimmed.min(1, 'Dis-nous un mot').max(600, 'Un peu plus court, si tu veux bien'),
 
-    interests: z
-      .array(z.enum(values(INTERESTS)))
-      .min(1, 'Choisis au moins un centre d’intérêt')
-      .max(INTERESTS.length),
+    // Facultatifs : on préfère une case vide à trois cochées au hasard
+    // pour passer l'étape.
+    interests: z.array(z.enum(values(INTERESTS))).max(INTERESTS.length).default([]),
     interestsOther: optionalText(120),
 
     zodiac: z.enum(values(ZODIAC)).optional(),
@@ -72,6 +74,7 @@ export const inscriptionSchema = z
     companionEmail: z.string().trim().email('Email invalide').max(180).optional().or(z.literal('')),
 
     referral: z.enum(values(REFERRALS)),
+    referralOther: optionalText(120),
 
     firstName: trimmed.min(1, 'Indique ton prénom').max(60),
     lastName: trimmed.min(1, 'Indique ton nom, au moins ses trois premières lettres').max(60),

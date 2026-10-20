@@ -82,6 +82,34 @@ Les réponses tiennent dans un champ JSON et non en colonnes : elles sont
 nombreuses, elles bougeront, et chaque question ajoutée aurait demandé
 une migration.
 
+## Les retouches de la seconde passe
+
+- **Les conditions s'acceptent à la première étape**, liens compris, et
+  non plus juste avant d'envoyer. On accepte avant de confier quoi que ce
+  soit, pas après seize questions. L'avance automatique du premier choix
+  a disparu avec : tourner la page au premier clic empêchait la case
+  d'être lue.
+- **La durée de célibat s'écrit** — un nombre, puis mois ou années.
+  Quatre tranches toutes faites mettaient « huit mois » et « sept ans »
+  dans le même panier et obligeaient à arrondir une réponse qu'on connaît
+  précisément. « Jamais été en couple » garde son bouton : aucun nombre
+  ne le dit. En base : `jamais`, `8_mois`, `3_ans`.
+- **Les centres d'intérêt sont facultatifs.** Mieux vaut une case vide que
+  trois cochées au hasard pour passer l'étape.
+- **Qui vient accompagné reçoit le lien du formulaire**, en entier, avec
+  de quoi l'envoyer en un geste. On prenait le prénom de l'autre, et
+  c'est tout : il n'était au courant de rien.
+- **Google et ChatGPT** rejoignent les sources, et « Autrement » ouvre un
+  champ : c'est précisément la réponse dont on a besoin qu'elle soit
+  précisée, puisque c'est la seule qu'on n'a pas prévue.
+- **La date montre des exemples** (« Ex : 01 ») plutôt que des sigles, et
+  la liste des mois commence à janvier. L'entrée vide reste, mais
+  `hidden` : la liste déroulée commence donc bien à janvier, et rien
+  n'est choisi tant qu'on n'a pas choisi — sans quoi quelqu'un né en mars
+  qui ne touche pas au champ enverrait janvier.
+- **Le prix a quitté l'en-tête**, et avec lui la mention sur le tarif
+  exceptionnel.
+
 ## Ce que le back-office en fait
 
 La fiche affiche « Célibataire depuis » avec le reste, et le matching

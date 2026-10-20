@@ -42,23 +42,34 @@ section('Navigation et validation');
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
 
-  // Un choix unique doit enchaîner sur l'étape suivante sans faire surgir
-  // d'erreur : la validation doit voir la réponse qu'on vient de cocher.
+  // La première étape ne tourne plus toute seule : la case des conditions
+  // est juste sous le choix, et avancer au premier clic l'empêcherait
+  // d'être lue.
   await page.getByRole('radio', { name: 'Une femme' }).click();
-  await page.waitForTimeout(700);
-  const title = await page.locator('.lil-question').innerText();
-  title.includes('Où habites-tu')
-    ? ok('un choix unique enchaîne sur l’étape suivante')
-    : bad('pas d’avance automatique', title);
-  (await page.locator('.lil-error').count()) === 0
-    ? ok('aucune erreur affichée à tort')
-    : bad('erreur parasite après l’avance automatique');
+  await page.waitForTimeout(500);
+  ((await page.locator('.lil-question').innerText()) || '').includes('Je suis')
+    ? ok('la première étape attend, pour laisser lire les conditions')
+    : bad('la première étape tourne encore toute seule');
+
+  await page.getByRole('button', { name: 'Suivant' }).click();
+  await page.waitForTimeout(300);
+  (await page.locator('.lil-error').count()) >= 1
+    ? ok('et l’on ne passe pas sans les avoir acceptées')
+    : bad('on avance sans accepter les conditions');
+
+  await page.locator('.lil-consent input').check();
+  await page.getByRole('button', { name: 'Suivant' }).click();
+  await page.waitForTimeout(300);
+  ((await page.locator('.lil-question').innerText()) || '').includes('Où habites-tu')
+    ? ok('acceptées, le parcours démarre')
+    : bad('le parcours ne démarre pas', await page.locator('.lil-question').innerText());
 
   await page.getByRole('button', { name: 'Suivant' }).click();
   await page.waitForTimeout(300);
   (await page.locator('.lil-error').count()) >= 2
     ? ok('les champs obligatoires vides bloquent')
     : bad('champs vides non signalés');
+
 
   await page.fill('#city', 'Lille');
   await page.fill('#postalCode', '123');
@@ -70,8 +81,21 @@ section('Navigation et validation');
     ? ok('un code postal à 3 chiffres est refusé')
     : bad('code postal invalide accepté');
 
+  // L'avance automatique vit toujours sur les étapes à un seul choix.
   await page.fill('#postalCode', '59000');
   await page.getByRole('button', { name: 'Suivant' }).click();
+  await page.waitForTimeout(300);
+  await page.getByRole('radio', { name: 'Hétéro' }).click();
+  await page.waitForTimeout(700);
+  ((await page.locator('.lil-question').innerText()) || '').includes('cherches')
+    ? ok('un choix unique enchaîne toujours sur l’étape suivante')
+    : bad('pas d’avance automatique', await page.locator('.lil-question').innerText());
+  (await page.locator('.lil-error').count()) === 0
+    ? ok('aucune erreur affichée à tort')
+    : bad('erreur parasite après l’avance automatique');
+
+  // Deux retours en arrière : on est passé par l'orientation.
+  await page.getByRole('button', { name: 'Précédent' }).click();
   await page.waitForTimeout(400);
   await page.getByRole('button', { name: 'Précédent' }).click();
   await page.waitForTimeout(400);
@@ -91,7 +115,9 @@ section('Reprise d’un brouillon');
   await page.reload({ waitUntil: 'networkidle' });
 
   await page.getByRole('radio', { name: 'Une femme' }).click();
-  await page.waitForTimeout(600);
+  await page.locator('.lil-consent input').check();
+  await page.getByRole('button', { name: 'Suivant' }).click();
+  await page.waitForTimeout(500);
   await page.fill('#city', 'Roubaix');
   await page.fill('#postalCode', '59100');
   await page.getByRole('button', { name: 'Suivant' }).click();
@@ -166,6 +192,18 @@ section('Parcours complet et envoi');
   };
 
   await pick('Une femme');
+
+  // Les conditions à l'entrée, et non à la sortie : on accepte avant de
+  // confier quoi que ce soit, pas après seize questions.
+  (await page.locator('.lil-consent').count()) === 1
+    ? ok('les conditions s’acceptent dès la première étape')
+    : bad('pas de case d’acceptation à l’entrée');
+  (await page.locator('.lil-consent a').count()) === 2
+    ? ok('avec les liens vers le règlement et la confidentialité')
+    : bad('liens absents de la case d’entrée', String(await page.locator('.lil-consent a').count()));
+  await page.locator('.lil-consent input').check();
+  await next();
+
   await page.fill('#city', 'Lille');
   await page.fill('#postalCode', '59000');
   await next();
@@ -182,7 +220,24 @@ section('Parcours complet et envoi');
   (await page.locator('.lil-question').innerText()).includes('célibataire')
     ? ok('« depuis quand célibataire » suit la présentation, pas les premières étapes')
     : bad('la question du célibat n’est pas à sa place', await page.locator('.lil-question').innerText());
-  await pick('Plus de 2 ans');
+  // On écrit la durée au lieu de choisir une tranche : « huit mois » et
+  // « sept ans » tombaient dans le même panier.
+  (await page.locator('.lil-celibat input').count()) === 1 &&
+  (await page.locator('.lil-celibat select').count()) === 1
+    ? ok('la durée de célibat s’écrit, avec mois ou années au choix')
+    : bad('pas de champ libre pour la durée de célibat');
+  (await page.locator('.lil-celibat-jamais').count()) === 1
+    ? ok('et « jamais été en couple » garde son bouton')
+    : bad('l’option « jamais en couple » a disparu');
+  !(await page.locator('.lil-question').innerText()).includes('personne ne vérifie')
+    ? ok('sans la phrase sur l’honneur')
+    : bad('la mention « personne ne vérifie » est encore là');
+  await page.fill('.lil-celibat-nombre', '8');
+  await page.selectOption('.lil-celibat select', 'mois');
+  await next();
+  ((await page.locator('.lil-question').innerText().catch(() => '')) || '').includes('(facultatif)')
+    ? ok('les centres d’intérêt sont facultatifs, et le disent')
+    : bad('les centres d’intérêt sont encore obligatoires');
   await page.getByRole('button', { name: 'Culture & spectacles' }).click();
   await page.getByRole('button', { name: 'Voyages & découvertes' }).click();
   await next();
@@ -202,8 +257,35 @@ section('Parcours complet et envoi');
   await next();
   await page.fill('#instagram', 'https://instagram.com/camille.d/');
   await next();
+  // Qui vient accompagné doit pouvoir envoyer le formulaire à l'autre :
+  // on prenait son prénom, et c'est tout.
+  await page.getByRole('radio', { name: 'Oui' }).first().click();
+  await page.waitForTimeout(300);
+  (await page.locator('.lil-partage-lien').innerText()).includes('/inscription')
+    ? ok('qui vient accompagné voit le lien du formulaire, en entier')
+    : bad('pas de lien à partager', await page.locator('.lil-partage-lien').innerText().catch(() => ''));
+  (await page.getByRole('button', { name: 'Partager le lien' }).count()) === 1
+    ? ok('avec de quoi l’envoyer en un geste')
+    : bad('pas de bouton de partage');
+
   await page.getByRole('radio', { name: 'Non, je viens seul·e' }).click();
+  await page.waitForTimeout(300);
+  (await page.locator('.lil-partage').count()) === 0
+    ? ok('et rien de tout ça pour qui vient seul')
+    : bad('le bloc de partage reste affiché');
   await next();
+  const sources = await page.locator('#referral option').allInnerTexts();
+  sources.some((o) => o.includes('Google')) && sources.some((o) => o.includes('ChatGPT'))
+    ? ok('Google et ChatGPT sont proposés parmi les sources')
+    : bad('nouvelles sources absentes', sources.join(', '));
+
+  await page.selectOption('#referral', 'autre');
+  await page.waitForTimeout(300);
+  (await page.locator('#referralOther').count()) === 1
+    ? ok('« Autrement » ouvre un champ pour préciser')
+    : bad('pas de champ de précision pour « Autrement »');
+  await page.fill('#referralOther', 'Une amie du club de sport');
+
   await page.selectOption('#referral', 'instagram');
   await next();
 
@@ -244,6 +326,12 @@ section('Parcours complet et envoi');
   (await page.locator('.lil-naissance select').count()) === 1
     ? ok('la date de naissance se saisit en trois cases, le mois en liste')
     : bad('la date de naissance n’est pas en trois cases');
+  (await page.locator('#birthDate').getAttribute('placeholder')) === 'Ex : 01'
+    ? ok('le jour montre un exemple plutôt qu’un sigle')
+    : bad('placeholder du jour inattendu', String(await page.locator('#birthDate').getAttribute('placeholder')));
+  (await page.locator('.lil-naissance select option:not([hidden])').first().innerText()) === 'janvier'
+    ? ok('et la liste des mois commence à janvier')
+    : bad('la liste des mois ne commence pas à janvier');
   await page.fill('#birthDate', '17');
   await page.selectOption('.lil-naissance select', '04');
 
@@ -255,11 +343,9 @@ section('Parcours complet et envoi');
   (await annee.inputValue()) === '1993'
     ? ok('l’année se tape librement, sans zéros ajoutés en cours de frappe')
     : bad('l’année est complétée toute seule', await annee.inputValue());
-  // La case finale ne porte plus de lien : texte seul, et on coche pour passer.
-  (await page.locator('.lil-consent a').count()) === 0
-    ? ok('la case d’acceptation ne contient plus aucun lien')
-    : bad('un lien subsiste dans la case d’acceptation');
-  await page.locator('.lil-consent input').first().check();
+  (await page.locator('.lil-consent').count()) === 0
+    ? ok('et la dernière étape ne redemande plus d’accepter : c’est déjà fait')
+    : bad('la case d’acceptation est encore à la fin');
   await next();
 
   // --- Le service de matching, proposé en dernier -------------------
@@ -363,9 +449,12 @@ section('Parcours complet et envoi');
     sent.birthDate === '1993-04-17'
       ? ok('les trois cases se recomposent en une date exploitable pour l’âge')
       : bad('date de naissance mal recomposée', String(sent.birthDate));
-    sent.singleSince === 'plus_2_ans'
-      ? ok('« depuis quand célibataire » est posée dans le formulaire classique')
-      : bad('réponse célibat manquante', String(sent.singleSince));
+    sent.singleSince === '8_mois'
+      ? ok('la durée de célibat part telle qu’elle a été écrite')
+      : bad('durée de célibat mal transmise', String(sent.singleSince));
+    sent.referralOther === 'Une amie du club de sport'
+      ? ok('et la précision de « Autrement » suit')
+      : bad('précision de source perdue', String(sent.referralOther));
     sent.hasChildren === undefined
       ? ok('et la question sur les enfants a bien quitté le formulaire')
       : bad('la question sur les enfants est encore envoyée');
@@ -411,6 +500,8 @@ section('Téléphone (390 px)');
     : bad('la page déborde en largeur');
 
   await page.getByRole('radio', { name: 'Une femme' }).click();
+  await page.locator('.lil-consent input').check();
+  await page.getByRole('button', { name: 'Suivant' }).click();
   await page.waitForTimeout(600);
 
   const fontSizes = await page.evaluate(() =>

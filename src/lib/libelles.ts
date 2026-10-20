@@ -57,16 +57,14 @@ export const label = {
   gender: (v: string | null) => (v ? (GENDER[v] ?? v) : null),
   orientation: (v: string | null) => (v ? (ORIENTATION[v] ?? v) : null),
   lookingFor: (v: string | null) => (v ? (LOOKING_FOR[v] ?? v) : null),
-  singleSince: (v: string | null) =>
-    v
-      ? (({
-          moins_6_mois: 'Moins de 6 mois',
-          six_mois_2_ans: 'Entre 6 mois et 2 ans',
-          plus_2_ans: 'Plus de 2 ans',
-          toujours: 'Jamais été en couple',
-          prefere_pas: 'Préfère ne pas le dire',
-        })[v] ?? v)
-      : null,
+  /** « jamais » ou « 8_mois » devient « Jamais été en couple », « 8 mois ». */
+  singleSince: (v: string | null) => {
+    if (!v) return null;
+    if (v === 'jamais') return 'Jamais été en couple';
+    const [nombre, unite] = v.split('_');
+    if (!nombre || !unite) return v;
+    return `${nombre} ${unite === 'mois' ? 'mois' : 'ans'}`;
+  },
 
   childrenPreference: (v: string | null) => (v ? (CHILDREN_PREFERENCE[v] ?? v) : null),
   zodiac: (v: string | null) => (v ? fromOptions(ZODIAC, v) : null),

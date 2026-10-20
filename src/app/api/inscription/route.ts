@@ -56,6 +56,7 @@ function fullRow(data: InscriptionInput) {
     companion_first_name: data.companionFirstName ?? null,
     companion_email: data.comesWith === 'oui' ? data.companionEmail || null : null,
     referral: data.referral,
+    referral_other: data.referralOther ?? null,
     phone: normalizePhone(data.phone),
     birth_date: data.birthDate,
     ...matchingRow(data),
