@@ -57,14 +57,24 @@ curation ou les tranches de soirée, qui lisent la même colonne.
 
 ## Le matching sur mesure
 
-Après la dernière question, on propose un accompagnement : chercher dans
-le réseau la personne qui correspond, et mettre en relation. Oui ou non.
+**Il se propose une fois la candidature envoyée**, dans une seconde carte
+sous le remerciement. Il a d'abord été la dernière étape du formulaire ;
+le mettre après change tout. La candidature est en sécurité avant qu'on
+propose quoi que ce soit, personne n'a plus à refuser une offre pour
+pouvoir envoyer, et ce qui se lit là se lit l'esprit tranquille.
 
-**Qui dit non envoie sa candidature dans la foulée.** Pas d'étape de
-plus, pas de détour. Qui dit oui voit les questions se dérouler sous le
-bouton, **toutes à la fois et non en étapes** : la personne a déjà dit
-oui, on n'a plus à la convaincre d'avancer, et voir l'ensemble permet de
-jauger ce qui reste et de sauter ce qu'on ne veut pas dire.
+Techniquement, cela veut dire revenir écrire sur une fiche déjà
+enregistrée — et seulement celle-là. D'où le **jeton à usage unique**
+rendu à l'envoi, effacé dès qu'il a servi : un identifiant de fiche
+n'autorise pas à écrire des données sensibles. Il ne voyage jamais dans
+l'adresse, où il resterait dans l'historique et les journaux ; c'est
+d'ailleurs pourquoi l'envoi ne redirige plus vers `/merci` quand le
+service se propose.
+
+**Les questions arrivent toutes à la fois**, et non en étapes : la
+personne a déjà dit oui, on n'a plus à la convaincre d'avancer, et voir
+l'ensemble permet de jauger ce qui reste et de sauter ce qu'on ne veut
+pas dire.
 
 Tout y est facultatif. Le service est un bonus ; une question sans
 réponse n'empêche personne d'être mis en relation.
@@ -133,13 +143,16 @@ D'où la case à cocher qui ouvre ces deux blocs, et la date conservée dans
 `matching_consent_at` : si l'on nous demande un jour sur quelle base ces
 informations ont été recueillies, la réponse est à côté d'elles.
 
-**La case se tient juste devant ce qu'elle ouvre**, dans son propre
-encadré, entre « Ton parcours » et « Ton partenaire idéal ». Elle a
-d'abord été placée tout en bas, après les questions ordinaires, avec
-l'idée qu'on ne demande pas un consentement avant d'avoir montré à quoi
-il sert. À l'usage c'était l'inverse : on cochait en bas et des questions
-apparaissaient au milieu, hors de l'écran. Une case qui commande quelque
-chose doit être à côté de ce qu'elle commande.
+**Le consentement se donne en tête, avant la première question.** Il a
+d'abord été placé tout en bas, puis au milieu, juste devant les blocs
+qu'il ouvrait. Les deux fois, quelque chose apparaissait ou disparaissait
+en cours de route. En tête, on sait à quoi on s'engage avant de
+commencer, et plus rien ne bouge ensuite : origines et religion prennent
+leur place dans le fil comme les autres questions.
+
+Sans la case, aucune question ne s'affiche. C'est volontaire : voir des
+questions dont les réponses seront jetées par le serveur serait
+trompeur.
 
 Trois précautions, qui tiennent toutes dans le code :
 

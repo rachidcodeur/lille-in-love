@@ -964,6 +964,18 @@ body {
   margin-top: 22px;
 }
 
+/* Un textarea s'agrandit à la souris, et sortait du cadre : on borne la
+   largeur, et l'on ne laisse grandir que vers le bas. */
+.lil-matching textarea,
+.lil-matching input {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.lil-matching textarea {
+  resize: vertical;
+}
+
 .lil-matching-champ .lil-field-label {
   margin-bottom: 6px;
 }
@@ -1094,4 +1106,78 @@ body {
   border: 1px solid rgba(0, 0, 0, 0.18);
   background: #fff;
   cursor: pointer;
+}
+
+/* --- Le service de matching, après l'envoi ----------------------------
+   Une seconde carte sous le remerciement. Elle arrive quand la
+   candidature est déjà en sécurité : on peut la lire tranquillement, et
+   la refuser sans rien perdre.
+   ---------------------------------------------------------------------- */
+
+.lil-service {
+  margin-top: 18px;
+  padding: 26px 22px 24px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid rgba(168, 148, 110, 0.35);
+  /* L'ombre la détache du remerciement : deux cartes, deux propos. */
+  box-shadow: 0 10px 30px rgba(60, 46, 30, 0.1);
+}
+
+.lil-service-chapeau {
+  margin: 0 0 6px;
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-deep, #a8946e);
+}
+
+.lil-service-titre {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 26px;
+  line-height: 1.15;
+  font-weight: 500;
+  margin: 0 0 14px;
+}
+
+.lil-service-choix {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.lil-service-choix .lil-btn-secondaire {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.lil-service-consent {
+  margin-top: 18px;
+}
+
+.lil-service-attente {
+  margin-top: 14px;
+}
+
+.lil-service-envoyer {
+  margin-top: 26px;
+  width: 100%;
+}
+
+.lil-service-merci {
+  text-align: center;
+}
+
+/* La mention qui dit qui lit tout ça : discrète, mais pas enfouie. */
+.lil-confidentialite {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(168, 148, 110, 0.08);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-2, #5b5048);
 }

@@ -138,6 +138,8 @@ const ETAPES: Step[] = [
         required: true,
         label:
           'J’accepte le <a href="https://lilleinlove.fr/reglement" target="_blank" rel="noreferrer">règlement</a> et la <a href="https://lilleinlove.fr/confidentialite" target="_blank" rel="noreferrer">politique de confidentialité</a>.',
+        help:
+          'Tout ce que tu écris reste entre nous. Seuls les deux membres de l’équipe qui lisent les candidatures y ont accès — rien n’est publié, rien n’est revendu.',
       },
     ],
   },
@@ -257,24 +259,6 @@ const ETAPES: Step[] = [
         name: 'singleSince',
         type: 'celibat',
         required: true,
-      },
-    ],
-  },
-  {
-    id: 'interests',
-    section: 'Toi, en quelques mots',
-    title: "Quels sont tes centres d'intérêt ?",
-    facultatif: true,
-    help: 'Plusieurs choix possibles.',
-    fields: [
-      { name: 'interests', type: 'multi', options: INTERESTS },
-      {
-        name: 'interestsOther',
-        type: 'text',
-        label: 'Précise',
-        placeholder: 'Dis-nous en plus',
-        maxLength: 120,
-        showIf: { field: 'interests', equals: 'autre' },
       },
     ],
   },
@@ -444,34 +428,6 @@ const ETAPES: Step[] = [
         type: 'naissance',
         label: 'Date de naissance',
         required: true,
-      },
-    ],
-  },
-  {
-    id: 'matching',
-    section: 'Pour aller plus loin',
-    title: 'On peut aussi chercher pour toi',
-    help:
-      'Au-delà des soirées, on propose à qui le souhaite un accompagnement sur mesure : on cherche dans le réseau la personne qui te correspond vraiment, et on vous met en relation.',
-    note: 'Tu peux envoyer ta candidature sans ça. Le service reste ouvert plus tard.',
-    fields: [
-      {
-        name: 'matchingOptin',
-        type: 'radio',
-        required: true,
-        label: 'Veux-tu qu’on cherche pour toi ?',
-        options: [
-          { value: 'oui', label: 'Oui, je veux en savoir plus' },
-          { value: 'non', label: 'Non merci, les soirées me suffisent' },
-        ],
-      },
-      {
-        // Tout le questionnaire avancé tient dans ce seul champ : il
-        // s'ouvre sur « oui » et se replie sur « non », sans étape de
-        // plus. Qui refuse envoie sa candidature dans la foulée.
-        name: 'matching',
-        type: 'matching',
-        showIf: { field: 'matchingOptin', equals: 'oui' },
       },
     ],
   },

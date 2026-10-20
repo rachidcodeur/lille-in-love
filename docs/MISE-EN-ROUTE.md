@@ -17,7 +17,7 @@ l'application** sur `app.in-love.fr`.
 | **À passer d'urgence** | **`10_accompagnant.sql`** — sans lui, toute candidature « je viens accompagné » est refusée |
 | **À passer aussi** | **`09_simplification.sql`** (groupe G), **`11_corbeille.sql`**, **`12_anciennes.sql`** |
 | **Pour le Crush Time** | **`13_crushtime.sql`** (indispensable), **`14_ordre_photos.sql`**, **`15_duree_manches.sql`**, **`16_code_personnel.sql`**, **`17_notifications.sql`**, **`18_match_vu.sql`**, **`19_questionnaire.sql`** |
-| **Indispensable au formulaire** | **`20_matching.sql`** — sans elle, plus aucune inscription ne passe |
+| **Indispensables au formulaire** | **`20_matching.sql`** et **`22_matching_apres_envoi.sql`** — sans elles, plus aucune inscription ne passe. **`21_referral_other.sql`** peut attendre |
 | Resend | domaine **`in-love.fr` vérifié**, clé en place |
 | Expéditeur / réponse | `Lille in Love <info@in-love.fr>` |
 | `.env.local` | rempli et valide — `/api/health` répond `ok: true` |

@@ -174,7 +174,25 @@ section('Parcours complet et envoi');
     await route.fulfill({
       status: 201,
       contentType: 'application/json',
-      body: JSON.stringify({ ok: true, id: 'test', firstName: 'Camille', emailSent: true }),
+      // Le jeton, comme le rend la vraie route : c'est lui qui déclenche
+      // la proposition de matching sous le remerciement.
+      body: JSON.stringify({
+        ok: true,
+        id: 'test',
+        firstName: 'Camille',
+        emailSent: true,
+        matchingToken: '11111111-2222-4333-8444-555555555555',
+      }),
+    });
+  });
+
+  let matchingEnvoye = null;
+  await page.route('**/api/matching', async (route) => {
+    matchingEnvoye = JSON.parse(route.request().postData() ?? '{}');
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true }),
     });
   });
 
@@ -234,12 +252,6 @@ section('Parcours complet et envoi');
     : bad('la mention « personne ne vérifie » est encore là');
   await page.fill('.lil-celibat-nombre', '8');
   await page.selectOption('.lil-celibat select', 'mois');
-  await next();
-  ((await page.locator('.lil-question').innerText().catch(() => '')) || '').includes('(facultatif)')
-    ? ok('les centres d’intérêt sont facultatifs, et le disent')
-    : bad('les centres d’intérêt sont encore obligatoires');
-  await page.getByRole('button', { name: 'Culture & spectacles' }).click();
-  await page.getByRole('button', { name: 'Voyages & découvertes' }).click();
   await next();
   // « (facultatif) » se lit à côté de la question, pas au fond de l'aide :
   // c'est ce qui évite d'abandonner devant un champ qu'on pourrait sauter.
@@ -346,99 +358,75 @@ section('Parcours complet et envoi');
   (await page.locator('.lil-consent').count()) === 0
     ? ok('et la dernière étape ne redemande plus d’accepter : c’est déjà fait')
     : bad('la case d’acceptation est encore à la fin');
-  await next();
-
-  // --- Le service de matching, proposé en dernier -------------------
-  ((await page.locator('.lil-question').innerText().catch(() => '')) || '').includes('cherche')
-    ? ok('le service de matching est proposé après la dernière question')
-    : bad('pas d’étape de matching', await page.locator('.lil-question').innerText().catch(() => ''));
-
-  (await page.locator('.lil-matching').count()) === 0
-    ? ok('et ses questions restent repliées tant qu’on n’a pas dit oui')
-    : bad('les questions avancées s’affichent sans qu’on ait accepté');
-
-  await pick('Oui, je veux en savoir plus');
-  await page.waitForTimeout(400);
-  (await page.locator('.lil-matching-bloc').count()) >= 5
-    ? ok('« oui » déroule toutes les questions d’un coup, sans nouvelle étape')
-    : bad('les questions avancées ne s’affichent pas', String(await page.locator('.lil-matching-bloc').count()));
-
-  // Les deux blocs sensibles restent fermés tant que la case n'est pas cochée.
-  const titres = async () =>
-    (await page.locator('.lil-matching-bloc legend').allInnerTexts()).join(' | ').toLowerCase();
-  !(await titres()).includes('religion')
-    ? ok('les blocs sensibles restent fermés sans consentement explicite')
-    : bad('origines et religion affichées sans consentement', await titres());
-
-  // --- Les options du formulaire avancé répondent-elles vraiment ? ---
-  // Elles portaient « aria-pressed » quand tout le style du formulaire
-  // repose sur « aria-checked » : le choix était pris, et invisible.
-  const blocEnfants = page.locator('.lil-matching-bloc').filter({ hasText: 'As-tu des enfants' });
-  const oui = blocEnfants.getByRole('radio', { name: 'Oui' }).first();
-  await oui.click();
-  await page.waitForTimeout(200);
-
-  (await oui.getAttribute('aria-checked')) === 'true'
-    ? ok('un choix du formulaire avancé se marque comme sélectionné')
-    : bad('la sélection ne se voit pas', String(await oui.getAttribute('aria-checked')));
-  (await oui.locator('.lil-choice-mark').count()) === 1
-    ? ok('avec la même puce que partout ailleurs')
-    : bad('la puce de sélection manque');
-
-
-  // La case se tient juste devant ce qu'elle ouvre. Tout en bas, on
-  // cochait et les questions apparaissaient au milieu, hors de l'écran.
-  const porte = page.locator('.lil-matching-porte');
-  (await porte.count()) === 1
-    ? ok('la case de consentement a son propre encadré, dans le fil des questions')
-    : bad('pas de porte pour les sujets sensibles');
-
-  const avantPorte = await porte.evaluate((el) => {
-    const blocs = [...document.querySelectorAll('.lil-matching-bloc')];
-    const suivant = blocs.find((b) => el.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-    return suivant ? suivant.querySelector('legend')?.textContent?.toLowerCase() : null;
-  });
-  avantPorte && !avantPorte.includes('origines')
-    ? ok('et les blocs qu’elle commande ne sont pas là tant qu’elle est décochée')
-    : bad('un bloc sensible se glisse avant la case', String(avantPorte));
-
-  await page.locator('.lil-matching-consent input').check();
-  await page.waitForTimeout(350);
-
-  const apresPorte = await porte.evaluate((el) => {
-    const blocs = [...document.querySelectorAll('.lil-matching-bloc')];
-    const suivant = blocs.find((b) => el.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-    return suivant ? suivant.querySelector('legend')?.textContent?.toLowerCase() : null;
-  });
-  apresPorte?.includes('origines')
-    ? ok('cochée, le bloc qu’elle ouvre apparaît juste en dessous d’elle')
-    : bad('le bloc ouvert n’est pas sous la case', String(apresPorte));
-  (await titres()).includes('religion') && (await titres()).includes('origines')
-    ? ok('la case de consentement les ouvre, et elle seule')
-    : bad('le consentement n’ouvre pas les blocs sensibles', await titres());
-
-  // Et les cases à cocher, qui obéissent à « aucune préférence ».
-  const blocCulture = page.locator('.lil-matching-bloc').filter({ hasText: 'préférences culturelles' });
-  await blocCulture.getByRole('checkbox', { name: 'Européenne' }).click();
-  await blocCulture.getByRole('checkbox', { name: 'Africaine' }).click();
-  await page.waitForTimeout(200);
-  (await blocCulture.locator('[aria-checked="true"]').count()) === 2
-    ? ok('deux cases cochées tiennent ensemble')
-    : bad('les cases ne se cochent pas', String(await blocCulture.locator('[aria-checked="true"]').count()));
-
-  await blocCulture.getByRole('checkbox', { name: 'Aucune préférence' }).click();
-  await page.waitForTimeout(200);
-  (await blocCulture.locator('[aria-checked="true"]').count()) === 1
-    ? ok('et « aucune préférence » les décoche toutes, à l’écran aussi')
-    : bad('« aucune préférence » ne décoche rien');
-
 
   await next();
-  await page.waitForTimeout(900);
+  await page.waitForTimeout(1200);
 
   ((await page.locator('.lil-done-title').innerText().catch(() => '')) || '').includes('Camille')
     ? ok('l’écran de fin s’affiche avec le prénom')
     : bad('pas d’écran de fin');
+
+  const remerciement = await page.locator('.lil-done').innerText();
+  remerciement.includes('mail') && remerciement.includes('rencontres')
+    ? ok('le remerciement parle du mail et des rencontres')
+    : bad('texte de remerciement inattendu', remerciement.replace(/\n+/g, ' | '));
+
+  // --- Le service, proposé une fois la candidature partie ------------
+  // Il était la dernière étape du formulaire. Le mettre après change
+  // tout : plus personne n'a à refuser une offre pour pouvoir envoyer.
+  (await page.locator('.lil-service-offre').count()) === 1
+    ? ok('le service de matching se propose après l’envoi, en seconde carte')
+    : bad('pas de carte de service après l’envoi');
+  (await page.locator('.lil-matching-bloc').count()) === 0
+    ? ok('et ses questions attendent qu’on ait dit oui')
+    : bad('les questions s’affichent sans qu’on ait accepté');
+
+  await page.getByRole('button', { name: 'Oui, cherchez pour moi' }).click();
+  await page.waitForTimeout(400);
+
+  // Le consentement se donne en tête, avant la première question.
+  (await page.locator('.lil-matching-bloc').count()) === 0
+    ? ok('rien ne s’affiche tant que les conditions ne sont pas acceptées')
+    : bad('les questions s’affichent sans consentement');
+  (await page.locator('.lil-confidentialite').count()) === 1
+    ? ok('et la mention sur qui lit les réponses est là, avant de commencer')
+    : bad('pas de mention de confidentialité');
+
+  await page.locator('.lil-service-consent input').check();
+  await page.waitForTimeout(400);
+  (await page.locator('.lil-matching-bloc').count()) >= 8
+    ? ok('cochée, toutes les questions se déroulent d’un coup')
+    : bad('questions manquantes', String(await page.locator('.lil-matching-bloc').count()));
+
+  const titres = (await page.locator('.lil-matching-bloc legend').allInnerTexts())
+    .join(' | ')
+    .toLowerCase();
+  titres.includes('origines') && titres.includes('religion')
+    ? ok('origines et religion sont dans le fil, sans porte séparée')
+    : bad('blocs sensibles absents', titres);
+  titres.includes('voyages') && titres.includes('style de vie')
+    ? ok('avec les nouveaux blocs : voyages, style de vie')
+    : bad('nouveaux blocs absents', titres);
+
+  await page
+    .locator('.lil-matching-bloc', { hasText: 'situation maritale' })
+    .getByRole('radio', { name: 'Divorcé(e) ou séparé(e)' })
+    .click();
+  await page.waitForTimeout(200);
+
+  await page.getByRole('button', { name: 'Envoyer mes réponses' }).click();
+  await page.waitForTimeout(900);
+  (await page.locator('.lil-service-merci').count()) === 1
+    ? ok('l’envoi des réponses est confirmé sur place')
+    : bad('pas de confirmation après l’envoi du matching');
+
+  matchingEnvoye?.token === '11111111-2222-4333-8444-555555555555'
+    ? ok('les réponses partent avec le jeton rendu à l’inscription')
+    : bad('jeton absent de l’envoi', JSON.stringify(matchingEnvoye));
+  matchingEnvoye?.reponses?.situationMaritale === 'divorce' &&
+  matchingEnvoye?.reponses?.consentSensible === true
+    ? ok('avec les réponses et le consentement donné en tête')
+    : bad('réponses de matching perdues', JSON.stringify(matchingEnvoye?.reponses ?? null));
 
   if (!sent) {
     bad('aucune requête d’inscription reçue');
@@ -458,18 +446,11 @@ section('Parcours complet et envoi');
     sent.hasChildren === undefined
       ? ok('et la question sur les enfants a bien quitté le formulaire')
       : bad('la question sur les enfants est encore envoyée');
-    sent.matchingOptin === 'oui'
-      ? ok('le choix du service de matching est transmis')
-      : bad('choix de matching manquant', String(sent.matchingOptin));
-    sent.matching?.consentSensible === true
-      ? ok('avec le consentement aux données sensibles')
-      : bad('consentement sensible manquant', JSON.stringify(sent.matching ?? null));
-    sent.matching?.enfants === 'oui'
-      ? ok('et les réponses du formulaire avancé arrivent jusqu’au serveur')
-      : bad('réponses avancées perdues en route', JSON.stringify(sent.matching ?? null));
-    JSON.stringify(sent.matching?.originesRecherchees) === JSON.stringify(['aucune'])
-      ? ok('« aucune préférence » arrive seule, sans les cases d’avant')
-      : bad('cases contradictoires transmises', JSON.stringify(sent.matching?.originesRecherchees));
+    // Le matching ne fait plus partie de l'envoi de la candidature : il
+    // part ensuite, par sa propre route.
+    sent.matchingOptin === undefined && sent.matching === undefined
+      ? ok('la candidature part sans rien savoir du service de matching')
+      : bad('le matching voyage encore avec l’inscription', JSON.stringify(sent.matching ?? null));
     sent.elapsedMs > 0 ? ok('durée de remplissage transmise') : bad('durée manquante');
     sent.lil_ref_url === '' && sent.lil_extra_1 === ''
       ? ok('les pièges anti-robot partent vides')

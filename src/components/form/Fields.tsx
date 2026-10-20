@@ -414,6 +414,7 @@ export function FieldControl({ field, value, error, onChange, onAdvance }: Field
                 par un utilisateur. */}
             <span dangerouslySetInnerHTML={{ __html: field.label ?? '' }} />
           </label>
+          {field.help && <p className="lil-field-help">{field.help}</p>}
           {error && <ErrorLine id={errorId} message={error} />}
         </div>
       );

@@ -1,6 +1,5 @@
 'use client';
 
-import { Fragment } from 'react';
 import { BLOCS, type ChampMatching } from '@/lib/matching';
 
 /**
@@ -25,9 +24,11 @@ export type BrouillonMatching = Record<string, unknown>;
  * Tout est facultatif, et ça se voit : rien n'est marqué obligatoire,
  * rien ne bloque l'envoi.
  *
- * Les deux blocs sensibles — origines, religion — restent fermés tant que
- * la case de consentement n'est pas cochée. Le serveur les écarte de
- * toute façon sans elle ; ici, c'est la promesse qui est tenue à l'écran.
+ * Le consentement se donne en tête, avant la première question : on sait
+ * à quoi on s'engage avant de commencer, et plus rien ne s'ouvre ni ne se
+ * ferme en cours de route. Les deux sujets que la loi dit sensibles —
+ * origines, religion — prennent donc leur place dans le fil comme les
+ * autres. Le serveur les écarte de toute façon sans la case.
  */
 export function MatchingAvance({
   valeurs,
@@ -36,58 +37,19 @@ export function MatchingAvance({
   valeurs: BrouillonMatching;
   onChange: (valeurs: BrouillonMatching) => void;
 }) {
-  const consent = valeurs.consentSensible === true;
   const poser = (nom: string, valeur: unknown) => onChange({ ...valeurs, [nom]: valeur });
-
-  // La case se pose juste avant le premier bloc qu'elle ouvre. Elle était
-  // tout en bas : on cochait, et des questions apparaissaient au milieu,
-  // hors de l'écran. Une case qui commande quelque chose doit être à côté
-  // de ce qu'elle commande.
-  const premierSensible = BLOCS.findIndex((b) => b.sensible);
 
   return (
     <div className="lil-matching">
-      {BLOCS.map((bloc, index) => {
-        const porte =
-          index === premierSensible ? (
-            <div className="lil-matching-porte" key="porte">
-              <p className="lil-matching-porte-titre">Deux sujets de plus, si tu veux bien</p>
-              <p className="lil-field-help">
-                Les origines et la religion. La loi les range parmi les informations sensibles&nbsp;:
-                on ne les affiche que si tu le demandes, elles ne servent qu’à la mise en relation,
-                et tu peux les retirer quand tu veux.
-              </p>
-              <label className="lil-consent lil-matching-consent">
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  onChange={(e) => poser('consentSensible', e.target.checked)}
-                />
-                <span>J’accepte de répondre à ces deux sujets.</span>
-              </label>
-            </div>
-          ) : null;
-
-        if (bloc.sensible && !consent) return porte;
-
-        return (
-          <Fragment key={bloc.id}>
-            {porte}
-            <fieldset className="lil-matching-bloc">
-            <legend>{bloc.titre}</legend>
-            {bloc.intro && <p className="lil-field-help">{bloc.intro}</p>}
-              {bloc.champs.map((champ) => (
-                <Champ
-                  key={champ.nom}
-                  champ={champ}
-                  valeur={valeurs[champ.nom]}
-                  poser={poser}
-                />
-              ))}
-            </fieldset>
-          </Fragment>
-        );
-      })}
+      {BLOCS.map((bloc) => (
+        <fieldset className="lil-matching-bloc" key={bloc.id}>
+          <legend>{bloc.titre}</legend>
+          {bloc.intro && <p className="lil-field-help">{bloc.intro}</p>}
+          {bloc.champs.map((champ) => (
+            <Champ key={champ.nom} champ={champ} valeur={valeurs[champ.nom]} poser={poser} />
+          ))}
+        </fieldset>
+      ))}
     </div>
   );
 }

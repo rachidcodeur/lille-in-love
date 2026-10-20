@@ -12,9 +12,9 @@ import {
   type InscriptionCourteInput,
   type InscriptionInput,
 } from '@/lib/validation';
-import { nettoyerMatching } from '@/lib/matching';
 import { HONEYPOT_FIELDS, MIN_FILL_SECONDS } from '@/lib/questions';
 import { previenirEquipe, sendSequenceEmail } from '@/lib/mailer';
+import { randomUUID } from 'node:crypto';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -59,29 +59,13 @@ function fullRow(data: InscriptionInput) {
     referral_other: data.referralOther ?? null,
     phone: normalizePhone(data.phone),
     birth_date: data.birthDate,
-    ...matchingRow(data),
+    // Le jeton qui autorisera à compléter le matching après coup. Rendu
+    // une seule fois, à celui qui vient de s'inscrire.
+    matching_token: randomUUID(),
   };
 }
 
-/**
- * Le service de matching, et ses réponses.
- *
- * Le tamis est ici, côté serveur, et nulle part ailleurs : une case
- * décochée à l'écran ne prouve rien. Sans le consentement explicite, les
- * champs sensibles — origines, religion — ne sont pas écrits, même si le
- * navigateur les envoie.
- */
-function matchingRow(data: InscriptionInput) {
-  const accepte = data.matchingOptin === 'oui';
-  const brut = (data.matching ?? {}) as Record<string, unknown>;
-  const consent = accepte && brut.consentSensible === true;
 
-  return {
-    matching_optin: accepte,
-    matching: accepte ? nettoyerMatching(brut, consent) : {},
-    matching_consent_at: consent ? new Date().toISOString() : null,
-  };
-}
 
 export async function POST(request: Request) {
   const cors = corsHeaders(request);
@@ -248,7 +232,11 @@ export async function POST(request: Request) {
   };
 
   const inserer = (row: Record<string, unknown>) =>
-    db.from('lil_members').insert(row).select('id, first_name, last_name, email, city, birth_date, form_version').single();
+    db
+      .from('lil_members')
+      .insert(row)
+      .select('id, first_name, last_name, email, city, birth_date, form_version, matching_token')
+      .single();
 
   let { data: member, error: insertError } = await inserer({ ...commun, ...signalement });
 
@@ -348,7 +336,15 @@ export async function POST(request: Request) {
   if (!alerte.ok) console.error('[inscription] alerte interne non envoyée', alerte.error);
 
   return NextResponse.json(
-    { ok: true, id: member.id, firstName: member.first_name, emailSent: mail.ok },
+    {
+      ok: true,
+      id: member.id,
+      firstName: member.first_name,
+      emailSent: mail.ok,
+      // De quoi compléter le matching depuis l'écran de remerciement, et
+      // seulement depuis là : le jeton ne repart jamais ailleurs.
+      matchingToken: member.matching_token ?? null,
+    },
     { status: 201, headers: cors },
   );
 }
