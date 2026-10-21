@@ -377,11 +377,21 @@ section('Parcours complet et envoi');
   (await page.locator('.lil-service-offre').count()) === 1
     ? ok('le service de matching se propose après l’envoi, en seconde carte')
     : bad('pas de carte de service après l’envoi');
+
+  // Le service s'ajoute aux rencontres, il ne les rattrape pas : rien
+  // dans ce texte ne doit laisser croire qu'elles tiennent du hasard.
+  const offre = await page.locator('.lil-service-offre').innerText();
+  (await page.locator('.lil-service-titre').innerText()) === 'Service de matching personnalisé'
+    ? ok('la carte porte le nom du service')
+    : bad('titre inattendu', await page.locator('.lil-service-titre').innerText());
+  !/hasard/i.test(offre)
+    ? ok('et son texte ne présente pas les rencontres comme un coup de chance')
+    : bad('le texte parle de hasard', offre.replace(/\n+/g, ' | '));
   (await page.locator('.lil-matching-bloc').count()) === 0
     ? ok('et ses questions attendent qu’on ait dit oui')
     : bad('les questions s’affichent sans qu’on ait accepté');
 
-  await page.getByRole('button', { name: 'Oui, cherchez pour moi' }).click();
+  await page.getByRole('button', { name: 'Oui, ça m’intéresse' }).click();
   await page.waitForTimeout(400);
 
   // Le consentement se donne en tête, avant la première question.

@@ -114,11 +114,12 @@ export function ServiceMatching({ token }: { token: string }) {
   return (
     <section className="lil-service lil-service-offre">
       <p className="lil-service-chapeau">Pour aller plus loin</p>
-      <h2 className="lil-service-titre">On peut aussi chercher pour toi</h2>
+      <h2 className="lil-service-titre">Service de matching personnalisé</h2>
 
       <p className="lil-done-text">
-        Les rencontres, c’est le hasard d’un soir, et c’est très bien comme ça. Mais si tu
-        préfères ne pas attendre le hasard, on peut chercher pour toi dans tout notre réseau.
+        Nos rencontres réunissent des profils choisis un par un, et c’est déjà beaucoup. Si tu
+        veux aller plus loin, on peut chercher pour toi dans tout notre réseau, sur les critères
+        que tu nous donnes.
       </p>
       <p className="lil-done-text">
         Tu nous dis ce qui compte vraiment — fumeur ou non, avec ou sans enfants, origines,
@@ -132,7 +133,7 @@ export function ServiceMatching({ token }: { token: string }) {
 
       <div className="lil-service-choix">
         <button type="button" className="lil-btn" onClick={() => setEtat('remplit')}>
-          Oui, cherchez pour moi
+          Oui, ça m’intéresse
         </button>
         <button type="button" className="lil-btn-secondaire" onClick={() => setEtat('refuse')}>
           Non merci

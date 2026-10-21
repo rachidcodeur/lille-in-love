@@ -71,6 +71,12 @@ l'adresse, où il resterait dans l'historique et les journaux ; c'est
 d'ailleurs pourquoi l'envoi ne redirige plus vers `/merci` quand le
 service se propose.
 
+La carte s'appelle **« Service de matching personnalisé »**, et son texte
+ne présente jamais les rencontres comme un coup de chance qu'il faudrait
+rattraper : le service s'y ajoute, il ne les corrige pas. Un test vérifie
+le titre et l'absence du mot « hasard » — c'est le genre de nuance qu'une
+réécriture rapide fait disparaître sans qu'on s'en aperçoive.
+
 **Les questions arrivent toutes à la fois**, et non en étapes : la
 personne a déjà dit oui, on n'a plus à la convaincre d'avancer, et voir
 l'ensemble permet de jauger ce qui reste et de sauter ce qu'on ne veut
