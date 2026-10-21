@@ -43,7 +43,14 @@ function lireCle(cle: string): { role?: string; projet?: string } {
  * refuse la requête si la colonne n'existe pas, sans lire une seule
  * ligne.
  */
-const MIGRATIONS: { fichier: string; table: string; colonne: string; sans: string }[] = [
+const MIGRATIONS: {
+  fichier: string;
+  table: string;
+  colonne: string;
+  sans: string;
+  /** Sans elle, quelque chose casse tout de suite — pas seulement le soir. */
+  bloquante?: boolean;
+}[] = [
   {
     fichier: '13_crushtime.sql',
     table: 'lil_crush_participants',
@@ -80,6 +87,13 @@ const MIGRATIONS: { fichier: string; table: string; colonne: string; sans: strin
     colonne: 'reponses',
     sans: 'le questionnaire de fin de soirée ne s’affiche pas et aucun avis n’est recueilli',
   },
+  {
+    fichier: '20_matching.sql',
+    table: 'lil_members',
+    colonne: 'matching',
+    sans: 'le formulaire d’inscription échoue à l’envoi : il écrit des colonnes qui n’existent pas',
+    bloquante: true,
+  },
 ];
 
 /** Ce que la base ne connaît pas encore. */
@@ -87,7 +101,7 @@ async function migrationsManquantes(url: string, cle: string): Promise<string[]>
   if (!url || !cle) return [];
 
   const absentes = await Promise.all(
-    MIGRATIONS.map(async ({ fichier, table, colonne, sans }) => {
+    MIGRATIONS.map(async ({ fichier, table, colonne, sans, bloquante }) => {
       try {
         const reponse = await fetch(
           `${url.replace(/\/$/, '')}/rest/v1/${table}?select=${colonne}&limit=0`,
@@ -99,9 +113,12 @@ async function migrationsManquantes(url: string, cle: string): Promise<string[]>
         if (reponse.ok) return null;
         const corps = (await reponse.json().catch(() => null)) as { code?: string } | null;
         // 42703 : colonne inconnue. 42P01 : table inconnue.
-        return corps?.code === '42703' || corps?.code === '42P01'
+        if (corps?.code !== '42703' && corps?.code !== '42P01') return null;
+        // Le mot « facultatif » déclasse le problème plus bas : il ne doit
+        // y figurer que pour ce qui peut attendre le prochain déploiement.
+        return bloquante
           ? `${fichier} n’a pas été exécutée — sans elle, ${sans}.`
-          : null;
+          : `${fichier} n’a pas été exécutée — sans elle, ${sans} (facultatif tant que tu n’ouvres pas de soirée).`;
       } catch {
         // Base injoignable : les autres contrôles le diront déjà.
         return null;
@@ -193,7 +210,7 @@ export async function GET() {
   // Les migrations en attente : signalées, mais jamais bloquantes. Le
   // formulaire et la curation tournent sans celles du crush time.
   const migrations = await migrationsManquantes(supabaseUrl, serviceKey);
-  problemes.push(...migrations.map((m) => `${m} (facultatif tant que tu n’ouvres pas de soirée)`));
+  problemes.push(...migrations);
 
   const bloquants = problemes.filter((p) => !p.includes('facultatif'));
 

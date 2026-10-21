@@ -16,13 +16,6 @@
 --  ce que « matching_consent » retient, avec sa date. Sans cette case
 --  cochée, le formulaire n'envoie ni origines ni religion.
 --
---  ⚠ Cette migration est DÉJÀ EXÉCUTÉE en production, mais le formulaire
---  qui s'en sert vit pour l'instant sur la branche « formulaire-v2 ».
---  Le fichier reste ici parce que le dossier doit refléter l'état réel de
---  la base : les colonnes existent, simplement personne ne les remplit
---  tant que l'ancien formulaire est en ligne. Elles sont toutes
---  facultatives, rien ne casse.
---
 --  Idempotent : relançable sans risque.
 -- =====================================================================
 

@@ -20,6 +20,8 @@ export type FieldType =
   | 'email'
   | 'tel'
   | 'date'
+  | 'naissance'
+  | 'matching'
   | 'photos'
   | 'consent';
 
@@ -105,10 +107,9 @@ export const REFERRALS: Option[] = [
   { value: 'autre', label: 'Autrement' },
 ];
 
-export const STEPS_COMPLET: Step[] = [
+const ETAPES: Step[] = [
   {
     id: 'gender',
-    number: '01',
     section: 'Profil',
     title: 'Je suis',
     fields: [
@@ -126,7 +127,6 @@ export const STEPS_COMPLET: Step[] = [
   },
   {
     id: 'location',
-    number: '02',
     section: 'Profil',
     title: 'Où habites-tu ?',
     fields: [
@@ -153,7 +153,6 @@ export const STEPS_COMPLET: Step[] = [
   },
   {
     id: 'orientation',
-    number: '03',
     section: 'Profil',
     title: 'Je suis',
     fields: [
@@ -170,26 +169,7 @@ export const STEPS_COMPLET: Step[] = [
     ],
   },
   {
-    id: 'children',
-    number: '04',
-    section: 'Profil',
-    title: 'As-tu des enfants ?',
-    fields: [
-      {
-        name: 'hasChildren',
-        type: 'radio',
-        required: true,
-        advanceOnSelect: true,
-        options: [
-          { value: 'oui', label: 'Oui' },
-          { value: 'non', label: 'Non' },
-        ],
-      },
-    ],
-  },
-  {
     id: 'looking-for',
-    number: '05',
     section: 'Profil',
     title: "Qu'est-ce que tu cherches ?",
     fields: [
@@ -207,7 +187,6 @@ export const STEPS_COMPLET: Step[] = [
   },
   {
     id: 'height',
-    number: '06',
     section: 'Profil',
     title: 'Quelle est ta taille ?',
     help: 'En centimètres.',
@@ -225,7 +204,6 @@ export const STEPS_COMPLET: Step[] = [
   },
   {
     id: 'about',
-    number: '07',
     section: 'Toi, en quelques mots',
     title: 'Raconte-toi en deux lignes',
     help: 'C’est ce qu’on lit en premier. Pas besoin de bien écrire — sois juste toi.',
@@ -248,8 +226,32 @@ export const STEPS_COMPLET: Step[] = [
     ],
   },
   {
+    id: 'single-since',
+    section: 'Toi, en quelques mots',
+    title: 'Depuis quand es-tu célibataire ?',
+    // Posée ici, et non dans les premières étapes : la personne vient de
+    // se raconter et de dire pourquoi elle vient. La question prolonge ce
+    // qu'elle écrivait ; placée en cinquième, entre l'orientation et la
+    // taille, elle tombait comme un interrogatoire.
+    help: 'Une idée suffit — personne ne vérifie.',
+    fields: [
+      {
+        name: 'singleSince',
+        type: 'radio',
+        required: true,
+        advanceOnSelect: true,
+        options: [
+          { value: 'moins_6_mois', label: 'Moins de 6 mois' },
+          { value: 'six_mois_2_ans', label: 'Entre 6 mois et 2 ans' },
+          { value: 'plus_2_ans', label: 'Plus de 2 ans' },
+          { value: 'toujours', label: 'Je n’ai jamais été en couple' },
+          { value: 'prefere_pas', label: 'Je préfère ne pas le dire' },
+        ],
+      },
+    ],
+  },
+  {
     id: 'interests',
-    number: '08',
     section: 'Toi, en quelques mots',
     title: "Quels sont tes centres d'intérêt ?",
     help: 'Plusieurs choix possibles.',
@@ -267,7 +269,6 @@ export const STEPS_COMPLET: Step[] = [
   },
   {
     id: 'zodiac',
-    number: '09',
     section: 'Toi, en quelques mots',
     title: 'Quel est ton signe astrologique ?',
     facultatif: true,
@@ -283,7 +284,6 @@ export const STEPS_COMPLET: Step[] = [
   },
   {
     id: 'profession',
-    number: '10',
     section: 'Toi, en quelques mots',
     title: 'Quelle est ta profession ?',
     fields: [
@@ -298,7 +298,6 @@ export const STEPS_COMPLET: Step[] = [
   },
   {
     id: 'instagram',
-    number: '11',
     section: 'Toi, en quelques mots',
     title: 'Ton Instagram ?',
     facultatif: true,
@@ -314,7 +313,6 @@ export const STEPS_COMPLET: Step[] = [
   },
   {
     id: 'companion',
-    number: '12',
     section: 'Toi, en quelques mots',
     title: 'Tu viens avec quelqu’un ?',
     help: 'Un ami, une amie — on essaie de vous placer sur la même soirée.',
@@ -341,7 +339,6 @@ export const STEPS_COMPLET: Step[] = [
   },
   {
     id: 'referral',
-    number: '13',
     section: 'Toi, en quelques mots',
     title: 'Comment tu nous as connus ?',
     fields: [
@@ -356,7 +353,6 @@ export const STEPS_COMPLET: Step[] = [
   },
   {
     id: 'photos',
-    number: '14',
     section: 'Photos',
     title: 'Ajoute tes meilleures photos',
     help: '1 à 3 photos de toi, visage visible. C’est dessus qu’on se choisira pendant la soirée — prends tes meilleures.',
@@ -365,7 +361,6 @@ export const STEPS_COMPLET: Step[] = [
   },
   {
     id: 'contact',
-    number: '15',
     section: 'Coordonnées',
     title: 'Tes coordonnées',
     fields: [
@@ -399,7 +394,6 @@ export const STEPS_COMPLET: Step[] = [
   },
   {
     id: 'final',
-    number: '16',
     section: 'Coordonnées',
     title: 'Pour finir',
     fields: [
@@ -413,11 +407,14 @@ export const STEPS_COMPLET: Step[] = [
         help: 'C’est là qu’on t’écrira. Vérifie bien l’orthographe.',
       },
       {
+        // Trois cases plutôt qu'un sélecteur de date : sur un téléphone,
+        // remonter de 1990 au doigt dans un calendrier décourage, et
+        // plusieurs personnes s'y sont arrêtées. On tape le jour et
+        // l'année, on choisit le mois dans une liste.
         name: 'birthDate',
-        type: 'date',
+        type: 'naissance',
         label: 'Date de naissance',
         required: true,
-        autoComplete: 'bday',
       },
       {
         name: 'consent',
@@ -426,6 +423,34 @@ export const STEPS_COMPLET: Step[] = [
         // Texte seul, sans lien : à la dernière étape, un lien détourne plus
         // qu'il n'informe. La case reste obligatoire pour envoyer.
         label: 'J’accepte le règlement et la politique de confidentialité.',
+      },
+    ],
+  },
+  {
+    id: 'matching',
+    section: 'Pour aller plus loin',
+    title: 'On peut aussi chercher pour toi',
+    help:
+      'Au-delà des soirées, on propose à qui le souhaite un accompagnement sur mesure : on cherche dans le réseau la personne qui te correspond vraiment, et on vous met en relation.',
+    note: 'Tu peux envoyer ta candidature sans ça. Le service reste ouvert plus tard.',
+    fields: [
+      {
+        name: 'matchingOptin',
+        type: 'radio',
+        required: true,
+        label: 'Veux-tu qu’on cherche pour toi ?',
+        options: [
+          { value: 'oui', label: 'Oui, je veux en savoir plus' },
+          { value: 'non', label: 'Non merci, les soirées me suffisent' },
+        ],
+      },
+      {
+        // Tout le questionnaire avancé tient dans ce seul champ : il
+        // s'ouvre sur « oui » et se replie sur « non », sans étape de
+        // plus. Qui refuse envoie sa candidature dans la foulée.
+        name: 'matching',
+        type: 'matching',
+        showIf: { field: 'matchingOptin', equals: 'oui' },
       },
     ],
   },
@@ -442,10 +467,9 @@ export const STEPS_COMPLET: Step[] = [
  * Le consentement reste demandé — on collecte un nom, un visage et une
  * adresse, formulaire court ou pas.
  */
-export const STEPS_COURT: Step[] = [
+const ETAPES_COURT: Step[] = [
   {
     id: 'gender',
-    number: '01',
     section: 'Profil',
     title: 'Je suis',
     fields: [
@@ -463,7 +487,6 @@ export const STEPS_COURT: Step[] = [
   },
   {
     id: 'contact',
-    number: '02',
     section: 'Coordonnées',
     title: 'Qui es-tu ?',
     fields: [
@@ -497,7 +520,6 @@ export const STEPS_COURT: Step[] = [
   },
   {
     id: 'photos',
-    number: '03',
     section: 'Photos',
     title: 'Ajoute tes meilleures photos',
     help: '1 à 3 photos de toi, visage visible. C’est dessus qu’on se choisira pendant la soirée — prends tes meilleures.',
@@ -538,3 +560,20 @@ export const MIN_FILL_SECONDS: Record<FormVersion, number> = {
   court: 5,
   complet: 12,
 };
+
+/**
+ * Les numéros affichés se calculent, ils ne s'écrivent pas.
+ *
+ * Ils l'étaient, repris de Tally. Retirer une question en plein milieu a
+ * suffi pour que deux étapes portent le même numéro : personne ne pense à
+ * renuméroter les douze suivantes, et l'écran se met à mentir.
+ */
+function numeroter(etapes: Step[]): Step[] {
+  return etapes.map((etape, index) => ({
+    ...etape,
+    number: String(index + 1).padStart(2, '0'),
+  }));
+}
+
+export const STEPS_COMPLET: Step[] = numeroter(ETAPES);
+export const STEPS_COURT: Step[] = numeroter(ETAPES_COURT);

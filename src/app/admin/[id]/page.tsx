@@ -19,6 +19,7 @@ import { ActionsCorbeille } from '@/components/admin/ActionsCorbeille';
 import { Icone, type NomIcone } from '@/components/admin/Icones';
 import { Vignette } from '@/components/admin/Vignette';
 import { DECISION_TEMPLATES, templateAttendu } from '@/lib/decision';
+import { FicheMatching } from '@/components/admin/FicheMatching';
 
 export const dynamic = 'force-dynamic';
 
@@ -86,6 +87,7 @@ export default async function FichePage({ params }: Props) {
       icone: 'enfants',
     },
     { terme: 'Cherche', valeur: label.lookingFor(member.looking_for), icone: 'loupe' },
+    { terme: 'Célibataire depuis', valeur: label.singleSince(member.single_since), icone: 'coeur' },
     { terme: 'Taille', valeur: member.height_cm ? `${member.height_cm} cm` : null, icone: 'taille' },
     { terme: 'Profession', valeur: member.profession, icone: 'mallette' },
     { terme: 'Signe', valeur: label.zodiac(member.zodiac), icone: 'etoile' },
@@ -102,8 +104,9 @@ export default async function FichePage({ params }: Props) {
     },
   ];
 
-  // Reprise de l'ancien formulaire : la question n'est plus posée, on ne
-  // montre la case que lorsqu'une réponse existe.
+  // Reprise des anciens formulaires : ces deux questions ne sont plus
+  // posées — elles ont rejoint le formulaire avancé — mais les réponses
+  // déjà données restent lisibles.
   if (member.children_preference) {
     faits.splice(5, 0, {
       terme: 'Enfants du partenaire',
@@ -208,6 +211,15 @@ export default async function FichePage({ params }: Props) {
           <div className="adm-card">
             <GroupePicker memberId={member.id} groupe={member.soiree_group} />
           </div>
+
+          {/* Replié : la curation se fait sur les photos et quelques mots,
+              pas sur trente lignes de préférences. On l'ouvre le jour où
+              l'on cherche quelqu'un pour quelqu'un. */}
+          <FicheMatching
+            optin={member.matching_optin}
+            reponses={(member.matching ?? {}) as Record<string, string | string[]>}
+            consentLe={member.matching_consent_at}
+          />
 
           <div className="adm-card adm-decision">
             <div className="adm-card-head">

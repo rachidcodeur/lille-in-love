@@ -170,7 +170,6 @@ section('Parcours complet et envoi');
   await page.fill('#postalCode', '59000');
   await next();
   await pick('Hétéro');
-  await pick('Non');
   await pick('Une relation sérieuse');
   await page.fill('#heightCm', '168');
   await next();
@@ -178,6 +177,12 @@ section('Parcours complet et envoi');
   await page.fill('#about', 'Deux mots.');
   await page.fill('#motivation', 'Marre des applis, envie de rencontrer des gens en vrai.');
   await next();
+  // Elle vient après qu'on s'est raconté, pas entre l'orientation et la
+  // taille : à cet endroit elle prolonge ce qu'on vient d'écrire.
+  (await page.locator('.lil-question').innerText()).includes('célibataire')
+    ? ok('« depuis quand célibataire » suit la présentation, pas les premières étapes')
+    : bad('la question du célibat n’est pas à sa place', await page.locator('.lil-question').innerText());
+  await pick('Plus de 2 ans');
   await page.getByRole('button', { name: 'Culture & spectacles' }).click();
   await page.getByRole('button', { name: 'Voyages & découvertes' }).click();
   await next();
@@ -232,12 +237,116 @@ section('Parcours complet et envoi');
   await page.fill('#phone', '06 12 34 56 78');
   await next();
   await page.fill('#email', 'camille.dupont@example.com');
-  await page.fill('#birthDate', '1993-04-17');
+
+  // Trois cases plutôt qu'un sélecteur : sur un téléphone, remonter de
+  // 1993 au doigt dans un calendrier décourage.
+  (await page.locator('.lil-naissance input').count()) === 2 &&
+  (await page.locator('.lil-naissance select').count()) === 1
+    ? ok('la date de naissance se saisit en trois cases, le mois en liste')
+    : bad('la date de naissance n’est pas en trois cases');
+  await page.fill('#birthDate', '17');
+  await page.selectOption('.lil-naissance select', '04');
+
+  // On tape l'année chiffre par chiffre : la première version recomposait
+  // une date à chaque frappe, et « 1 » devenait « 0001 » sous les doigts.
+  const annee = page.locator('.lil-naissance-annee');
+  await annee.click();
+  await annee.pressSequentially('1993', { delay: 60 });
+  (await annee.inputValue()) === '1993'
+    ? ok('l’année se tape librement, sans zéros ajoutés en cours de frappe')
+    : bad('l’année est complétée toute seule', await annee.inputValue());
   // La case finale ne porte plus de lien : texte seul, et on coche pour passer.
   (await page.locator('.lil-consent a').count()) === 0
     ? ok('la case d’acceptation ne contient plus aucun lien')
     : bad('un lien subsiste dans la case d’acceptation');
-  await page.locator('.lil-consent input').check();
+  await page.locator('.lil-consent input').first().check();
+  await next();
+
+  // --- Le service de matching, proposé en dernier -------------------
+  ((await page.locator('.lil-question').innerText().catch(() => '')) || '').includes('cherche')
+    ? ok('le service de matching est proposé après la dernière question')
+    : bad('pas d’étape de matching', await page.locator('.lil-question').innerText().catch(() => ''));
+
+  (await page.locator('.lil-matching').count()) === 0
+    ? ok('et ses questions restent repliées tant qu’on n’a pas dit oui')
+    : bad('les questions avancées s’affichent sans qu’on ait accepté');
+
+  await pick('Oui, je veux en savoir plus');
+  await page.waitForTimeout(400);
+  (await page.locator('.lil-matching-bloc').count()) >= 5
+    ? ok('« oui » déroule toutes les questions d’un coup, sans nouvelle étape')
+    : bad('les questions avancées ne s’affichent pas', String(await page.locator('.lil-matching-bloc').count()));
+
+  // Les deux blocs sensibles restent fermés tant que la case n'est pas cochée.
+  const titres = async () =>
+    (await page.locator('.lil-matching-bloc legend').allInnerTexts()).join(' | ').toLowerCase();
+  !(await titres()).includes('religion')
+    ? ok('les blocs sensibles restent fermés sans consentement explicite')
+    : bad('origines et religion affichées sans consentement', await titres());
+
+  // --- Les options du formulaire avancé répondent-elles vraiment ? ---
+  // Elles portaient « aria-pressed » quand tout le style du formulaire
+  // repose sur « aria-checked » : le choix était pris, et invisible.
+  const blocEnfants = page.locator('.lil-matching-bloc').filter({ hasText: 'As-tu des enfants' });
+  const oui = blocEnfants.getByRole('radio', { name: 'Oui' }).first();
+  await oui.click();
+  await page.waitForTimeout(200);
+
+  (await oui.getAttribute('aria-checked')) === 'true'
+    ? ok('un choix du formulaire avancé se marque comme sélectionné')
+    : bad('la sélection ne se voit pas', String(await oui.getAttribute('aria-checked')));
+  (await oui.locator('.lil-choice-mark').count()) === 1
+    ? ok('avec la même puce que partout ailleurs')
+    : bad('la puce de sélection manque');
+
+
+  // La case se tient juste devant ce qu'elle ouvre. Tout en bas, on
+  // cochait et les questions apparaissaient au milieu, hors de l'écran.
+  const porte = page.locator('.lil-matching-porte');
+  (await porte.count()) === 1
+    ? ok('la case de consentement a son propre encadré, dans le fil des questions')
+    : bad('pas de porte pour les sujets sensibles');
+
+  const avantPorte = await porte.evaluate((el) => {
+    const blocs = [...document.querySelectorAll('.lil-matching-bloc')];
+    const suivant = blocs.find((b) => el.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    return suivant ? suivant.querySelector('legend')?.textContent?.toLowerCase() : null;
+  });
+  avantPorte && !avantPorte.includes('origines')
+    ? ok('et les blocs qu’elle commande ne sont pas là tant qu’elle est décochée')
+    : bad('un bloc sensible se glisse avant la case', String(avantPorte));
+
+  await page.locator('.lil-matching-consent input').check();
+  await page.waitForTimeout(350);
+
+  const apresPorte = await porte.evaluate((el) => {
+    const blocs = [...document.querySelectorAll('.lil-matching-bloc')];
+    const suivant = blocs.find((b) => el.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    return suivant ? suivant.querySelector('legend')?.textContent?.toLowerCase() : null;
+  });
+  apresPorte?.includes('origines')
+    ? ok('cochée, le bloc qu’elle ouvre apparaît juste en dessous d’elle')
+    : bad('le bloc ouvert n’est pas sous la case', String(apresPorte));
+  (await titres()).includes('religion') && (await titres()).includes('origines')
+    ? ok('la case de consentement les ouvre, et elle seule')
+    : bad('le consentement n’ouvre pas les blocs sensibles', await titres());
+
+  // Et les cases à cocher, qui obéissent à « aucune préférence ».
+  const blocCulture = page.locator('.lil-matching-bloc').filter({ hasText: 'préférences culturelles' });
+  await blocCulture.getByRole('checkbox', { name: 'Européenne' }).click();
+  await blocCulture.getByRole('checkbox', { name: 'Africaine' }).click();
+  await page.waitForTimeout(200);
+  (await blocCulture.locator('[aria-checked="true"]').count()) === 2
+    ? ok('deux cases cochées tiennent ensemble')
+    : bad('les cases ne se cochent pas', String(await blocCulture.locator('[aria-checked="true"]').count()));
+
+  await blocCulture.getByRole('checkbox', { name: 'Aucune préférence' }).click();
+  await page.waitForTimeout(200);
+  (await blocCulture.locator('[aria-checked="true"]').count()) === 1
+    ? ok('et « aucune préférence » les décoche toutes, à l’écran aussi')
+    : bad('« aucune préférence » ne décoche rien');
+
+
   await next();
   await page.waitForTimeout(900);
 
@@ -251,6 +360,27 @@ section('Parcours complet et envoi');
     sent.photos?.length === 3 ? ok('3 chemins de photos transmis') : bad('photos mal transmises');
     typeof sent.heightCm === 'number' ? ok('taille envoyée en nombre') : bad('taille non numérique');
     sent.consent === true ? ok('consentement transmis') : bad('consentement manquant');
+    sent.birthDate === '1993-04-17'
+      ? ok('les trois cases se recomposent en une date exploitable pour l’âge')
+      : bad('date de naissance mal recomposée', String(sent.birthDate));
+    sent.singleSince === 'plus_2_ans'
+      ? ok('« depuis quand célibataire » est posée dans le formulaire classique')
+      : bad('réponse célibat manquante', String(sent.singleSince));
+    sent.hasChildren === undefined
+      ? ok('et la question sur les enfants a bien quitté le formulaire')
+      : bad('la question sur les enfants est encore envoyée');
+    sent.matchingOptin === 'oui'
+      ? ok('le choix du service de matching est transmis')
+      : bad('choix de matching manquant', String(sent.matchingOptin));
+    sent.matching?.consentSensible === true
+      ? ok('avec le consentement aux données sensibles')
+      : bad('consentement sensible manquant', JSON.stringify(sent.matching ?? null));
+    sent.matching?.enfants === 'oui'
+      ? ok('et les réponses du formulaire avancé arrivent jusqu’au serveur')
+      : bad('réponses avancées perdues en route', JSON.stringify(sent.matching ?? null));
+    JSON.stringify(sent.matching?.originesRecherchees) === JSON.stringify(['aucune'])
+      ? ok('« aucune préférence » arrive seule, sans les cases d’avant')
+      : bad('cases contradictoires transmises', JSON.stringify(sent.matching?.originesRecherchees));
     sent.elapsedMs > 0 ? ok('durée de remplissage transmise') : bad('durée manquante');
     sent.lil_ref_url === '' && sent.lil_extra_1 === ''
       ? ok('les pièges anti-robot partent vides')

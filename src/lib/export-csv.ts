@@ -26,6 +26,8 @@ export const COLONNES = [
   'looking_for',
   'orientation',
   'has_children',
+  'single_since',
+  'matching_optin',
   'children_preference',
   'height_cm',
   'zodiac_sign',
@@ -89,6 +91,10 @@ export function ligneExport(member: MemberDetail): string[] {
     member.looking_for ? (CHERCHE[member.looking_for] ?? member.looking_for) : '',
     texte(member.orientation),
     booleen(member.has_children),
+    texte(member.single_since),
+    // « == null » et non « === null » : une fiche d'avant ce formulaire
+    // n'a pas la clé du tout, et « undefined » serait sorti comme un refus.
+    member.matching_optin == null ? '' : member.matching_optin ? 'oui' : 'non',
     texte(member.children_preference),
     texte(member.height_cm),
     texte(member.zodiac),

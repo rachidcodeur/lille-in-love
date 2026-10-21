@@ -80,6 +80,10 @@ export type MemberDetail = MemberSummary & {
   children_preference: string | null;
   orientation: string | null;
   has_children: boolean | null;
+  single_since: string | null;
+  matching_optin: boolean | null;
+  matching: Record<string, unknown> | null;
+  matching_consent_at: string | null;
   looking_for: string | null;
   height_cm: number | null;
   about: string | null;
