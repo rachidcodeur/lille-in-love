@@ -515,6 +515,11 @@ sur l'adresse qu'on a sous les yeux.
 
 ---
 
+> **Un port déjà pris ?** `54321` sert aussi à quelques utilitaires
+> installés sur un Mac. Plutôt que d'éteindre une application, donne-en
+> un autre à la suite de tests :
+> `FAKE_PORT=54399 APP_PORT=3199 npm run test:curation`.
+
 ## 7. La recette avant d'ouvrir
 
 - [ ] `supabase/10_accompagnant.sql` exécuté (bloquant)

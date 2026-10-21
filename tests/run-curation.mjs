@@ -14,8 +14,13 @@ import { dirname, join } from 'node:path';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, '..');
 
-const FAKE_PORT = 54321;
-const APP_PORT = 3100;
+// Réglables : 54321 est aussi le port de quelques utilitaires installés
+// sur un Mac — CleanMyMac, entre autres — et l'on ne va pas éteindre les
+// applications de quelqu'un pour lancer une suite de tests.
+//
+//   FAKE_PORT=54399 npm run test:curation
+const FAKE_PORT = Number(process.env.FAKE_PORT ?? 54321);
+const APP_PORT = Number(process.env.APP_PORT ?? 3100);
 
 /** L'environnement de test : tout pointe vers le faux service. */
 const testEnv = {
@@ -63,7 +68,8 @@ async function exigerPortLibre(port, quoi) {
         e.code === 'EADDRINUSE'
           ? new Error(
               `Le port ${port} est déjà utilisé (${quoi}).\n` +
-                `  Arrête ce qui l'occupe :  lsof -ti tcp:${port} -sTCP:LISTEN | xargs kill`,
+                `  Arrête ce qui l'occupe :  lsof -ti tcp:${port} -sTCP:LISTEN | xargs kill
+  Ou choisis-en un autre :  FAKE_PORT=54399 APP_PORT=3199 npm run test:curation`,
             )
           : e,
       ),
