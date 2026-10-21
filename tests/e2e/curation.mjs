@@ -64,12 +64,20 @@ await page.reload({ waitUntil: 'networkidle' });
 const steps = await page.locator('.lil-progress-count').innerText();
 steps.endsWith('/ 3') ? ok(`le parcours court fait 3 étapes (${steps})`) : bad('nombre d’étapes inattendu', steps);
 
-// Le parcours court ne fait pas cocher : il porte sa mention sous le
-// dernier bouton. Le bloc d'acceptation ne concerne que le complet.
-(await page.locator('.lil-accord').count()) === 0
-  ? ok('le parcours court garde son acceptation implicite, sans case en tête')
-  : bad('un bloc d’acceptation s’est glissé dans le parcours court');
+// La même acceptation pour les deux parcours : une règle qui change
+// d'un formulaire à l'autre est une règle qu'on finit par oublier
+// quelque part.
+(await page.locator('.lil-accord').count()) === 1
+  ? ok('le parcours court a lui aussi son bloc d’acceptation, en tête')
+  : bad('pas de bloc d’acceptation sur le parcours court');
 
+await page.getByRole('radio', { name: 'Une femme' }).click();
+await page.waitForTimeout(600);
+((await page.locator('.lil-question').innerText()) || '').includes('Je suis')
+  ? ok('et rien ne démarre tant qu’on ne l’a pas cochée')
+  : bad('le parcours court démarre sans acceptation');
+
+await page.locator('.lil-accord input').check();
 await page.getByRole('radio', { name: 'Une femme' }).click();
 await page.waitForTimeout(600);
 
@@ -88,14 +96,15 @@ await page.waitForTimeout(2500);
   ? ok('2 photos envoyées au stockage')
   : bad('photo bloquée à l’envoi');
 
-// Plus de case à cocher sur l'étape des photos : l'envoi vaut acceptation,
-// et une mention sous le bouton le dit.
-(await page.locator('.lil-consent').count()) === 0
+// L'acceptation ne vit que dans son bloc, en tête : ni case ni mention
+// à l'étape des photos, où l'on choisit ses images et où un encadré
+// juridique n'a jamais été lu.
+(await page.locator('.lil-card .lil-consent').count()) === 0
   ? ok('aucune case à cocher sur l’étape des photos')
   : bad('la case de consentement est revenue');
-((await page.locator('.lil-mention').innerText().catch(() => '')) || '').includes('acceptes')
-  ? ok('la mention d’acceptation est affichée sous le bouton')
-  : bad('mention d’acceptation absente');
+(await page.locator('.lil-mention').count()) === 0
+  ? ok('ni mention sous le bouton : elle a rejoint le bloc du haut')
+  : bad('la mention d’acceptation est encore sous le bouton');
 // Le garde anti-robot écarte tout formulaire rempli en moins de 12 secondes.
 await page.waitForTimeout(11000);
 await page.getByRole('button', { name: 'Envoyer ma candidature' }).click();
@@ -1103,6 +1112,7 @@ await page.goto(`${BASE}/embed/court`, { waitUntil: 'networkidle' });
 await page.evaluate(() => localStorage.clear());
 await page.reload({ waitUntil: 'networkidle' });
 
+await page.locator('.lil-accord input').check();
 await page.getByRole('radio', { name: 'Un homme' }).click();
 await page.waitForTimeout(600);
 await page.fill('#firstName', 'Gaspard');
@@ -1350,6 +1360,8 @@ await page.waitForTimeout(1600);
   ? ok('la page reste en place quand le formulaire a encore quelque chose à montrer')
   : bad('la page part malgré le service à proposer', page.url());
 
+// Le court porte lui aussi son acceptation, jusque dans l'iframe.
+await cadre.locator('.lil-accord input').check();
 await cadre.getByRole('radio', { name: 'Une femme' }).click();
 await page.waitForTimeout(600);
 await cadre.locator('#firstName').fill('Leila');

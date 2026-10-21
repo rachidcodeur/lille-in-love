@@ -487,10 +487,10 @@ const ETAPES_COURT: Step[] = [
     title: 'Ajoute tes meilleures photos',
     help: '1 à 3 photos de toi, visage visible. C’est dessus qu’on se choisira pendant la soirée — prends tes meilleures.',
     note: 'Ta photo pourra éventuellement être utilisée pour t’identifier lors d’un jeu pendant la soirée.',
-    // Pas de case à cocher ici : la personne choisit ses photos, on ne lui
-    // demande pas de cocher un encadré juridique au même moment. L'envoi vaut
-    // acceptation, et la mention ci-dessous le dit.
-    mention: `En envoyant ta candidature, tu acceptes le <a href="${BRAND.reglementUrl}" target="_blank" rel="noopener">règlement</a> et la politique de confidentialité.`,
+    // Plus de mention ici : l'acceptation est la même pour les deux
+    // parcours, dans son bloc au-dessus du formulaire. Un encadré
+    // juridique au moment de choisir ses photos n'était de toute façon
+    // pas le bon endroit pour être lu.
     fields: [{ name: 'photos', type: 'photos', required: true, min: 1, max: 3 }],
   },
 ];

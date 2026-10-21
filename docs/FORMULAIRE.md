@@ -122,6 +122,12 @@ une migration.
   quoi le premier clic emporterait la personne avant qu'elle ait lu. Le
   bloc se borde de rouge quand on essaie de passer outre, et retrouve sa
   couleur dès qu'on coche.
+
+  **Les deux parcours la demandent.** Le court s'en passait, avec une
+  mention sous son dernier bouton — et l'on se retrouvait à demander deux
+  choses différentes selon la porte par laquelle on était entré. Une règle
+  qui change d'un formulaire à l'autre est une règle qu'on finit par
+  oublier quelque part.
 - **La durée de célibat s'écrit** — un nombre, puis mois ou années.
   Quatre tranches toutes faites mettaient « huit mois » et « sept ans »
   dans le même panier et obligeaient à arrondir une réponse qu'on connaît
@@ -148,6 +154,20 @@ une migration.
   les trois cases en ont reçu un.
 - **Le prix a quitté l'en-tête**, et avec lui la mention sur le tarif
   exceptionnel.
+
+## Le formulaire autonome, dans `docs/`
+
+`formulaire-autonome-complet.html` est une copie figée du formulaire, qui
+écrit directement dans Supabase. C'était la solution d'attente avant que
+l'application soit déployée, et elle **ne reçoit aucune des évolutions
+décrites ici** : elle en est restée aux seize étapes d'origine, question
+sur les enfants comprise.
+
+La page `in-love.fr/inscription/` utilise aujourd'hui le widget en
+iframe (`data-lil-form="complet"`), donc l'application elle-même. Le
+fichier autonome ne sert plus qu'en secours, et il faudrait le
+régénérer (`node tools/formulaire-autonome/build.mjs`) avant de s'en
+resservir.
 
 ## Ce que le back-office en fait
 

@@ -238,11 +238,13 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
   }, [index]);
 
   /**
-   * Le parcours court ne fait pas cocher : il porte une mention sous son
-   * dernier bouton, « en envoyant tu acceptes… ». Trois étapes, et l'on
-   * ne collecte presque rien — une case de plus y coûterait plus qu'elle
-   * ne protège. Le bloc d'acceptation ne concerne donc que le parcours
-   * complet.
+   * L'acceptation vaut pour les deux parcours.
+   *
+   * Le court s'en passait, avec une mention sous son dernier bouton — et
+   * l'on se retrouvait à demander deux choses différentes selon la porte
+   * par laquelle on était entré. Une règle qui change d'un formulaire à
+   * l'autre est une règle qu'on finit par oublier quelque part. Le
+   * mécanisme reste là pour une étape qui voudrait se passer de la case.
    */
   const consentementImplicite = useMemo(
     () => STEPS.some((etape) => Boolean(etape.mention)),
