@@ -1,6 +1,6 @@
 'use client';
 
-import { BLOCS, type ChampMatching } from '@/lib/matching';
+import { BLOCS, conditionRemplie, type ChampMatching } from '@/lib/matching';
 
 /**
  * Ce que l'écran manipule : les réponses, plus la case de consentement.
@@ -45,9 +45,11 @@ export function MatchingAvance({
         <fieldset className="lil-matching-bloc" key={bloc.id}>
           <legend>{bloc.titre}</legend>
           {bloc.intro && <p className="lil-field-help">{bloc.intro}</p>}
-          {bloc.champs.map((champ) => (
-            <Champ key={champ.nom} champ={champ} valeur={valeurs[champ.nom]} poser={poser} />
-          ))}
+          {bloc.champs
+            .filter((champ) => conditionRemplie(champ, valeurs))
+            .map((champ) => (
+              <Champ key={champ.nom} champ={champ} valeur={valeurs[champ.nom]} poser={poser} />
+            ))}
         </fieldset>
       ))}
     </div>

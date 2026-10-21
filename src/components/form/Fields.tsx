@@ -167,7 +167,7 @@ function ChampNaissance({
             type="text"
             inputMode="numeric"
             autoComplete="bday-year"
-            placeholder="Ex : 1993"
+            placeholder="1993"
             aria-invalid={Boolean(error)}
             value={parts.annee}
             onChange={(e) => poser({ ...parts, annee: chiffres(e.target.value, 4) })}

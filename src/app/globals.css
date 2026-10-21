@@ -903,7 +903,9 @@ body {
 
 .lil-naissance {
   display: grid;
-  grid-template-columns: 5rem 1fr 6.5rem;
+  /* Le jour reçoit deux chiffres et un exemple (« Ex : 06 ») : il lui
+     faut la place. L'année n'en demande pas tant. */
+  grid-template-columns: 6rem 1fr 5.5rem;
   gap: 10px;
   align-items: end;
 }
@@ -982,8 +984,16 @@ body {
   resize: vertical;
 }
 
+/* Trente questions à la suite : à 14 px, les intitulés se confondaient
+   avec les aides et les options. Trois pixels de plus suffisent à les
+   faire lire comme des questions. */
 .lil-matching-champ .lil-field-label {
+  font-size: 17px;
   margin-bottom: 6px;
+}
+
+.lil-matching-champ .lil-field-label .lil-facultatif {
+  font-size: 15px;
 }
 
 /* « Oui / Non » et « Peu importe / Oui / Non » n'ont aucune raison
@@ -1141,6 +1151,54 @@ body {
   border: 1px solid rgba(168, 148, 110, 0.35);
   /* L'ombre la détache du remerciement : deux cartes, deux propos. */
   box-shadow: 0 10px 30px rgba(60, 46, 30, 0.1);
+}
+
+/* --- L'offre, sur fond marron ----------------------------------------
+   Elle arrive après une page entière de crème : le contraste la fait
+   exister au lieu de la laisser passer pour un paragraphe de plus.
+   Seule l'offre, et le remerciement qui la clôt — le formulaire
+   détaillé garde son fond clair, où ses trente champs se lisent.
+   ---------------------------------------------------------------------- */
+
+.lil-service-offre,
+.lil-service-merci {
+  background: var(--ink-2);
+  border-color: rgba(227, 214, 180, 0.25);
+  color: var(--sand);
+  box-shadow: 0 14px 34px rgba(28, 19, 15, 0.22);
+}
+
+.lil-service-offre .lil-service-chapeau,
+.lil-service-merci .lil-service-chapeau {
+  color: var(--gold-soft);
+}
+
+.lil-service-offre .lil-service-titre,
+.lil-service-merci .lil-service-titre {
+  color: var(--cream);
+}
+
+.lil-service-offre .lil-done-text,
+.lil-service-merci .lil-done-text {
+  color: rgba(246, 240, 228, 0.86);
+}
+
+.lil-service-offre .lil-done-note {
+  color: rgba(246, 240, 228, 0.6);
+}
+
+/* Les deux boutons en blanc : sur ce fond, c'est le blanc qui appelle. */
+.lil-service-offre .lil-btn,
+.lil-service-offre .lil-btn-secondaire {
+  background: var(--white);
+  color: var(--ink);
+  border-color: var(--white);
+}
+
+.lil-service-offre .lil-btn-secondaire {
+  background: transparent;
+  color: rgba(246, 240, 228, 0.9);
+  border-color: rgba(246, 240, 228, 0.45);
 }
 
 .lil-service-chapeau {

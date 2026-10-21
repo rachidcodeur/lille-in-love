@@ -485,6 +485,28 @@ section('10. Le formulaire de matching sur mesure');
   Object.keys(nettoyerMatching({ sport: 'parfois', champInvente: 'x' }, true)).length === 0
     ? ok('une option inventée et un champ inconnu tombent en silence')
     : bad('des valeurs inventées sont entrées');
+
+  // « Si oui, lequel ? » n'apparaît qu'après un « oui ». Répondu puis
+  // dédit — on revient sur « non » —, le texte reste dans le navigateur
+  // et ne doit pas suivre : « un chat » sous « pas d'animal » se lirait
+  // comme une réponse.
+  const anime = nettoyerMatching({ animaux: 'oui', animauxLequel: 'Un chat' }, true);
+  const dedit = nettoyerMatching({ animaux: 'non', animauxLequel: 'Un chat' }, true);
+  anime.animauxLequel === 'Un chat' && dedit.animauxLequel === undefined
+    ? ok('« si oui, lequel » ne suit que le « oui »')
+    : bad('précision conditionnelle mal filtrée', JSON.stringify([anime, dedit]));
+
+  const precise = nettoyerMatching(
+    { typeVoyage: ['culturel', 'autre'], typeVoyageAutre: 'Plongée' },
+    true,
+  );
+  const sansAutre = nettoyerMatching(
+    { typeVoyage: ['culturel'], typeVoyageAutre: 'Plongée' },
+    true,
+  );
+  precise.typeVoyageAutre === 'Plongée' && sansAutre.typeVoyageAutre === undefined
+    ? ok('« autre, à préciser » suit la case cochée')
+    : bad('précision de voyage mal filtrée', JSON.stringify([precise, sansAutre]));
 }
 
 section('11. Le modèle de configuration n’oublie personne');

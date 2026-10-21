@@ -357,6 +357,12 @@ section('Parcours complet et envoi');
     ? ok('le jour montre un exemple plutôt qu’un sigle')
     : bad('placeholder du jour inattendu', String(await page.locator('#birthDate').getAttribute('placeholder')));
 
+  // L'exemple de l'année tient sans préfixe : la case est étroite, et le
+  // libellé au-dessus dit déjà ce qu'on attend.
+  (await page.locator('.lil-naissance-annee').evaluate((el) => el.scrollWidth <= el.clientWidth + 1))
+    ? ok('et celui de l’année tient dans sa case')
+    : bad('l’exemple de l’année déborde de sa case');
+
   // Plus d'entrée vide dans la liste des mois : janvier ouvre la liste
   // et vaut par défaut.
   const moisOptions = await page.locator('.lil-naissance select option').allInnerTexts();
@@ -445,6 +451,36 @@ section('Parcours complet et envoi');
   titres.includes('voyages') && titres.includes('style de vie')
     ? ok('avec les nouveaux blocs : voyages, style de vie')
     : bad('nouveaux blocs absents', titres);
+
+  // Un cliché à la demande, pour juger de l'allure : « E2E_SHOTS=dossier ».
+  if (process.env.E2E_SHOTS) {
+    await page.locator('.lil-matching-bloc', { hasText: 'Tes habitudes' }).scrollIntoViewIfNeeded();
+    await page.screenshot({ path: `${process.env.E2E_SHOTS}/matching.png`, fullPage: true });
+  }
+
+  // Trente questions à la suite : l'intitulé doit se distinguer de
+  // l'aide et des options, sinon on ne sait plus ce qu'on lit.
+  const taille = await page
+    .locator('.lil-matching-champ .lil-field-label')
+    .first()
+    .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+  taille >= 16
+    ? ok('les intitulés du second questionnaire se lisent de loin')
+    : bad('intitulés trop petits', `${taille}px`);
+
+  // « Si oui, lequel ? » n'a de sens qu'après un « oui » : affiché
+  // d'avance, il demande de préciser ce qu'on n'a pas encore dit.
+  const animaux = page.locator('.lil-matching-bloc', { hasText: 'Tes habitudes' });
+  const lequel = animaux.locator('.lil-matching-champ', { hasText: 'Si oui, lequel ?' });
+  const avant = await lequel.count();
+  await animaux
+    .locator('.lil-matching-champ', { hasText: 'As-tu un animal de compagnie' })
+    .getByRole('radio', { name: 'Oui' })
+    .click();
+  await page.waitForTimeout(200);
+  avant === 0 && (await lequel.count()) === 1
+    ? ok('« si oui, lequel ? » n’apparaît qu’après le « oui »')
+    : bad('précision sur l’animal mal conditionnée', `avant ${avant}`);
 
   await page
     .locator('.lil-matching-bloc', { hasText: 'situation maritale' })

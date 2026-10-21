@@ -76,9 +76,8 @@ export function ServiceMatching({ token }: { token: string }) {
             onChange={(e) => setValeurs({ ...valeurs, consentSensible: e.target.checked })}
           />
           <span>
-            J’accepte de répondre à des questions sur mes origines et sur la religion. La loi les
-            range parmi les informations sensibles&nbsp;: elles ne servent qu’à te présenter
-            quelqu’un, et je peux les retirer quand je veux.
+            J’accepte de répondre à des questions sur mes origines et sur la religion. Elles ne
+            servent qu’à te présenter quelqu’un, et je peux les retirer quand je veux.
           </span>
         </label>
 

@@ -42,7 +42,25 @@ export type ChampMatching = {
   exclusive?: string;
   /** Ne s'affiche, et ne s'enregistre, qu'avec le consentement coché. */
   sensible?: boolean;
+  /**
+   * Ne s'affiche que si un champ voisin porte cette réponse. « Précise »
+   * n'a de sens qu'après avoir coché « Autre » ; affiché tout le temps,
+   * il demande de préciser quelque chose qu'on n'a pas dit.
+   */
+  siOption?: { champ: string; vaut: string };
 };
+
+/** La réponse voisine est-elle celle qu'on attend ? */
+export function conditionRemplie(
+  champ: ChampMatching,
+  reponses: Record<string, unknown>,
+): boolean {
+  if (!champ.siOption) return true;
+  const valeur = reponses[champ.siOption.champ];
+  return Array.isArray(valeur)
+    ? valeur.includes(champ.siOption.vaut)
+    : valeur === champ.siOption.vaut;
+}
 
 export type BlocMatching = {
   id: string;
@@ -152,7 +170,15 @@ export const BLOCS: BlocMatching[] = [
           { valeur: 'etudiant', libelle: 'Étudiant(e) ou en formation' },
           { valeur: 'recherche', libelle: 'En recherche' },
           { valeur: 'retraite', libelle: 'Retraité(e)' },
+          { valeur: 'autre', libelle: 'Autre' },
         ],
+      },
+      {
+        nom: 'situationProAutre',
+        libelle: 'Précise',
+        type: 'ligne',
+        max: 120,
+        siOption: { champ: 'situationPro', vaut: 'autre' },
       },
       { nom: 'nationalite', libelle: 'Nationalité', type: 'ligne', max: 80 },
     ],
@@ -193,6 +219,7 @@ export const BLOCS: BlocMatching[] = [
         type: 'ligne',
         max: 120,
         sensible: true,
+        siOption: { champ: 'originesRecherchees', vaut: 'autre' },
       },
     ],
   },
@@ -286,12 +313,16 @@ export const BLOCS: BlocMatching[] = [
         libelle: 'Tes restaurants préférés',
         aide: 'Plusieurs réponses possibles — pour savoir où vous emmener.',
         type: 'cases',
+        // Des enseignes plutôt que des catégories : « rapide et sans
+        // façon » ne dit pas la même chose à tout le monde, « McDonald's »
+        // si. Il n'y a rien de vulgaire à nommer ce que les gens mangent.
         options: [
-          { valeur: 'rapide', libelle: 'Rapide et sans façon' },
-          { valeur: 'bistrot', libelle: 'Bistrot, cuisine de quartier' },
-          { valeur: 'monde', libelle: 'Cuisine du monde' },
-          { valeur: 'gastro', libelle: 'Gastronomique' },
-          { valeur: 'etoile', libelle: 'Étoilé, grandes tables' },
+          { valeur: 'rapide', libelle: 'Fast-food (McDonald’s, Burger King…)' },
+          { valeur: 'pizza_burger', libelle: 'Pizzeria, burgers, tacos' },
+          { valeur: 'bistrot', libelle: 'Brasserie, bistrot de quartier' },
+          { valeur: 'monde', libelle: 'Cuisine du monde (asiatique, libanais, italien…)' },
+          { valeur: 'gastro', libelle: 'Gastronomique, belles tables' },
+          { valeur: 'etoile', libelle: 'Étoilé, grande cuisine' },
           { valeur: 'vege', libelle: 'Végétarien, healthy' },
         ],
       },
@@ -330,13 +361,21 @@ export const BLOCS: BlocMatching[] = [
           { valeur: 'nature_voyage', libelle: 'Nature, randonnée' },
           { valeur: 'culturel', libelle: 'Culturel' },
           { valeur: 'luxe', libelle: 'Confort, hôtels' },
+          { valeur: 'autre', libelle: 'Autre' },
         ],
+      },
+      {
+        nom: 'typeVoyageAutre',
+        libelle: 'Précise',
+        type: 'ligne',
+        max: 120,
+        siOption: { champ: 'typeVoyage', vaut: 'autre' },
       },
     ],
   },
   {
     id: 'habitudes',
-    titre: 'Vos habitudes',
+    titre: 'Tes habitudes',
     intro: 'Ce qui se partage au quotidien, et qui compte plus qu’on ne croit.',
     champs: [
       { nom: 'sport', libelle: 'Fais-tu du sport ?', type: 'radio', options: OUI_NON },
@@ -378,6 +417,13 @@ export const BLOCS: BlocMatching[] = [
       },
       { nom: 'animaux', libelle: 'As-tu un animal de compagnie ?', type: 'radio', options: OUI_NON },
       {
+        nom: 'animauxLequel',
+        libelle: 'Si oui, lequel ?',
+        type: 'ligne',
+        max: 120,
+        siOption: { champ: 'animaux', vaut: 'oui' },
+      },
+      {
         nom: 'animauxPartenaire',
         libelle: 'Cela te dérangerait-il qu’elle en ait ?',
         type: 'radio',
@@ -409,6 +455,9 @@ export function nettoyerMatching(brut: unknown, consentement: boolean): Reponses
 
   for (const champ of CHAMPS) {
     if (champ.sensible && !consentement) continue;
+    // « Précise » sans la case qui l'ouvre : la réponse ne veut rien
+    // dire, et elle n'a rien à faire en base.
+    if (!conditionRemplie(champ, propre)) continue;
     const valeur = entrant[champ.nom];
     const connues = new Set((champ.options ?? []).map((o) => o.valeur));
 
