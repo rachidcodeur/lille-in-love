@@ -100,16 +100,23 @@ une migration.
 
 ## Les retouches de la seconde passe
 
-- **Les conditions s'acceptent à la première étape**, liens compris, et
-  non plus juste avant d'envoyer. On accepte avant de confier quoi que ce
-  soit, pas après seize questions. L'avance automatique du premier choix
-  a disparu avec : tourner la page au premier clic empêchait la case
-  d'être lue.
+- **Les conditions s'acceptent dans leur propre bloc**, entre l'encart de
+  la soirée et la carte des questions. On accepte avant de confier quoi
+  que ce soit, pas après seize questions — et la case ne dépend plus
+  d'aucune question en particulier : elle a d'abord été dans la première
+  étape, où elle empêchait l'avance automatique du premier choix.
+
+  Rien ne démarre sans elle, pas même cette avance automatique : sans
+  quoi le premier clic emporterait la personne avant qu'elle ait lu. Le
+  bloc se borde de rouge quand on essaie de passer outre, et retrouve sa
+  couleur dès qu'on coche.
 - **La durée de célibat s'écrit** — un nombre, puis mois ou années.
   Quatre tranches toutes faites mettaient « huit mois » et « sept ans »
   dans le même panier et obligeaient à arrondir une réponse qu'on connaît
   précisément. « Jamais été en couple » garde son bouton : aucun nombre
-  ne le dit. En base : `jamais`, `8_mois`, `3_ans`.
+  ne le dit. Chaque case porte son libellé — « Nombre », « Mois /
+  Années » — parce qu'un exemple dit le format, pas ce qu'on attend. En
+  base : `jamais`, `8_mois`, `3_ans`.
 - **Les centres d'intérêt sont facultatifs.** Mieux vaut une case vide que
   trois cochées au hasard pour passer l'étape.
 - **Qui vient accompagné reçoit le lien du formulaire**, en entier, avec
@@ -118,11 +125,15 @@ une migration.
 - **Google et ChatGPT** rejoignent les sources, et « Autrement » ouvre un
   champ : c'est précisément la réponse dont on a besoin qu'elle soit
   précisée, puisque c'est la seule qu'on n'a pas prévue.
-- **La date montre des exemples** (« Ex : 01 ») plutôt que des sigles, et
-  la liste des mois commence à janvier. L'entrée vide reste, mais
-  `hidden` : la liste déroulée commence donc bien à janvier, et rien
-  n'est choisi tant qu'on n'a pas choisi — sans quoi quelqu'un né en mars
-  qui ne touche pas au champ enverrait janvier.
+- **La date porte ses trois libellés** — Jour, Mois, Année — et des
+  exemples (« Ex : 06 », « Ex : 1993 ») plutôt que des sigles. La liste
+  des mois n'a plus d'entrée vide : elle commence à janvier, qui vaut
+  aussi par défaut.
+
+  Ce choix a un revers, assumé : quelqu'un né en mars qui ne touche pas à
+  la liste enverra janvier. Le libellé au-dessus porte seul le travail de
+  rappeler qu'il y a là un choix à faire — c'est d'ailleurs pour cela que
+  les trois cases en ont reçu un.
 - **Le prix a quitté l'en-tête**, et avec lui la mention sur le tarif
   exceptionnel.
 

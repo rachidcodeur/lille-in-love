@@ -237,6 +237,20 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
     });
   }, [index]);
 
+  /**
+   * Le parcours court ne fait pas cocher : il porte une mention sous son
+   * dernier bouton, « en envoyant tu acceptes… ». Trois étapes, et l'on
+   * ne collecte presque rien — une case de plus y coûterait plus qu'elle
+   * ne protège. Le bloc d'acceptation ne concerne donc que le parcours
+   * complet.
+   */
+  const consentementImplicite = useMemo(
+    () => STEPS.some((etape) => Boolean(etape.mention)),
+    [STEPS],
+  );
+  const consentementImpliciteRef = useRef(consentementImplicite);
+  consentementImpliciteRef.current = consentementImplicite;
+
   const setValue = useCallback((name: string, value: unknown) => {
     // La ref est mise à jour tout de suite : ce qui lit l'état hors rendu
     // (avance automatique, envoi) voit la réponse sans attendre React.
@@ -257,6 +271,13 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
   const goNext = useCallback(() => {
     const steps = stepsRef.current;
     const stepErrors = validateStep(steps[indexRef.current]!, valuesRef.current);
+
+    // La case vit au-dessus du formulaire, hors des étapes : sa
+    // vérification se fait donc ici, et à l'envoi.
+    if (!consentementImpliciteRef.current && valuesRef.current.consent !== true) {
+      stepErrors.consent = 'Il faut accepter le règlement pour continuer';
+    }
+
     if (Object.keys(stepErrors).length > 0) {
       setErrors(stepErrors);
       return;
@@ -267,6 +288,9 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
 
   async function submit() {
     const stepErrors = validateStep(step, valuesRef.current);
+    if (!consentementImplicite && valuesRef.current.consent !== true) {
+      stepErrors.consent = 'Il faut accepter le règlement pour envoyer';
+    }
     if (Object.keys(stepErrors).length > 0) {
       setErrors(stepErrors);
       return;
@@ -281,8 +305,6 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
 
     // Une étape qui porte une mention remplace la case à cocher : l'envoi
     // vaut acceptation.
-    const consentementImplicite = STEPS.some((etape) => Boolean(etape.mention));
-
     const payload = {
       ...values,
       consent: consentementImplicite ? true : values.consent === true,
@@ -406,6 +428,48 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
   return (
     <div className="lil-shell" ref={rootRef}>
       <Entete />
+
+      {/* Entre l'encart de la soirée et les questions : on accepte avant
+          de commencer, pas après seize étapes, et la case ne dépend plus
+          d'une question en particulier. */}
+      {!consentementImplicite && (
+      <div className="lil-accord" data-manque={errors.consent ? true : undefined}>
+        <label className="lil-consent">
+          <input
+            type="checkbox"
+            name="consent"
+            checked={values.consent === true}
+            aria-invalid={Boolean(errors.consent)}
+            onChange={(event) => {
+              setValue('consent', event.target.checked);
+              if (event.target.checked) setErrors((avant) => ({ ...avant, consent: '' }));
+            }}
+          />
+          <span>
+            J’accepte le{' '}
+            <a href={BRAND.reglementUrl} target="_blank" rel="noreferrer">
+              règlement
+            </a>{' '}
+            et la{' '}
+            <a href={BRAND.confidentialiteUrl} target="_blank" rel="noreferrer">
+              politique de confidentialité
+            </a>
+            .
+          </span>
+        </label>
+        <p className="lil-field-help">
+          Tout ce que tu écris reste entre nous. Seuls les deux membres de l’équipe qui lisent les
+          candidatures y ont accès — rien n’est publié, rien n’est revendu.
+        </p>
+        {errors.consent && (
+          <p className="lil-error" role="alert">
+            <span aria-hidden="true">↳</span>
+            <span>{errors.consent}</span>
+          </p>
+        )}
+      </div>
+      )}
+
       <form
         className="lil-card"
         noValidate

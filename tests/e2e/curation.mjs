@@ -64,6 +64,12 @@ await page.reload({ waitUntil: 'networkidle' });
 const steps = await page.locator('.lil-progress-count').innerText();
 steps.endsWith('/ 3') ? ok(`le parcours court fait 3 étapes (${steps})`) : bad('nombre d’étapes inattendu', steps);
 
+// Le parcours court ne fait pas cocher : il porte sa mention sous le
+// dernier bouton. Le bloc d'acceptation ne concerne que le complet.
+(await page.locator('.lil-accord').count()) === 0
+  ? ok('le parcours court garde son acceptation implicite, sans case en tête')
+  : bad('un bloc d’acceptation s’est glissé dans le parcours court');
+
 await page.getByRole('radio', { name: 'Une femme' }).click();
 await page.waitForTimeout(600);
 

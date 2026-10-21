@@ -42,27 +42,46 @@ section('Navigation et validation');
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
 
-  // La première étape ne tourne plus toute seule : la case des conditions
-  // est juste sous le choix, et avancer au premier clic l'empêcherait
-  // d'être lue.
+  // L'acceptation vit entre l'encart de la soirée et les questions :
+  // elle ne dépend d'aucune d'entre elles, et se lit avant d'en avoir
+  // répondu une seule.
+  const accord = page.locator('.lil-accord');
+  (await accord.count()) === 1
+    ? ok('l’acceptation a son bloc, entre la soirée et les questions')
+    : bad('pas de bloc d’acceptation');
+  (await accord.evaluate((el) => {
+    const carte = document.querySelector('.lil-card');
+    return Boolean(carte && el.compareDocumentPosition(carte) & Node.DOCUMENT_POSITION_FOLLOWING);
+  }))
+    ? ok('et elle précède bien la carte des questions')
+    : bad('le bloc d’acceptation n’est pas au-dessus du formulaire');
+  (await accord.locator('a').count()) === 2
+    ? ok('avec les liens vers le règlement et la confidentialité')
+    : bad('liens absents', String(await accord.locator('a').count()));
+
+  // Non cochée, rien ne bouge — pas même l'avance automatique du premier
+  // choix, qui sans cela emporterait la personne avant qu'elle ait lu.
   await page.getByRole('radio', { name: 'Une femme' }).click();
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(700);
   ((await page.locator('.lil-question').innerText()) || '').includes('Je suis')
-    ? ok('la première étape attend, pour laisser lire les conditions')
-    : bad('la première étape tourne encore toute seule');
-
-  await page.getByRole('button', { name: 'Suivant' }).click();
-  await page.waitForTimeout(300);
-  (await page.locator('.lil-error').count()) >= 1
-    ? ok('et l’on ne passe pas sans les avoir acceptées')
+    ? ok('sans l’avoir acceptée, le parcours ne démarre pas')
     : bad('on avance sans accepter les conditions');
+  (await page.locator('.lil-accord[data-manque]').count()) === 1
+    ? ok('et le bloc le signale, sans rougir l’écran entier')
+    : bad('rien ne signale l’acceptation manquante');
 
-  await page.locator('.lil-consent input').check();
-  await page.getByRole('button', { name: 'Suivant' }).click();
-  await page.waitForTimeout(300);
+  // Cochée, le premier choix enchaîne de nouveau tout seul.
+  await accord.locator('input').check();
+  await page.waitForTimeout(200);
+  (await page.locator('.lil-accord[data-manque]').count()) === 0
+    ? ok('la cocher efface aussitôt le reproche')
+    : bad('le bloc reste en erreur après avoir coché');
+
+  await page.getByRole('radio', { name: 'Une femme' }).click();
+  await page.waitForTimeout(700);
   ((await page.locator('.lil-question').innerText()) || '').includes('Où habites-tu')
-    ? ok('acceptées, le parcours démarre')
-    : bad('le parcours ne démarre pas', await page.locator('.lil-question').innerText());
+    ? ok('et un choix unique enchaîne sur l’étape suivante')
+    : bad('pas d’avance automatique', await page.locator('.lil-question').innerText());
 
   await page.getByRole('button', { name: 'Suivant' }).click();
   await page.waitForTimeout(300);
@@ -114,10 +133,9 @@ section('Reprise d’un brouillon');
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle' });
 
+  await page.locator('.lil-accord input').check();
   await page.getByRole('radio', { name: 'Une femme' }).click();
-  await page.locator('.lil-consent input').check();
-  await page.getByRole('button', { name: 'Suivant' }).click();
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(600);
   await page.fill('#city', 'Roubaix');
   await page.fill('#postalCode', '59100');
   await page.getByRole('button', { name: 'Suivant' }).click();
@@ -209,18 +227,9 @@ section('Parcours complet et envoi');
     await page.waitForTimeout(450);
   };
 
+  // L'acceptation se coche une fois pour toutes, au-dessus du formulaire.
+  await page.locator('.lil-accord input').check();
   await pick('Une femme');
-
-  // Les conditions à l'entrée, et non à la sortie : on accepte avant de
-  // confier quoi que ce soit, pas après seize questions.
-  (await page.locator('.lil-consent').count()) === 1
-    ? ok('les conditions s’acceptent dès la première étape')
-    : bad('pas de case d’acceptation à l’entrée');
-  (await page.locator('.lil-consent a').count()) === 2
-    ? ok('avec les liens vers le règlement et la confidentialité')
-    : bad('liens absents de la case d’entrée', String(await page.locator('.lil-consent a').count()));
-  await page.locator('.lil-consent input').check();
-  await next();
 
   await page.fill('#city', 'Lille');
   await page.fill('#postalCode', '59000');
@@ -247,6 +256,12 @@ section('Parcours complet et envoi');
   (await page.locator('.lil-celibat-jamais').count()) === 1
     ? ok('et « jamais été en couple » garde son bouton')
     : bad('l’option « jamais en couple » a disparu');
+
+  // Un libellé par case : « Ex : 8 » dit le format, pas ce qu'on attend.
+  const casesCelibat = (await page.locator('.lil-celibat-libelle').allInnerTexts()).join(' | ');
+  casesCelibat.includes('Nombre') && casesCelibat.includes('Mois / Années')
+    ? ok('les deux cases portent leur libellé')
+    : bad('libellés de durée absents', casesCelibat);
   !(await page.locator('.lil-question').innerText()).includes('personne ne vérifie')
     ? ok('sans la phrase sur l’honneur')
     : bad('la mention « personne ne vérifie » est encore là');
@@ -338,12 +353,25 @@ section('Parcours complet et envoi');
   (await page.locator('.lil-naissance select').count()) === 1
     ? ok('la date de naissance se saisit en trois cases, le mois en liste')
     : bad('la date de naissance n’est pas en trois cases');
-  (await page.locator('#birthDate').getAttribute('placeholder')) === 'Ex : 01'
+  (await page.locator('#birthDate').getAttribute('placeholder')) === 'Ex : 06'
     ? ok('le jour montre un exemple plutôt qu’un sigle')
     : bad('placeholder du jour inattendu', String(await page.locator('#birthDate').getAttribute('placeholder')));
-  (await page.locator('.lil-naissance select option:not([hidden])').first().innerText()) === 'janvier'
-    ? ok('et la liste des mois commence à janvier')
-    : bad('la liste des mois ne commence pas à janvier');
+
+  // Plus d'entrée vide dans la liste des mois : janvier ouvre la liste
+  // et vaut par défaut.
+  const moisOptions = await page.locator('.lil-naissance select option').allInnerTexts();
+  moisOptions.length === 12 && moisOptions[0] === 'janvier'
+    ? ok('la liste des mois commence à janvier, sans entrée vide')
+    : bad('liste des mois inattendue', moisOptions.join(', '));
+  (await page.locator('.lil-naissance select').inputValue()) === '01'
+    ? ok('et janvier est choisi par défaut')
+    : bad('aucun mois par défaut', await page.locator('.lil-naissance select').inputValue());
+
+  const libellesDate = (await page.locator('.lil-naissance .lil-celibat-libelle').allInnerTexts())
+    .join(' | ');
+  libellesDate === 'Jour | Mois | Année'
+    ? ok('les trois cases portent leur libellé')
+    : bad('libellés de date inattendus', libellesDate);
   await page.fill('#birthDate', '17');
   await page.selectOption('.lil-naissance select', '04');
 
@@ -355,9 +383,9 @@ section('Parcours complet et envoi');
   (await annee.inputValue()) === '1993'
     ? ok('l’année se tape librement, sans zéros ajoutés en cours de frappe')
     : bad('l’année est complétée toute seule', await annee.inputValue());
-  (await page.locator('.lil-consent').count()) === 0
-    ? ok('et la dernière étape ne redemande plus d’accepter : c’est déjà fait')
-    : bad('la case d’acceptation est encore à la fin');
+  (await page.locator('.lil-card .lil-consent').count()) === 0
+    ? ok('et aucune étape ne redemande d’accepter : c’est fait une fois pour toutes')
+    : bad('une case d’acceptation subsiste dans le formulaire');
 
   await next();
   await page.waitForTimeout(1200);
@@ -490,9 +518,8 @@ section('Téléphone (390 px)');
     ? ok('aucun débordement horizontal')
     : bad('la page déborde en largeur');
 
+  await page.locator('.lil-accord input').check();
   await page.getByRole('radio', { name: 'Une femme' }).click();
-  await page.locator('.lil-consent input').check();
-  await page.getByRole('button', { name: 'Suivant' }).click();
   await page.waitForTimeout(600);
 
   const fontSizes = await page.evaluate(() =>

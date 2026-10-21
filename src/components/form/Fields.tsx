@@ -76,7 +76,12 @@ function ChampNaissance({
   const errorId = `${field.name}-error`;
   const depuisIso = (v: unknown) => {
     const m = typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v.split('-') : null;
-    return m ? { jour: String(Number(m[2])), mois: m[1]!, annee: m[0]! } : { jour: '', mois: '', annee: '' };
+    // Janvier par défaut : la liste n'a plus d'entrée vide, et un mois
+    // doit donc toujours valoir quelque chose. Le libellé au-dessus est
+    // là pour qu'on pense à le changer.
+    return m
+      ? { jour: String(Number(m[2])), mois: m[1]!, annee: m[0]! }
+      : { jour: '', mois: '01', annee: '' };
   };
 
   const [parts, setParts] = useState(() => depuisIso(value));
@@ -111,51 +116,63 @@ function ChampNaissance({
     <div>
       {label}
       <div className="lil-naissance">
-        <input
-          id={field.name}
-          className="lil-input lil-naissance-jour"
-          type="text"
-          inputMode="numeric"
-          autoComplete="bday-day"
-          placeholder="Ex : 01"
-          aria-label="Jour de naissance"
-          aria-invalid={Boolean(error)}
-          aria-describedby={error ? errorId : undefined}
-          value={parts.jour}
-          onChange={(e) => poser({ ...parts, jour: chiffres(e.target.value, 2) })}
-        />
-        <select
-          className="lil-input lil-naissance-mois"
-          autoComplete="bday-month"
-          aria-label="Mois de naissance"
-          aria-invalid={Boolean(error)}
-          value={parts.mois}
-          onChange={(e) => poser({ ...parts, mois: e.target.value })}
-        >
-          {/* « hidden » et non une entrée ordinaire : la liste déroulée
-              commence donc à janvier, comme demandé, mais rien n'est
-              choisi tant qu'on n'a pas choisi. Sans cela, quelqu'un né en
-              mars qui ne touche pas au champ enverrait janvier. */}
-          <option value="" hidden>
+        <div className="lil-naissance-case">
+          <label className="lil-celibat-libelle" htmlFor={field.name}>
+            Jour
+          </label>
+          <input
+            id={field.name}
+            className="lil-input lil-naissance-jour"
+            type="text"
+            inputMode="numeric"
+            autoComplete="bday-day"
+            placeholder="Ex : 06"
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? errorId : undefined}
+            value={parts.jour}
+            onChange={(e) => poser({ ...parts, jour: chiffres(e.target.value, 2) })}
+          />
+        </div>
+
+        <div className="lil-naissance-case">
+          <label className="lil-celibat-libelle" htmlFor={`${field.name}-mois`}>
             Mois
-          </option>
-          {MOIS.map((nom, i) => (
-            <option key={nom} value={String(i + 1).padStart(2, '0')}>
-              {nom}
-            </option>
-          ))}
-        </select>
-        <input
-          className="lil-input lil-naissance-annee"
-          type="text"
-          inputMode="numeric"
-          autoComplete="bday-year"
-          placeholder="Ex : 1993"
-          aria-label="Année de naissance"
-          aria-invalid={Boolean(error)}
-          value={parts.annee}
-          onChange={(e) => poser({ ...parts, annee: chiffres(e.target.value, 4) })}
-        />
+          </label>
+          {/* Plus d'entrée vide : la liste commence à janvier, qui vaut
+              aussi par défaut. Le libellé au-dessus porte seul le travail
+              de rappeler qu'il y a un choix à faire. */}
+          <select
+            id={`${field.name}-mois`}
+            className="lil-input lil-naissance-mois"
+            autoComplete="bday-month"
+            aria-invalid={Boolean(error)}
+            value={parts.mois}
+            onChange={(e) => poser({ ...parts, mois: e.target.value })}
+          >
+            {MOIS.map((nom, i) => (
+              <option key={nom} value={String(i + 1).padStart(2, '0')}>
+                {nom}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="lil-naissance-case">
+          <label className="lil-celibat-libelle" htmlFor={`${field.name}-annee`}>
+            Année
+          </label>
+          <input
+            id={`${field.name}-annee`}
+            className="lil-input lil-naissance-annee"
+            type="text"
+            inputMode="numeric"
+            autoComplete="bday-year"
+            placeholder="Ex : 1993"
+            aria-invalid={Boolean(error)}
+            value={parts.annee}
+            onChange={(e) => poser({ ...parts, annee: chiffres(e.target.value, 4) })}
+          />
+        </div>
       </div>
       {field.help && <p className="lil-field-help">{field.help}</p>}
       {error && <ErrorLine id={errorId} message={error} />}
@@ -193,27 +210,37 @@ function ChampCelibat({
     <div>
       {label}
       <div className="lil-celibat">
-        <input
-          id={field.name}
-          className="lil-input lil-celibat-nombre"
-          type="text"
-          inputMode="numeric"
-          placeholder="Ex : 8"
-          aria-label="Depuis combien de temps"
-          aria-invalid={Boolean(error)}
-          aria-describedby={error ? errorId : undefined}
-          value={nombre}
-          onChange={(e) => poser(e.target.value.replace(/\D/g, '').slice(0, 2), unite)}
-        />
-        <select
-          className="lil-input lil-celibat-unite"
-          aria-label="Mois ou années"
-          value={unite}
-          onChange={(e) => poser(nombre, e.target.value)}
-        >
-          <option value="mois">mois</option>
-          <option value="ans">ans</option>
-        </select>
+        <div className="lil-celibat-case">
+          <label className="lil-celibat-libelle" htmlFor={field.name}>
+            Nombre
+          </label>
+          <input
+            id={field.name}
+            className="lil-input lil-celibat-nombre"
+            type="text"
+            inputMode="numeric"
+            placeholder="Ex : 8"
+            aria-invalid={Boolean(error)}
+            aria-describedby={error ? errorId : undefined}
+            value={nombre}
+            onChange={(e) => poser(e.target.value.replace(/\D/g, '').slice(0, 2), unite)}
+          />
+        </div>
+
+        <div className="lil-celibat-case">
+          <label className="lil-celibat-libelle" htmlFor={`${field.name}-unite`}>
+            Mois / Années
+          </label>
+          <select
+            id={`${field.name}-unite`}
+            className="lil-input lil-celibat-unite"
+            value={unite}
+            onChange={(e) => poser(nombre, e.target.value)}
+          >
+            <option value="mois">Mois</option>
+            <option value="ans">Années</option>
+          </select>
+        </div>
       </div>
 
       <button

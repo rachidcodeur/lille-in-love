@@ -118,28 +118,14 @@ const ETAPES: Step[] = [
     title: 'Je suis',
     fields: [
       {
-        // Plus d'avance automatique : la case est juste en dessous, et
-        // tourner la page au premier clic l'empêcherait d'être lue.
         name: 'gender',
         type: 'radio',
         required: true,
+        advanceOnSelect: true,
         options: [
           { value: 'femme', label: 'Une femme' },
           { value: 'homme', label: 'Un homme' },
         ],
-      },
-      {
-        // Les conditions à l'entrée, et non à la sortie : on accepte
-        // avant de confier quoi que ce soit, pas après avoir répondu à
-        // seize questions. Les liens sont ici — à la dernière étape ils
-        // détournaient, au début ils informent.
-        name: 'consent',
-        type: 'consent',
-        required: true,
-        label:
-          'J’accepte le <a href="https://lilleinlove.fr/reglement" target="_blank" rel="noreferrer">règlement</a> et la <a href="https://lilleinlove.fr/confidentialite" target="_blank" rel="noreferrer">politique de confidentialité</a>.',
-        help:
-          'Tout ce que tu écris reste entre nous. Seuls les deux membres de l’équipe qui lisent les candidatures y ont accès — rien n’est publié, rien n’est revendu.',
       },
     ],
   },

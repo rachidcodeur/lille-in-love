@@ -903,9 +903,15 @@ body {
 
 .lil-naissance {
   display: grid;
-  grid-template-columns: 4.5rem 1fr 6rem;
-  gap: 8px;
-  align-items: center;
+  grid-template-columns: 5rem 1fr 6.5rem;
+  gap: 10px;
+  align-items: end;
+}
+
+.lil-naissance-case {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
 }
 
 .lil-naissance input,
@@ -1047,9 +1053,22 @@ body {
 
 .lil-celibat {
   display: grid;
-  grid-template-columns: 6rem 1fr;
-  gap: 8px;
-  align-items: center;
+  grid-template-columns: 7rem 1fr;
+  gap: 10px;
+  align-items: end;
+}
+
+.lil-celibat-case {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+/* Un libellé par case : « Ex : 8 » dit le format, pas ce qu'on attend. */
+.lil-celibat-libelle {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-2, #5b5048);
 }
 
 .lil-celibat input,
@@ -1180,4 +1199,39 @@ body {
   font-size: 13.5px;
   line-height: 1.5;
   color: var(--text-2, #5b5048);
+}
+
+/* --- L'acceptation, entre la soirée et les questions ------------------
+   Hors du formulaire : elle ne dépend d'aucune question, et se lit avant
+   d'en avoir répondu une seule.
+   ---------------------------------------------------------------------- */
+
+.lil-accord {
+  margin: 14px 0 0;
+  padding: 16px 18px;
+  border-radius: 16px;
+  background: rgba(168, 148, 110, 0.08);
+  border: 1px solid rgba(168, 148, 110, 0.3);
+}
+
+.lil-accord .lil-consent {
+  margin: 0;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+.lil-accord .lil-field-help {
+  margin-top: 10px;
+}
+
+/* Refusée alors qu'on veut avancer : le cadre le dit, sans rougir
+   l'écran entier. */
+.lil-accord[data-manque] {
+  border-color: rgba(176, 72, 60, 0.55);
+  background: rgba(176, 72, 60, 0.06);
+}
+
+.lil-accord .lil-error {
+  margin-top: 10px;
 }
