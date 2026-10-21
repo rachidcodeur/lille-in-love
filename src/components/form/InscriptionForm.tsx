@@ -144,7 +144,12 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
   const [globalError, setGlobalError] = useState<string | null>(null);
   const router = useRouter();
   const [done, setDone] = useState<
-    { firstName: string; already: boolean; motif?: 'email' | 'telephone' } | null
+    {
+      firstName: string;
+      already: boolean;
+      motif?: 'email' | 'telephone';
+      matchingToken?: string | null;
+    } | null
   >(null);
 
   const startedAt = useRef(Date.now());
@@ -305,6 +310,8 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
         motif?: 'email' | 'telephone';
         firstName?: string;
         alreadyRegistered?: boolean;
+        /** Rendu une seule fois : il autorise à compléter le matching. */
+        matchingToken?: string | null;
       };
 
       if (!response.ok) {
@@ -333,7 +340,12 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
 
       // Le message s'affiche tout de suite : si la redirection tarde ou
       // échoue, la personne a quand même sa confirmation sous les yeux.
-      setDone({ firstName: prenom, already: deja, motif: result.motif });
+      setDone({
+        firstName: prenom,
+        already: deja,
+        motif: result.motif,
+        matchingToken: result.matchingToken ?? null,
+      });
 
       // La conversion, pour les campagnes. Une candidature déjà reçue n'en
       // est pas une : on ne la compte pas deux fois.
@@ -347,6 +359,13 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
 
       // Puis la page de remerciement, qui a sa propre adresse. Le court
       // délai laisse à l'événement le temps de partir avant la navigation.
+      //
+      // Sauf quand le service de matching se propose : il s'affiche sous
+      // le remerciement, et une redirection l'emporterait avant qu'on ait
+      // eu le temps de le lire. Le jeton ne voyage pas dans l'adresse —
+      // il resterait dans l'historique et dans les journaux.
+      if (result.matchingToken) return;
+
       const destination = `/merci?${new URLSearchParams({
         ...(prenom ? { p: prenom } : {}),
         ...(deja ? { deja: '1' } : {}),
@@ -372,7 +391,12 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
       <div className="lil-shell" ref={rootRef}>
         <Entete />
         <div className="lil-card">
-          <Remerciement firstName={done.firstName} deja={done.already} motif={done.motif} />
+          <Remerciement
+            firstName={done.firstName}
+            deja={done.already}
+            motif={done.motif}
+            matchingToken={done.matchingToken}
+          />
         </div>
       </div>
     );

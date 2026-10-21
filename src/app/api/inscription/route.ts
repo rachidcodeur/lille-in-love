@@ -12,9 +12,9 @@ import {
   type InscriptionCourteInput,
   type InscriptionInput,
 } from '@/lib/validation';
-import { nettoyerMatching } from '@/lib/matching';
 import { HONEYPOT_FIELDS, MIN_FILL_SECONDS } from '@/lib/questions';
 import { previenirEquipe, sendSequenceEmail } from '@/lib/mailer';
+import { randomUUID } from 'node:crypto';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -58,28 +58,34 @@ function fullRow(data: InscriptionInput) {
     referral: data.referral,
     phone: normalizePhone(data.phone),
     birth_date: data.birthDate,
-    ...matchingRow(data),
   };
 }
 
-/**
- * Le service de matching, et ses réponses.
- *
- * Le tamis est ici, côté serveur, et nulle part ailleurs : une case
- * décochée à l'écran ne prouve rien. Sans le consentement explicite, les
- * champs sensibles — origines, religion — ne sont pas écrits, même si le
- * navigateur les envoie.
- */
-function matchingRow(data: InscriptionInput) {
-  const accepte = data.matchingOptin === 'oui';
-  const brut = (data.matching ?? {}) as Record<string, unknown>;
-  const consent = accepte && brut.consentSensible === true;
 
-  return {
-    matching_optin: accepte,
-    matching: accepte ? nettoyerMatching(brut, consent) : {},
-    matching_consent_at: consent ? new Date().toISOString() : null,
-  };
+
+/**
+ * Écrire ce qui peut manquer, sans risquer le reste.
+ *
+ * Rend le jeton de matching si l'écriture a abouti, et rien si la base ne
+ * connaît pas encore ces colonnes. Dans les deux cas la candidature est
+ * enregistrée : c'est tout ce qui compte à cet instant.
+ */
+async function poserLesSupplements(
+  db: ReturnType<typeof supabaseAdmin>,
+  memberId: string,
+  valeurs: { referral_other: string | null; matching_token: string },
+): Promise<string | null> {
+  const ensemble = await db.from('lil_members').update(valeurs).eq('id', memberId);
+  if (!ensemble.error) return valeurs.matching_token;
+
+  // L'une des deux manque : on réessaie avec celle qui ouvre le service,
+  // des fois que ce soit l'autre qui ne soit pas encore là.
+  const seul = await db
+    .from('lil_members')
+    .update({ matching_token: valeurs.matching_token })
+    .eq('id', memberId);
+
+  return seul.error ? null : valeurs.matching_token;
 }
 
 export async function POST(request: Request) {
@@ -247,7 +253,11 @@ export async function POST(request: Request) {
   };
 
   const inserer = (row: Record<string, unknown>) =>
-    db.from('lil_members').insert(row).select('id, first_name, last_name, email, city, birth_date, form_version').single();
+    db
+      .from('lil_members')
+      .insert(row)
+      .select('id, first_name, last_name, email, city, birth_date, form_version')
+      .single();
 
   let { data: member, error: insertError } = await inserer({ ...commun, ...signalement });
 
@@ -277,6 +287,28 @@ export async function POST(request: Request) {
       { status: 500, headers: cors },
     );
   }
+
+  // --- Ce qui dépend des dernières migrations -------------------------
+  //
+  // Dans leur propre écriture, et après : la candidature est déjà
+  // enregistrée quand on y arrive. Portées par l'insert, ces colonnes
+  // l'auraient emportée avec elles sur une base où
+  // 21_referral_other.sql ou 22_matching_apres_envoi.sql n'ont pas encore
+  // tourné — PostgREST refuse l'ordre entier pour une colonne inconnue,
+  // et plus aucune inscription ne passerait.
+  //
+  // Sans elles : la précision de « Autrement » n'est pas gardée, et le
+  // service de matching ne se propose pas. Rien d'autre ne change.
+  //
+  // Le parcours court n'y a pas droit : trois étapes, et l'on ne sait
+  // presque rien de la personne — proposer de chercher pour elle n'aurait
+  // pas de sens, et la redirection vers /merci reprend ses droits.
+  const jetonMatching = isCourt
+    ? null
+    : await poserLesSupplements(db, member.id, {
+        referral_other: (data as { referralOther?: string }).referralOther ?? null,
+        matching_token: randomUUID(),
+      });
 
   // --- Photos : on les range sous le membre ---------------------------
   const storage = db.storage.from(bucket);
@@ -347,7 +379,15 @@ export async function POST(request: Request) {
   if (!alerte.ok) console.error('[inscription] alerte interne non envoyée', alerte.error);
 
   return NextResponse.json(
-    { ok: true, id: member.id, firstName: member.first_name, emailSent: mail.ok },
+    {
+      ok: true,
+      id: member.id,
+      firstName: member.first_name,
+      emailSent: mail.ok,
+      // De quoi compléter le matching depuis l'écran de remerciement, et
+      // seulement depuis là : le jeton ne repart jamais ailleurs.
+      matchingToken: jetonMatching,
+    },
     { status: 201, headers: cors },
   );
 }

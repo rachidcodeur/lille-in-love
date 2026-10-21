@@ -37,6 +37,7 @@ export const COLONNES = [
   'friend_name',
   'friend_email',
   'source',
+  'referral_other',
   'created_at',
   'id',
 ] as const;
@@ -106,6 +107,7 @@ export function ligneExport(member: MemberDetail): string[] {
     // « source » désigne ici comment la personne nous a connus : c'est la
     // réponse au questionnaire, pas la provenance technique de l'envoi.
     texte(member.referral),
+    texte(member.referral_other),
     horodatage(member.created_at),
     texte(member.id),
   ];

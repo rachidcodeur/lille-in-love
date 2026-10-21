@@ -57,14 +57,30 @@ curation ou les tranches de soirée, qui lisent la même colonne.
 
 ## Le matching sur mesure
 
-Après la dernière question, on propose un accompagnement : chercher dans
-le réseau la personne qui correspond, et mettre en relation. Oui ou non.
+**Il se propose une fois la candidature envoyée**, dans une seconde carte
+sous le remerciement. Il a d'abord été la dernière étape du formulaire ;
+le mettre après change tout. La candidature est en sécurité avant qu'on
+propose quoi que ce soit, personne n'a plus à refuser une offre pour
+pouvoir envoyer, et ce qui se lit là se lit l'esprit tranquille.
 
-**Qui dit non envoie sa candidature dans la foulée.** Pas d'étape de
-plus, pas de détour. Qui dit oui voit les questions se dérouler sous le
-bouton, **toutes à la fois et non en étapes** : la personne a déjà dit
-oui, on n'a plus à la convaincre d'avancer, et voir l'ensemble permet de
-jauger ce qui reste et de sauter ce qu'on ne veut pas dire.
+Techniquement, cela veut dire revenir écrire sur une fiche déjà
+enregistrée — et seulement celle-là. D'où le **jeton à usage unique**
+rendu à l'envoi, effacé dès qu'il a servi : un identifiant de fiche
+n'autorise pas à écrire des données sensibles. Il ne voyage jamais dans
+l'adresse, où il resterait dans l'historique et les journaux ; c'est
+d'ailleurs pourquoi l'envoi ne redirige plus vers `/merci` quand le
+service se propose.
+
+La carte s'appelle **« Service de matching personnalisé »**, et son texte
+ne présente jamais les rencontres comme un coup de chance qu'il faudrait
+rattraper : le service s'y ajoute, il ne les corrige pas. Un test vérifie
+le titre et l'absence du mot « hasard » — c'est le genre de nuance qu'une
+réécriture rapide fait disparaître sans qu'on s'en aperçoive.
+
+**Les questions arrivent toutes à la fois**, et non en étapes : la
+personne a déjà dit oui, on n'a plus à la convaincre d'avancer, et voir
+l'ensemble permet de jauger ce qui reste et de sauter ce qu'on ne veut
+pas dire.
 
 Tout y est facultatif. Le service est un bonus ; une question sans
 réponse n'empêche personne d'être mis en relation.
@@ -81,6 +97,34 @@ la sélection, et sans eux on cliquait sans que rien ne bouge à l'œil.
 Les réponses tiennent dans un champ JSON et non en colonnes : elles sont
 nombreuses, elles bougeront, et chaque question ajoutée aurait demandé
 une migration.
+
+## Les retouches de la seconde passe
+
+- **Les conditions s'acceptent à la première étape**, liens compris, et
+  non plus juste avant d'envoyer. On accepte avant de confier quoi que ce
+  soit, pas après seize questions. L'avance automatique du premier choix
+  a disparu avec : tourner la page au premier clic empêchait la case
+  d'être lue.
+- **La durée de célibat s'écrit** — un nombre, puis mois ou années.
+  Quatre tranches toutes faites mettaient « huit mois » et « sept ans »
+  dans le même panier et obligeaient à arrondir une réponse qu'on connaît
+  précisément. « Jamais été en couple » garde son bouton : aucun nombre
+  ne le dit. En base : `jamais`, `8_mois`, `3_ans`.
+- **Les centres d'intérêt sont facultatifs.** Mieux vaut une case vide que
+  trois cochées au hasard pour passer l'étape.
+- **Qui vient accompagné reçoit le lien du formulaire**, en entier, avec
+  de quoi l'envoyer en un geste. On prenait le prénom de l'autre, et
+  c'est tout : il n'était au courant de rien.
+- **Google et ChatGPT** rejoignent les sources, et « Autrement » ouvre un
+  champ : c'est précisément la réponse dont on a besoin qu'elle soit
+  précisée, puisque c'est la seule qu'on n'a pas prévue.
+- **La date montre des exemples** (« Ex : 01 ») plutôt que des sigles, et
+  la liste des mois commence à janvier. L'entrée vide reste, mais
+  `hidden` : la liste déroulée commence donc bien à janvier, et rien
+  n'est choisi tant qu'on n'a pas choisi — sans quoi quelqu'un né en mars
+  qui ne touche pas au champ enverrait janvier.
+- **Le prix a quitté l'en-tête**, et avec lui la mention sur le tarif
+  exceptionnel.
 
 ## Ce que le back-office en fait
 
@@ -105,13 +149,16 @@ D'où la case à cocher qui ouvre ces deux blocs, et la date conservée dans
 `matching_consent_at` : si l'on nous demande un jour sur quelle base ces
 informations ont été recueillies, la réponse est à côté d'elles.
 
-**La case se tient juste devant ce qu'elle ouvre**, dans son propre
-encadré, entre « Ton parcours » et « Ton partenaire idéal ». Elle a
-d'abord été placée tout en bas, après les questions ordinaires, avec
-l'idée qu'on ne demande pas un consentement avant d'avoir montré à quoi
-il sert. À l'usage c'était l'inverse : on cochait en bas et des questions
-apparaissaient au milieu, hors de l'écran. Une case qui commande quelque
-chose doit être à côté de ce qu'elle commande.
+**Le consentement se donne en tête, avant la première question.** Il a
+d'abord été placé tout en bas, puis au milieu, juste devant les blocs
+qu'il ouvrait. Les deux fois, quelque chose apparaissait ou disparaissait
+en cours de route. En tête, on sait à quoi on s'engage avant de
+commencer, et plus rien ne bouge ensuite : origines et religion prennent
+leur place dans le fil comme les autres questions.
+
+Sans la case, aucune question ne s'affiche. C'est volontaire : voir des
+questions dont les réponses seront jetées par le serveur serait
+trompeur.
 
 Trois précautions, qui tiennent toutes dans le code :
 

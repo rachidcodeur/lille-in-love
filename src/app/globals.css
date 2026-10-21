@@ -964,6 +964,18 @@ body {
   margin-top: 22px;
 }
 
+/* Un textarea s'agrandit à la souris, et sortait du cadre : on borne la
+   largeur, et l'on ne laisse grandir que vers le bas. */
+.lil-matching textarea,
+.lil-matching input {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.lil-matching textarea {
+  resize: vertical;
+}
+
 .lil-matching-champ .lil-field-label {
   margin-bottom: 6px;
 }
@@ -1026,4 +1038,146 @@ body {
    élan : la porte vient déjà de séparer. */
 .lil-matching-porte + .lil-matching-bloc {
   margin-top: 26px;
+}
+
+/* --- Depuis combien de temps célibataire ------------------------------
+   Un nombre et une unité : quatre tranches toutes faites mettaient
+   « huit mois » et « sept ans » dans le même panier.
+   ---------------------------------------------------------------------- */
+
+.lil-celibat {
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.lil-celibat input,
+.lil-celibat select {
+  /* 16 px au moins : en dessous, iOS zoome à la saisie. */
+  font-size: 16px;
+}
+
+.lil-celibat-nombre {
+  text-align: center;
+}
+
+.lil-celibat-jamais {
+  margin-top: 12px;
+}
+
+/* --- Le lien à envoyer à qui l'on amène -------------------------------
+   On prenait le prénom de l'autre, et c'est tout : il n'était au courant
+   de rien. Le lien s'affiche en entier — on ne remplace pas ce qu'on
+   peut lire par un bouton qui promet de faire quelque chose.
+   ---------------------------------------------------------------------- */
+
+.lil-partage {
+  margin-top: 18px;
+  padding: 16px 16px 18px;
+  border-radius: 14px;
+  background: rgba(168, 148, 110, 0.09);
+  border: 1px solid rgba(168, 148, 110, 0.3);
+}
+
+.lil-partage-titre {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+
+.lil-partage-lien {
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+.lil-btn-secondaire {
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  min-height: 46px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  background: #fff;
+  cursor: pointer;
+}
+
+/* --- Le service de matching, après l'envoi ----------------------------
+   Une seconde carte sous le remerciement. Elle arrive quand la
+   candidature est déjà en sécurité : on peut la lire tranquillement, et
+   la refuser sans rien perdre.
+   ---------------------------------------------------------------------- */
+
+.lil-service {
+  margin-top: 18px;
+  padding: 26px 22px 24px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid rgba(168, 148, 110, 0.35);
+  /* L'ombre la détache du remerciement : deux cartes, deux propos. */
+  box-shadow: 0 10px 30px rgba(60, 46, 30, 0.1);
+}
+
+.lil-service-chapeau {
+  margin: 0 0 6px;
+  font-size: 11.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold-deep, #a8946e);
+}
+
+.lil-service-titre {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: 26px;
+  line-height: 1.15;
+  font-weight: 500;
+  margin: 0 0 14px;
+}
+
+.lil-service-choix {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.lil-service-choix .lil-btn-secondaire {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.lil-service-consent {
+  margin-top: 18px;
+}
+
+.lil-service-attente {
+  margin-top: 14px;
+}
+
+.lil-service-envoyer {
+  margin-top: 26px;
+  width: 100%;
+}
+
+.lil-service-merci {
+  text-align: center;
+}
+
+/* La mention qui dit qui lit tout ça : discrète, mais pas enfouie. */
+.lil-confidentialite {
+  margin: 16px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(168, 148, 110, 0.08);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-2, #5b5048);
 }

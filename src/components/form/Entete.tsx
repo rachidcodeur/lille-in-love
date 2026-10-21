@@ -48,7 +48,14 @@ export function Entete() {
           {SOIREE.reperes.map((repere) => (
             <li key={repere}>{repere}</li>
           ))}
+          {/* Le prix se détache des autres repères : c'est la seule
+              information que personne ne veut découvrir trop tard. */}
+          <li className="lil-repere-prix">
+            <b>{avecChiffres(SOIREE.prix)}</b> {SOIREE.prixDetail}
+          </li>
         </ul>
+
+        <p className="lil-prix-mention">{SOIREE.prixMention}</p>
       </section>
     </header>
   );

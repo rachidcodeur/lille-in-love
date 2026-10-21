@@ -91,8 +91,19 @@ const MIGRATIONS: {
     fichier: '20_matching.sql',
     table: 'lil_members',
     colonne: 'matching',
-    sans: 'le formulaire d’inscription échoue à l’envoi : il écrit des colonnes qui n’existent pas',
-    bloquante: true,
+    sans: 'le formulaire d’inscription ne garde ni le célibat ni les réponses du matching',
+  },
+  {
+    fichier: '21_referral_other.sql',
+    table: 'lil_members',
+    colonne: 'referral_other',
+    sans: 'la précision de « Autrement » n’est pas conservée',
+  },
+  {
+    fichier: '22_matching_apres_envoi.sql',
+    table: 'lil_members',
+    colonne: 'matching_token',
+    sans: 'le service de matching ne se propose pas après l’envoi',
   },
 ];
 

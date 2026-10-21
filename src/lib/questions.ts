@@ -21,6 +21,8 @@ export type FieldType =
   | 'tel'
   | 'date'
   | 'naissance'
+  | 'celibat'
+  | 'partage'
   | 'matching'
   | 'photos'
   | 'consent';
@@ -102,6 +104,8 @@ export const REFERRALS: Option[] = [
   { value: 'facebook', label: 'Facebook' },
   { value: 'pub_video', label: 'Une vidéo publicitaire Instagram ou Facebook' },
   { value: 'bouche_a_oreille', label: 'Le bouche-à-oreille' },
+  { value: 'google', label: 'Google' },
+  { value: 'chatgpt', label: 'ChatGPT ou une autre IA' },
   { value: 'affiche', label: 'Une affiche' },
   { value: 'flyer', label: 'Un flyer' },
   { value: 'autre', label: 'Autrement' },
@@ -114,14 +118,28 @@ const ETAPES: Step[] = [
     title: 'Je suis',
     fields: [
       {
+        // Plus d'avance automatique : la case est juste en dessous, et
+        // tourner la page au premier clic l'empêcherait d'être lue.
         name: 'gender',
         type: 'radio',
         required: true,
-        advanceOnSelect: true,
         options: [
           { value: 'femme', label: 'Une femme' },
           { value: 'homme', label: 'Un homme' },
         ],
+      },
+      {
+        // Les conditions à l'entrée, et non à la sortie : on accepte
+        // avant de confier quoi que ce soit, pas après avoir répondu à
+        // seize questions. Les liens sont ici — à la dernière étape ils
+        // détournaient, au début ils informent.
+        name: 'consent',
+        type: 'consent',
+        required: true,
+        label:
+          'J’accepte le <a href="https://lilleinlove.fr/reglement" target="_blank" rel="noreferrer">règlement</a> et la <a href="https://lilleinlove.fr/confidentialite" target="_blank" rel="noreferrer">politique de confidentialité</a>.',
+        help:
+          'Tout ce que tu écris reste entre nous. Seuls les deux membres de l’équipe qui lisent les candidatures y ont accès — rien n’est publié, rien n’est revendu.',
       },
     ],
   },
@@ -233,37 +251,14 @@ const ETAPES: Step[] = [
     // se raconter et de dire pourquoi elle vient. La question prolonge ce
     // qu'elle écrivait ; placée en cinquième, entre l'orientation et la
     // taille, elle tombait comme un interrogatoire.
-    help: 'Une idée suffit — personne ne vérifie.',
     fields: [
       {
+        // Quatre tranches ne suffisaient pas : « huit mois » et « sept
+        // ans » tombaient dans le même panier. On laisse écrire le
+        // nombre et choisir l'unité.
         name: 'singleSince',
-        type: 'radio',
+        type: 'celibat',
         required: true,
-        advanceOnSelect: true,
-        options: [
-          { value: 'moins_6_mois', label: 'Moins de 6 mois' },
-          { value: 'six_mois_2_ans', label: 'Entre 6 mois et 2 ans' },
-          { value: 'plus_2_ans', label: 'Plus de 2 ans' },
-          { value: 'toujours', label: 'Je n’ai jamais été en couple' },
-          { value: 'prefere_pas', label: 'Je préfère ne pas le dire' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'interests',
-    section: 'Toi, en quelques mots',
-    title: "Quels sont tes centres d'intérêt ?",
-    help: 'Plusieurs choix possibles.',
-    fields: [
-      { name: 'interests', type: 'multi', required: true, options: INTERESTS },
-      {
-        name: 'interestsOther',
-        type: 'text',
-        label: 'Précise',
-        placeholder: 'Dis-nous en plus',
-        maxLength: 120,
-        showIf: { field: 'interests', equals: 'autre' },
       },
     ],
   },
@@ -335,6 +330,14 @@ const ETAPES: Step[] = [
         placeholder: 'Pour lui envoyer une invitation',
         showIf: { field: 'comesWith', equals: 'oui' },
       },
+      {
+        // On prenait son prénom, et c'est tout : l'autre n'était au
+        // courant de rien. Le lien s'affiche ici, avec de quoi le lui
+        // envoyer en un geste — chacun remplit le sien.
+        name: 'companionPartage',
+        type: 'partage',
+        showIf: { field: 'comesWith', equals: 'oui' },
+      },
     ],
   },
   {
@@ -348,6 +351,16 @@ const ETAPES: Step[] = [
         required: true,
         options: REFERRALS,
         placeholder: 'Choisis une réponse',
+      },
+      {
+        // « Autrement » sans la suite ne nous apprend rien : c'est la
+        // seule réponse dont on a besoin qu'elle soit précisée.
+        name: 'referralOther',
+        type: 'text',
+        label: 'Par quel moyen ?',
+        placeholder: 'Dis-nous en deux mots',
+        maxLength: 120,
+        showIf: { field: 'referral', equals: 'autre' },
       },
     ],
   },
@@ -415,42 +428,6 @@ const ETAPES: Step[] = [
         type: 'naissance',
         label: 'Date de naissance',
         required: true,
-      },
-      {
-        name: 'consent',
-        type: 'consent',
-        required: true,
-        // Texte seul, sans lien : à la dernière étape, un lien détourne plus
-        // qu'il n'informe. La case reste obligatoire pour envoyer.
-        label: 'J’accepte le règlement et la politique de confidentialité.',
-      },
-    ],
-  },
-  {
-    id: 'matching',
-    section: 'Pour aller plus loin',
-    title: 'On peut aussi chercher pour toi',
-    help:
-      'Au-delà des soirées, on propose à qui le souhaite un accompagnement sur mesure : on cherche dans le réseau la personne qui te correspond vraiment, et on vous met en relation.',
-    note: 'Tu peux envoyer ta candidature sans ça. Le service reste ouvert plus tard.',
-    fields: [
-      {
-        name: 'matchingOptin',
-        type: 'radio',
-        required: true,
-        label: 'Veux-tu qu’on cherche pour toi ?',
-        options: [
-          { value: 'oui', label: 'Oui, je veux en savoir plus' },
-          { value: 'non', label: 'Non merci, les soirées me suffisent' },
-        ],
-      },
-      {
-        // Tout le questionnaire avancé tient dans ce seul champ : il
-        // s'ouvre sur « oui » et se replie sur « non », sans étape de
-        // plus. Qui refuse envoie sa candidature dans la foulée.
-        name: 'matching',
-        type: 'matching',
-        showIf: { field: 'matchingOptin', equals: 'oui' },
       },
     ],
   },

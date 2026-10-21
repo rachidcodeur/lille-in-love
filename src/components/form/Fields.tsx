@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { Field } from '@/lib/questions';
 import { MatchingAvance, type BrouillonMatching } from './MatchingAvance';
+import { PartagerInscription } from './PartagerInscription';
 
 /** Les mois en toutes lettres : « 09 » se retient mal, « septembre » non. */
 const MOIS = [
@@ -116,7 +117,7 @@ function ChampNaissance({
           type="text"
           inputMode="numeric"
           autoComplete="bday-day"
-          placeholder="JJ"
+          placeholder="Ex : 01"
           aria-label="Jour de naissance"
           aria-invalid={Boolean(error)}
           aria-describedby={error ? errorId : undefined}
@@ -131,7 +132,13 @@ function ChampNaissance({
           value={parts.mois}
           onChange={(e) => poser({ ...parts, mois: e.target.value })}
         >
-          <option value="">Mois</option>
+          {/* « hidden » et non une entrée ordinaire : la liste déroulée
+              commence donc à janvier, comme demandé, mais rien n'est
+              choisi tant qu'on n'a pas choisi. Sans cela, quelqu'un né en
+              mars qui ne touche pas au champ enverrait janvier. */}
+          <option value="" hidden>
+            Mois
+          </option>
           {MOIS.map((nom, i) => (
             <option key={nom} value={String(i + 1).padStart(2, '0')}>
               {nom}
@@ -143,13 +150,83 @@ function ChampNaissance({
           type="text"
           inputMode="numeric"
           autoComplete="bday-year"
-          placeholder="AAAA"
+          placeholder="Ex : 1993"
           aria-label="Année de naissance"
           aria-invalid={Boolean(error)}
           value={parts.annee}
           onChange={(e) => poser({ ...parts, annee: chiffres(e.target.value, 4) })}
         />
       </div>
+      {field.help && <p className="lil-field-help">{field.help}</p>}
+      {error && <ErrorLine id={errorId} message={error} />}
+    </div>
+  );
+}
+
+/**
+ * Depuis combien de temps, en mois ou en années.
+ *
+ * Quatre tranches toutes faites mettaient « huit mois » et « sept ans »
+ * dans le même panier, et obligeaient à arrondir une réponse qu'on
+ * connaît précisément. On écrit le nombre, on choisit l'unité.
+ *
+ * Reste un cas qu'aucun nombre ne dit : n'avoir jamais été en couple.
+ * Il a son propre bouton, et il efface la durée — les deux réponses
+ * s'excluent.
+ */
+function ChampCelibat({
+  field,
+  value,
+  error,
+  onChange,
+  label,
+}: Pick<FieldProps, 'field' | 'value' | 'error' | 'onChange'> & { label: React.ReactNode }) {
+  const errorId = `${field.name}-error`;
+  const brut = typeof value === 'string' ? value : '';
+  const jamais = brut === 'jamais';
+  const [nombre = '', unite = 'mois'] = jamais || !brut ? ['', 'mois'] : brut.split('_');
+
+  const poser = (n: string, u: string) =>
+    onChange(field.name, n ? `${n}_${u}` : '');
+
+  return (
+    <div>
+      {label}
+      <div className="lil-celibat">
+        <input
+          id={field.name}
+          className="lil-input lil-celibat-nombre"
+          type="text"
+          inputMode="numeric"
+          placeholder="Ex : 8"
+          aria-label="Depuis combien de temps"
+          aria-invalid={Boolean(error)}
+          aria-describedby={error ? errorId : undefined}
+          value={nombre}
+          onChange={(e) => poser(e.target.value.replace(/\D/g, '').slice(0, 2), unite)}
+        />
+        <select
+          className="lil-input lil-celibat-unite"
+          aria-label="Mois ou années"
+          value={unite}
+          onChange={(e) => poser(nombre, e.target.value)}
+        >
+          <option value="mois">mois</option>
+          <option value="ans">ans</option>
+        </select>
+      </div>
+
+      <button
+        type="button"
+        className="lil-choice lil-celibat-jamais"
+        role="radio"
+        aria-checked={jamais}
+        onClick={() => onChange(field.name, jamais ? '' : 'jamais')}
+      >
+        <span className="lil-choice-mark" aria-hidden="true" />
+        <span>Je n’ai jamais été en couple</span>
+      </button>
+
       {field.help && <p className="lil-field-help">{field.help}</p>}
       {error && <ErrorLine id={errorId} message={error} />}
     </div>
@@ -282,6 +359,22 @@ export function FieldControl({ field, value, error, onChange, onAdvance }: Field
       );
     }
 
+    /* ---- Le lien à envoyer à qui l'on amène ---------------------- */
+    case 'partage':
+      return <PartagerInscription />;
+
+    /* ---- Depuis combien de temps célibataire --------------------- */
+    case 'celibat':
+      return (
+        <ChampCelibat
+          field={field}
+          value={value}
+          error={error}
+          onChange={onChange}
+          label={label}
+        />
+      );
+
     /* ---- Date de naissance, en trois cases ----------------------- */
     case 'naissance':
       return (
@@ -321,6 +414,7 @@ export function FieldControl({ field, value, error, onChange, onAdvance }: Field
                 par un utilisateur. */}
             <span dangerouslySetInnerHTML={{ __html: field.label ?? '' }} />
           </label>
+          {field.help && <p className="lil-field-help">{field.help}</p>}
           {error && <ErrorLine id={errorId} message={error} />}
         </div>
       );
