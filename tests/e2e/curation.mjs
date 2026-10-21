@@ -637,7 +637,7 @@ const memeNumero = await (
       formVersion: 'complet',
       gender: 'homme', birthDate: '1992-05-14', city: 'Lille', postalCode: '59000',
       orientation: 'hetero', lookingFor: 'relation_serieuse',
-      singleSince: '8_mois', matchingOptin: 'non',
+      singleSince: '8_mois',
       heightCm: 180, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
       profession: 'Essai', referral: 'instagram', comesWith: 'non',
       firstName: 'Premier', lastName: 'Numero', phone: '06 12 34 56 78',
@@ -656,7 +656,7 @@ const secondEnvoi = await (
       formVersion: 'complet',
       gender: 'homme', birthDate: '1992-05-14', city: 'Lille', postalCode: '59000',
       orientation: 'hetero', lookingFor: 'relation_serieuse',
-      singleSince: '8_mois', matchingOptin: 'non',
+      singleSince: '8_mois',
       heightCm: 180, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
       profession: 'Essai', referral: 'instagram', comesWith: 'non',
       firstName: 'Second', lastName: 'Numero',
@@ -3271,6 +3271,58 @@ await fetch(`${FAKE}/__reset`, { method: 'POST' });
 /* ====================================================================
    20. Le bilan de santé du déploiement
    ==================================================================== */
+// --- Une inscription survit aux migrations en retard ----------------
+// Les colonnes du matching viennent de migrations récentes. Portées par
+// l'insert, elles auraient emporté la candidature avec elles sur une base
+// où elles n'ont pas encore tourné : PostgREST refuse l'ordre entier pour
+// une colonne inconnue. Elles s'écrivent donc à part, après.
+await fetch(`${FAKE}/__colonnes-absentes?table=lil_members&colonnes=matching_token,referral_other`, {
+  method: 'POST',
+});
+
+const sansMigrations = await fetch(`${BASE}/api/inscription`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    formVersion: 'complet',
+    gender: 'femme', birthDate: '1992-05-14', city: 'Lille', postalCode: '59000',
+    orientation: 'hetero', lookingFor: 'relation_serieuse', singleSince: '8_mois',
+    heightCm: 168, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
+    profession: 'Essai', referral: 'autre', referralOther: 'Une amie',
+    comesWith: 'non', firstName: 'Lucie', lastName: 'Retard',
+    phone: '06 99 88 77 66', email: 'retard@example.com', consent: true, elapsedMs: 60000,
+    photos: [{ path: 'pending/77777777-7777-4777-8777-777777777777.jpg' }],
+  }),
+});
+const corpsRetard = await sansMigrations.json().catch(() => null);
+
+sansMigrations.status === 201
+  ? ok('une candidature passe même si les dernières migrations manquent')
+  : bad('inscription refusée faute de migration', JSON.stringify(corpsRetard));
+corpsRetard?.matchingToken == null
+  ? ok('et le service de matching ne se propose pas, faute de jeton')
+  : bad('un jeton est rendu alors que la colonne n’existe pas');
+
+// Le parcours court n'ouvre pas le service : on ne sait presque rien de
+// la personne, et sa page de remerciement garde sa redirection.
+const court = await (
+  await fetch(`${BASE}/api/inscription`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      formVersion: 'court',
+      gender: 'femme', firstName: 'Brève', lastName: 'Passage',
+      email: 'breve.passage@example.com', consent: true, elapsedMs: 60000,
+      photos: [{ path: 'pending/88888888-8888-4888-8888-888888888888.jpg' }],
+    }),
+  })
+).json();
+court.id && court.matchingToken == null
+  ? ok('le parcours court s’enregistre sans ouvrir le service de matching')
+  : bad('le parcours court reçoit un jeton', JSON.stringify(court));
+
+await fetch(`${FAKE}/__colonnes-absentes?table=lil_members&colonnes=`, { method: 'POST' });
+
 section('20. Le bilan de santé du déploiement');
 
 // Une migration oubliée ne se voit nulle part : l'application démarre, les

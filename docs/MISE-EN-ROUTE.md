@@ -17,7 +17,7 @@ l'application** sur `app.in-love.fr`.
 | **À passer d'urgence** | **`10_accompagnant.sql`** — sans lui, toute candidature « je viens accompagné » est refusée |
 | **À passer aussi** | **`09_simplification.sql`** (groupe G), **`11_corbeille.sql`**, **`12_anciennes.sql`** |
 | **Pour le Crush Time** | **`13_crushtime.sql`** (indispensable), **`14_ordre_photos.sql`**, **`15_duree_manches.sql`**, **`16_code_personnel.sql`**, **`17_notifications.sql`**, **`18_match_vu.sql`**, **`19_questionnaire.sql`** |
-| **Indispensables au formulaire** | **`20_matching.sql`** et **`22_matching_apres_envoi.sql`** — sans elles, plus aucune inscription ne passe. **`21_referral_other.sql`** peut attendre |
+| **Pour le formulaire** | **`20_matching.sql`**, **`21_referral_other.sql`**, **`22_matching_apres_envoi.sql`** — aucune n'est bloquante : sans elles l'inscription passe, seules les réponses du matching ne sont pas gardées |
 | Resend | domaine **`in-love.fr` vérifié**, clé en place |
 | Expéditeur / réponse | `Lille in Love <info@in-love.fr>` |
 | `.env.local` | rempli et valide — `/api/health` répond `ok: true` |
@@ -481,9 +481,10 @@ demandent du HTTPS, que `localhost` n'a pas.
    dans l'application ne se rejoue pas à l'ouverture, et le questionnaire
    de fin de soirée ne recueille aucun avis. Rien ne casse —
    l'application retombe sur ce qu'elle sait faire — mais la soirée y perd.
-   **`20_matching.sql`, elle, ne peut pas attendre** : le formulaire
-   d'inscription écrit ses colonnes à chaque envoi, et sans elles plus
-   aucune candidature ne passe. `/api/health` la signale comme bloquante.
+   **`20`, `21` et `22`** portent le formulaire d'inscription et le
+   service de matching. Aucune n'est bloquante : ce qu'elles apportent est
+   écrit à part, après la candidature, et leur absence ne coûte que les
+   réponses du matching. `/api/health` dit lesquelles manquent.
 
    `14`, `15` et `16` peuvent attendre : l'ordre des photos et la durée
    gardent leurs valeurs par défaut, et la colonne du code personnel n'est
