@@ -71,6 +71,18 @@ l'adresse, où il resterait dans l'historique et les journaux ; c'est
 d'ailleurs pourquoi l'envoi ne redirige plus vers `/merci` quand le
 service se propose.
 
+**Et la page qui héberge le formulaire non plus.** `embed.js` emmène
+toute la page WordPress vers `data-lil-merci` dès la fin de l'envoi — ce
+qui emportait la carte avant qu'on ait pu la lire. Le formulaire annonce
+donc dans son message `lil:done` qu'il a encore quelque chose à montrer,
+et le widget patiente. Le pixel de conversion, lui, est déjà parti juste
+avant : rien n'est perdu côté mesure.
+
+Le parcours court garde sa redirection, puisqu'il ne propose rien
+ensuite. L'iframe se redimensionne toute seule sur la hauteur du
+contenu, formulaire détaillé compris : la page défile normalement, sans
+ascenseur interne.
+
 La carte s'appelle **« Service de matching personnalisé »**, et son texte
 ne présente jamais les rencontres comme un coup de chance qu'il faudrait
 rattraper : le service s'y ajoute, il ne les corrige pas. Un test vérifie

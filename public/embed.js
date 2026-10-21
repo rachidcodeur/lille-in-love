@@ -6,7 +6,8 @@
  *   2. ajuste sa hauteur au fil des étapes (plus de barre de défilement interne) ;
  *   3. ramène la vue en haut du formulaire à chaque changement d'étape ;
  *   4. conduit la page entière vers le remerciement une fois la candidature
- *      envoyée, si data-lil-merci indique où aller.
+ *      envoyée, si data-lil-merci indique où aller — sauf quand le
+ *      formulaire annonce qu'il affiche quelque chose ensuite.
  *
  * Rien à installer côté WordPress : un simple bloc HTML suffit.
  */
@@ -88,7 +89,12 @@
       // Une fois la conversion envoyée, on emmène la page entière vers le
       // remerciement. Le court délai laisse partir l'événement du pixel
       // avant que le navigateur ne quitte la page.
-      if (data.type === 'lil:done' && MERCI) {
+      //
+      // Sauf quand le formulaire annonce qu'il a quelque chose à montrer
+      // ensuite — le service de matching s'affiche sous le remerciement,
+      // et la redirection l'emportait avant qu'on ait pu le lire. Le
+      // pixel, lui, est déjà parti juste au-dessus : rien n'est perdu.
+      if (data.type === 'lil:done' && MERCI && !data.matching) {
         setTimeout(function () {
           try {
             window.top.location.href = MERCI;

@@ -1335,6 +1335,21 @@ const cadre = page.frameLocator('iframe');
   ? ok('le widget a posé l’iframe sur la page')
   : bad('aucune iframe posée par embed.js');
 
+// --- La page ne s'en va pas quand il reste quelque chose à lire -----
+// Le service de matching s'affiche sous le remerciement, dans l'iframe.
+// « data-lil-merci » emportait la page entière avant qu'on ait pu le
+// voir : le formulaire annonce donc ce qui l'attend, et embed.js patiente.
+await page.locator('iframe').evaluate((frame) => {
+  frame.contentWindow.parent.postMessage(
+    { type: 'lil:done', already: false, id: 'essai', matching: true },
+    '*',
+  );
+});
+await page.waitForTimeout(1600);
+!page.url().includes('/merci-wordpress')
+  ? ok('la page reste en place quand le formulaire a encore quelque chose à montrer')
+  : bad('la page part malgré le service à proposer', page.url());
+
 await cadre.getByRole('radio', { name: 'Une femme' }).click();
 await page.waitForTimeout(600);
 await cadre.locator('#firstName').fill('Leila');

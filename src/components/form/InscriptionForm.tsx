@@ -376,7 +376,18 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
       // La page WordPress peut vouloir réagir de son côté — son propre
       // pixel, sa propre redirection.
       if (window.parent !== window) {
-        window.parent.postMessage({ type: 'lil:done', already: deja, id: result.id }, '*');
+        window.parent.postMessage(
+          {
+            type: 'lil:done',
+            already: deja,
+            id: result.id,
+            // Dit à la page qui nous héberge de ne pas nous emporter : le
+            // service de matching s'affiche juste en dessous, et une
+            // redirection le ferait disparaître avant qu'on l'ait lu.
+            matching: Boolean(result.matchingToken),
+          },
+          '*',
+        );
       }
 
       // Puis la page de remerciement, qui a sa propre adresse. Le court
