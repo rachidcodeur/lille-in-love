@@ -130,12 +130,19 @@ export const BLOCS: BlocMatching[] = [
         libelle: 'Quel type de relation cherches-tu ?',
         aide: 'Plusieurs réponses possibles.',
         type: 'cases',
+        exclusive: 'sais_pas',
+        // « Union libre » et « Relation libre » disaient la même chose à
+        // une lettre près. La liste va maintenant du plus engageant au
+        // moins, et ne mélange plus un statut légal avec une façon de
+        // vivre à deux.
         options: [
+          { valeur: 'longue', libelle: 'Relation longue' },
           { valeur: 'mariage', libelle: 'Mariage' },
           { valeur: 'pacs', libelle: 'PACS' },
-          { valeur: 'union_libre', libelle: 'Union libre' },
+          { valeur: 'vie_commune', libelle: 'Vivre ensemble' },
           { valeur: 'relation_libre', libelle: 'Relation libre' },
           { valeur: 'non_exclusif', libelle: 'Couple non exclusif' },
+          { valeur: 'sais_pas', libelle: 'Je ne sais pas encore' },
         ],
       },
     ],
@@ -156,7 +163,15 @@ export const BLOCS: BlocMatching[] = [
           { valeur: 'bac_5', libelle: 'Bac +5' },
           { valeur: 'doctorat', libelle: 'Doctorat' },
           { valeur: 'en_formation', libelle: 'En cours de formation' },
+          { valeur: 'autre', libelle: 'Autre' },
         ],
+      },
+      {
+        nom: 'etudesAutre',
+        libelle: 'Dis-nous plus',
+        type: 'ligne',
+        max: 120,
+        siOption: { champ: 'etudes', vaut: 'autre' },
       },
       {
         nom: 'situationPro',
@@ -175,12 +190,11 @@ export const BLOCS: BlocMatching[] = [
       },
       {
         nom: 'situationProAutre',
-        libelle: 'Précise',
+        libelle: 'Dis-nous plus',
         type: 'ligne',
         max: 120,
         siOption: { champ: 'situationPro', vaut: 'autre' },
       },
-      { nom: 'nationalite', libelle: 'Nationalité', type: 'ligne', max: 80 },
     ],
   },
   {
@@ -188,9 +202,16 @@ export const BLOCS: BlocMatching[] = [
     titre: 'Culture et origines',
     champs: [
       {
+        nom: 'taPersonnalite',
+        libelle: 'Quelle est ta personnalité ?',
+        aide: 'En quelques mots, comme tes proches te décriraient.',
+        type: 'ligne',
+        max: 200,
+      },
+      {
         nom: 'origines',
-        libelle: 'Tes origines culturelles',
-        aide: 'Comme tu les décrirais toi-même.',
+        libelle: 'Tu es de quelle origine ?',
+        aide: 'Comme tu la décrirais toi-même.',
         type: 'ligne',
         max: 120,
         sensible: true,
@@ -215,7 +236,7 @@ export const BLOCS: BlocMatching[] = [
       },
       {
         nom: 'originesAutre',
-        libelle: 'Précise',
+        libelle: 'Dis-nous plus',
         type: 'ligne',
         max: 120,
         sensible: true,
@@ -232,10 +253,12 @@ export const BLOCS: BlocMatching[] = [
         libelle: 'La religion est-elle importante pour toi ?',
         type: 'radio',
         sensible: true,
+        // « Pas du tout » d'abord : c'est la réponse la plus donnée, et
+        // la liste ne commence plus par celle qui engage le plus.
         options: [
-          { valeur: 'tres', libelle: 'Très importante' },
-          { valeur: 'un_peu', libelle: 'Un peu' },
           { valeur: 'pas', libelle: 'Pas du tout' },
+          { valeur: 'un_peu', libelle: 'Un peu' },
+          { valeur: 'tres', libelle: 'Très importante' },
         ],
       },
       {
@@ -256,14 +279,19 @@ export const BLOCS: BlocMatching[] = [
   },
   {
     id: 'ideal',
-    titre: 'La personne que tu cherches',
+    titre: 'Décris-nous l’élu de ton cœur',
     champs: [
       {
         nom: 'physiqueIdeal',
-        libelle: 'Physiquement, à quoi es-tu sensible ?',
-        aide: 'Taille, allure, cheveux… sans te censurer.',
+        libelle: 'Physiquement, qu’est-ce qui te fait craquer ?',
+        aide: 'Taille, corpulence, cheveux, couleur de peau, style vestimentaire.',
         type: 'texte',
         max: 500,
+        // La couleur de peau est nommée dans l'aide : ce qu'on écrit ici
+        // peut donc toucher aux origines, que la loi dit sensibles. Le
+        // champ suit le même sort qu'elles — sans le consentement, il ne
+        // s'enregistre pas.
+        sensible: true,
       },
       {
         nom: 'qualitesRecherchees',
@@ -281,15 +309,11 @@ export const BLOCS: BlocMatching[] = [
       {
         nom: 'personnalite',
         libelle: 'Décris-nous ton style de vie',
-        aide: 'Tes journées, tes week-ends, ce qui te ressemble.',
+        // « Tes passions » était une question à part, juste en dessous :
+        // on répondait deux fois la même chose. Elle tient dans l'aide.
+        aide: 'Tes journées, tes week-ends, tes passions, ce qui te ressemble.',
         type: 'texte',
         max: 600,
-      },
-      {
-        nom: 'passions',
-        libelle: 'Tes passions',
-        type: 'ligne',
-        max: 200,
       },
       {
         nom: 'sorties',
@@ -366,7 +390,7 @@ export const BLOCS: BlocMatching[] = [
       },
       {
         nom: 'typeVoyageAutre',
-        libelle: 'Précise',
+        libelle: 'Dis-nous plus',
         type: 'ligne',
         max: 120,
         siOption: { champ: 'typeVoyage', vaut: 'autre' },
