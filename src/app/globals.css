@@ -984,6 +984,17 @@ body {
   resize: vertical;
 }
 
+/* Une question restée vide se signale là où elle est, sans rougir : un
+   liseré et un fond plus marqués suffisent à la retrouver après avoir
+   fait défiler trente questions. */
+.lil-matching-champ[data-manque] {
+  border-left: 3px solid var(--gold);
+  background: rgba(168, 148, 110, 0.07);
+  margin-left: -14px;
+  padding: 10px 0 10px 11px;
+  border-radius: 0 8px 8px 0;
+}
+
 /* Trente questions à la suite : à 14 px, les intitulés se confondaient
    avec les aides et les options. Trois pixels de plus suffisent à les
    faire lire comme des questions. */
@@ -1231,14 +1242,6 @@ body {
   align-items: center;
 }
 
-.lil-service-consent {
-  margin-top: 18px;
-}
-
-.lil-service-attente {
-  margin-top: 14px;
-}
-
 .lil-service-envoyer {
   margin-top: 26px;
   width: 100%;
@@ -1295,4 +1298,81 @@ body {
 
 .lil-accord .lil-error {
   margin-top: 10px;
+}
+
+/* ------------------------------------------------------------------ */
+/* Qui l'on amène                                                      */
+/* ------------------------------------------------------------------ */
+
+.lil-compagnon-noms + .lil-compagnon-noms {
+  margin-top: 14px;
+}
+
+/* La fiche qu'on propose de reconnaître. Encadrée et un peu en retrait :
+   ce n'est pas une question de plus, c'est une réponse qu'on avance et
+   qu'on peut écarter d'un mot. */
+.lil-compagnon-trouve {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--cream);
+}
+
+.lil-compagnon-photo {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: rgba(168, 148, 110, 0.18);
+}
+
+.lil-compagnon-dit {
+  min-width: 0;
+}
+
+.lil-compagnon-nom {
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 2px;
+}
+
+.lil-compagnon-boutons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.lil-compagnon-boutons .lil-btn-secondaire {
+  padding: 8px 16px;
+  font-size: 15px;
+}
+
+/* « Non » n'est pas un refus qu'on met en valeur : c'est le cas le plus
+   fréquent, et il ne doit rien coûter. */
+.lil-compagnon-non {
+  background: none;
+  border: 0;
+  padding: 6px 2px;
+  color: var(--ink-soft);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+}
+
+.lil-compagnon-confirme {
+  margin-top: 14px;
+  color: var(--ink-2);
+  font-size: 15px;
+}
+
+.lil-compagnon > .lil-field-help {
+  margin-top: 14px;
 }

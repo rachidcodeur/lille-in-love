@@ -22,7 +22,7 @@ export type FieldType =
   | 'date'
   | 'naissance'
   | 'celibat'
-  | 'partage'
+  | 'compagnon'
   | 'matching'
   | 'photos'
   | 'consent';
@@ -253,7 +253,6 @@ const ETAPES: Step[] = [
     section: 'Toi, en quelques mots',
     title: 'Quel est ton signe astrologique ?',
     facultatif: true,
-    help: 'Pour ceux que ça amuse.',
     fields: [
       {
         name: 'zodiac',
@@ -308,20 +307,10 @@ const ETAPES: Step[] = [
         ],
       },
       {
-        name: 'companionFirstName',
-        type: 'text',
-        label: 'Son prénom',
-        facultatif: true,
-        maxLength: 60,
-        placeholder: 'Pour lui envoyer une invitation',
-        showIf: { field: 'comesWith', equals: 'oui' },
-      },
-      {
-        // On prenait son prénom, et c'est tout : l'autre n'était au
-        // courant de rien. Le lien s'affiche ici, avec de quoi le lui
-        // envoyer en un geste — chacun remplit le sien.
-        name: 'companionPartage',
-        type: 'partage',
+        // Son prénom et son nom, et le rapprochement s'il est déjà des
+        // nôtres : deux « Julie » ne se distinguent pas autrement.
+        name: 'companion',
+        type: 'compagnon',
         showIf: { field: 'comesWith', equals: 'oui' },
       },
     ],
@@ -330,11 +319,11 @@ const ETAPES: Step[] = [
     id: 'referral',
     section: 'Toi, en quelques mots',
     title: 'Comment tu nous as connus ?',
+    facultatif: true,
     fields: [
       {
         name: 'referral',
         type: 'select',
-        required: true,
         options: REFERRALS,
         placeholder: 'Choisis une réponse',
       },

@@ -69,11 +69,18 @@ export const inscriptionSchema = z
 
     comesWith: z.enum(['oui', 'non']),
     companionFirstName: optionalText(60),
+    companionLastName: optionalText(60),
+    // La fiche reconnue et confirmée à l'écran. Le serveur revérifie
+    // qu'elle porte bien ces deux noms : ce qui vient du navigateur ne
+    // désigne personne tant qu'on ne l'a pas vérifié.
+    companionMemberId: z.string().uuid().optional().or(z.literal('')),
     // Plus demandé par le formulaire ; toléré pour ne pas casser un envoi
     // qui viendrait d'une page en cache.
     companionEmail: z.string().trim().email('Email invalide').max(180).optional().or(z.literal('')),
 
-    referral: z.enum(values(REFERRALS)),
+    // Facultatif : savoir comment on nous a connus nous sert, mais pas au
+    // point de retenir quelqu'un qui ne sait pas quoi répondre.
+    referral: z.enum(values(REFERRALS)).optional(),
     referralOther: optionalText(120),
 
     firstName: trimmed.min(1, 'Indique ton prénom').max(60),

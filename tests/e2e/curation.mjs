@@ -619,6 +619,11 @@ await fetch(`${BASE}/api/inscription`, {
   }),
 });
 
+// Ce qui inquiète vraiment avec un doublon, ce n'est pas la ligne en
+// trop : c'est le second « Candidature reçue » dans la boîte de
+// quelqu'un qui n'a rien refait.
+const avantDoublon = (await state()).sent.length;
+
 const dupe = await fetch(`${BASE}/api/inscription`, {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
@@ -638,6 +643,9 @@ dupeBody.alreadyRegistered ? ok('un second envoi du même email est reconnu, pas
 
 s = await state();
 s.members.length === 1 ? ok('toujours une seule candidature en base') : bad('membres en base', String(s.members.length));
+s.sent.length === avantDoublon
+  ? ok('et aucun second mail n’est parti')
+  : bad('un mail de plus pour un doublon', s.sent.slice(avantDoublon).map((m) => `${m.to} · ${m.subject}`).join(', '));
 
 /* ---------------------------------------------------------------- */
 section('10 bis. Le même numéro sous une autre adresse');
@@ -3389,6 +3397,152 @@ bilan.ok === true
   : bad('une migration en attente fait passer le déploiement pour cassé');
 
 await fetch(`${FAKE}/__colonnes-absentes?table=lil_crush_matches&colonnes=`, { method: 'POST' });
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
+/* ====================================================================
+   21. Un complément n'est pas une nouvelle candidature
+   ==================================================================== */
+// Répondre au matching revient sur une fiche déjà enregistrée : c'est un
+// complément d'informations, pas une inscription. Ni l'équipe ni la
+// personne ne doivent recevoir quoi que ce soit une seconde fois.
+section('21. Le matching complété n’envoie aucun mail');
+
+const inscrit = await (
+  await fetch(`${BASE}/api/inscription`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      formVersion: 'complet',
+      gender: 'femme', birthDate: '1990-03-02', city: 'Lille', postalCode: '59000',
+      orientation: 'hetero', lookingFor: 'relation_serieuse', singleSince: '2_ans',
+      heightCm: 170, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
+      profession: 'Essai', referral: 'instagram',
+      comesWith: 'non', firstName: 'Julie', lastName: 'Dupont',
+      phone: '06 11 22 33 44', email: 'julie.dupont@example.com', consent: true,
+      elapsedMs: 60000,
+      photos: [{ path: 'pending/44444444-4444-4444-8444-444444444444.jpg' }],
+    }),
+  })
+).json();
+
+inscrit.matchingToken
+  ? ok('la candidature complète ouvre le service de matching')
+  : bad('pas de jeton rendu', JSON.stringify(inscrit));
+
+s = await state();
+const avantMatching = { partis: s.sent.length, journal: s.emails.length };
+
+const complement = await fetch(`${BASE}/api/matching`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    token: inscrit.matchingToken,
+    reponses: { consentSensible: true, situationMaritale: 'divorce', sport: 'oui' },
+  }),
+});
+
+s = await state();
+complement.status === 200
+  ? ok('les réponses sont acceptées')
+  : bad('le complément a été refusé', String(complement.status));
+s.sent.length === avantMatching.partis
+  ? ok('et aucun mail ne part : ni à l’inscrit, ni à Lille in Love')
+  : bad('un mail est parti pour un complément', s.sent.slice(avantMatching.partis).map((m) => `${m.to} · ${m.subject}`).join(', '));
+s.emails.length === avantMatching.journal
+  ? ok('rien n’est ajouté au journal non plus')
+  : bad('le journal a grossi', String(s.emails.length - avantMatching.journal));
+
+const ficheJulie = s.members.find((m) => m.email === 'julie.dupont@example.com');
+ficheJulie?.matching?.situationMaritale === 'divorce'
+  ? ok('mais les réponses sont bien venues s’ajouter à la fiche')
+  : bad('réponses de matching absentes de la fiche', JSON.stringify(ficheJulie?.matching ?? null));
+ficheJulie?.matching_token == null
+  ? ok('et le jeton est consommé : on complète une fois, pas trois')
+  : bad('le jeton resservira');
+
+/* ====================================================================
+   22. Reconnaître la personne qu'on amène
+   ==================================================================== */
+// On ne dévoile pas les participants. La route ne répond que si le prénom
+// et le nom donnés désignent une seule fiche, et ne dit rien de plus
+// qu'un prénom et trois lettres.
+section('22. Qui l’on amène');
+
+const demander = async (prenom, nom) =>
+  (
+    await fetch(`${BASE}/api/compagnon`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prenom, nom }),
+    })
+  ).json();
+
+const reconnue = await demander('julie', 'DUPONT');
+reconnue.trouve && reconnue.prenom === 'Julie' && reconnue.nom === 'DUP'
+  ? ok('les deux noms exacts désignent la fiche, et n’en montrent que trois lettres')
+  : bad('fiche non reconnue', JSON.stringify(reconnue));
+
+// Les accents et les traits d'union ne doivent pas faire manquer
+// quelqu'un : « Jean-Éric » et « jean eric » sont la même personne.
+(await demander('Julié', 'Dupont')).trouve
+  ? ok('et les accents ne font pas manquer quelqu’un')
+  : bad('un accent suffit à ne plus reconnaître la fiche');
+
+// Le prénom seul ne suffit pas : sans ça, « Julie » ferait apparaître
+// toutes les Julie de la base, une par une.
+!(await demander('Julie', 'Durand')).trouve
+  ? ok('le prénom seul ne dévoile personne')
+  : bad('un nom faux a suffi à reconnaître quelqu’un');
+!(await demander('Camille', 'Dupont')).trouve
+  ? ok('ni le nom seul')
+  : bad('un prénom faux a suffi à reconnaître quelqu’un');
+
+// Le navigateur envoie l'identifiant qu'on lui a rendu, et un navigateur
+// n'est pas une autorité : le serveur revérifie que la fiche porte bien
+// ces deux noms. Sans ça, on se rattacherait à n'importe qui.
+const rattacher = async (nomCompagnon, id) =>
+  (
+    await fetch(`${BASE}/api/inscription`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        formVersion: 'complet',
+        gender: 'homme', birthDate: '1988-07-19', city: 'Lille', postalCode: '59000',
+        orientation: 'hetero', lookingFor: 'relation_serieuse', singleSince: '1_ans',
+        heightCm: 180, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
+        profession: 'Essai', referral: 'instagram',
+        comesWith: 'oui',
+        companionFirstName: 'Julie',
+        companionLastName: nomCompagnon,
+        companionMemberId: id,
+        firstName: 'Marc', lastName: `Ami${nomCompagnon}`,
+        phone: `06 55 44 33 ${nomCompagnon === 'Dupont' ? '11' : '22'}`,
+        email: `marc.${nomCompagnon.toLowerCase()}@example.com`,
+        consent: true, elapsedMs: 60000,
+        photos: [{ path: 'pending/55555555-5555-4555-8555-555555555555.jpg' }],
+      }),
+    })
+  ).json();
+
+const julieId = (await state()).members.find((m) => m.email === 'julie.dupont@example.com')?.id;
+
+await rattacher('Dupont', julieId);
+s = await state();
+const avecAmie = s.members.find((m) => m.email === 'marc.dupont@example.com');
+avecAmie?.companion_member_id === julieId
+  ? ok('confirmée et vérifiée, la fiche de l’amie est rattachée')
+  : bad('rattachement perdu', JSON.stringify(avecAmie?.companion_member_id ?? null));
+avecAmie?.companion_last_name === 'Dupont'
+  ? ok('avec son nom de famille, tel qu’il a été saisi')
+  : bad('nom du compagnon absent', JSON.stringify(avecAmie?.companion_last_name ?? null));
+
+await rattacher('Durand', julieId);
+s = await state();
+const menteur = s.members.find((m) => m.email === 'marc.durand@example.com');
+menteur && menteur.companion_member_id == null
+  ? ok('un identifiant qui ne correspond pas aux noms n’est pas repris')
+  : bad('rattachement accepté sans vérification', JSON.stringify(menteur?.companion_member_id ?? null));
+
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
 await browser.close();

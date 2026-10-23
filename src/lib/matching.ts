@@ -433,6 +433,32 @@ export const BLOCS: BlocMatching[] = [
   },
 ];
 
+/**
+ * Ce qui reste sans réponse.
+ *
+ * Le service est entièrement facultatif — on peut dire « Non merci » et
+ * ne rien perdre. Mais une fois qu'on a dit oui, répondre à moitié ne
+ * sert personne : on cherche sur ce qu'on nous donne, et un profil
+ * à trois réponses ne se cherche pas. D'où ces questions obligatoires
+ * dans un service qui, lui, ne l'est pas.
+ *
+ * Les « Précise » n'y échappent que tant que leur case n'est pas cochée.
+ */
+export function champsManquants(valeurs: Record<string, unknown>): string[] {
+  const manque: string[] = [];
+  for (const champ of CHAMPS) {
+    if (!conditionRemplie(champ, valeurs)) continue;
+    const valeur = valeurs[champ.nom];
+    const vide = Array.isArray(valeur)
+      ? valeur.length === 0
+      : typeof valeur === 'string'
+        ? valeur.trim() === ''
+        : valeur === undefined || valeur === null;
+    if (vide) manque.push(champ.nom);
+  }
+  return manque;
+}
+
 /** Tous les champs, à plat. */
 export const CHAMPS: ChampMatching[] = BLOCS.flatMap((b) => b.champs);
 

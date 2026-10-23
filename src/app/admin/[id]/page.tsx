@@ -101,8 +101,16 @@ export default async function FichePage({ params }: Props) {
     },
     {
       terme: 'Vient avec',
+      // « Déjà inscrit·e » n'est écrit que si la personne a confirmé elle-
+      // même le rapprochement : un nom qui se ressemble n'en est pas un.
       valeur: member.comes_with
-        ? [member.companion_first_name, member.companion_email].filter(Boolean).join(' · ') || 'Oui'
+        ? [
+            [member.companion_first_name, member.companion_last_name].filter(Boolean).join(' '),
+            member.companion_email,
+            member.companion_member_id ? 'déjà inscrit·e' : null,
+          ]
+            .filter(Boolean)
+            .join(' · ') || 'Oui'
         : member.comes_with === false
           ? 'Seul·e'
           : null,

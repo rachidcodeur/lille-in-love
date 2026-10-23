@@ -33,6 +33,44 @@ const section = (label) => console.log(`\n${BOLD}${label}${OFF}`);
 
 const browser = await chromium.launch({ executablePath: CHROME, headless: true });
 
+/**
+ * Répondre à tout le second questionnaire.
+ *
+ * Trente questions obligatoires : les énumérer une à une dans le test
+ * reviendrait à recopier « matching.ts », et à le recopier de nouveau à
+ * chaque question ajoutée. On prend donc la première réponse venue, quelle
+ * qu'elle soit — ce qu'on vérifie ici, c'est que l'envoi passe une fois
+ * tout rempli, pas la teneur des réponses.
+ */
+async function repondreATout(page) {
+  // Cocher une case peut en faire apparaître une autre (« Précise ») :
+  // on repasse jusqu'à ce que plus rien ne manque.
+  for (let tour = 0; tour < 4; tour += 1) {
+    const champs = await page.locator('.lil-matching-champ').all();
+    let reste = false;
+
+    for (const champ of champs) {
+      const choix = champ.locator('.lil-choice').first();
+      if (await choix.count()) {
+        if ((await champ.locator('[aria-checked="true"]').count()) === 0) {
+          await choix.click();
+          reste = true;
+        }
+        continue;
+      }
+
+      const saisie = champ.locator('input, textarea').first();
+      if ((await saisie.count()) && !(await saisie.inputValue())) {
+        await saisie.fill('Peu importe');
+        reste = true;
+      }
+    }
+
+    if (!reste) return;
+    await page.waitForTimeout(150);
+  }
+}
+
 /* ================================================================== */
 section('Navigation et validation');
 {
@@ -186,6 +224,33 @@ section('Parcours complet et envoi');
     });
   });
 
+  // La reconnaissance du compagnon : « Julie Dupont » existe, le reste
+  // non. Un carré de pixels tient lieu de photo.
+  const PIXEL =
+    'data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==';
+  let compagnonDemande = null;
+  await page.route('**/api/compagnon', async (route) => {
+    compagnonDemande = JSON.parse(route.request().postData() ?? '{}');
+    const connue =
+      compagnonDemande.prenom?.toLowerCase() === 'julie' &&
+      compagnonDemande.nom?.toLowerCase() === 'dupont';
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(
+        connue
+          ? {
+              trouve: true,
+              id: '99999999-8888-4777-8666-555555555555',
+              prenom: 'Julie',
+              nom: 'DUP',
+              photo: PIXEL,
+            }
+          : { trouve: false },
+      ),
+    });
+  });
+
   let sent = null;
   await page.route('**/api/inscription', async (route) => {
     sent = JSON.parse(route.request().postData() ?? '{}');
@@ -284,22 +349,57 @@ section('Parcours complet et envoi');
   await next();
   await page.fill('#instagram', 'https://instagram.com/camille.d/');
   await next();
-  // Qui vient accompagné doit pouvoir envoyer le formulaire à l'autre :
-  // on prenait son prénom, et c'est tout.
+  // Qui vient accompagné donne deux noms : « Julie » toute seule ne
+  // désigne personne, et deux amis finissaient sur deux soirées.
   await page.getByRole('radio', { name: 'Oui' }).first().click();
   await page.waitForTimeout(300);
-  (await page.locator('.lil-partage-lien').innerText()).includes('/inscription')
-    ? ok('qui vient accompagné voit le lien du formulaire, en entier')
-    : bad('pas de lien à partager', await page.locator('.lil-partage-lien').innerText().catch(() => ''));
-  (await page.getByRole('button', { name: 'Partager le lien' }).count()) === 1
-    ? ok('avec de quoi l’envoyer en un geste')
-    : bad('pas de bouton de partage');
+  (await page.locator('#companionFirstName').count()) === 1 &&
+  (await page.locator('#companionLastName').count()) === 1
+    ? ok('qui vient accompagné donne le prénom et le nom')
+    : bad('les deux noms ne sont pas demandés');
+
+  // La fiche reconnue s'affiche avec son visage, et attend qu'on la
+  // confirme : le rapprochement se fait d'un clic, pas tout seul.
+  await page.fill('#companionFirstName', 'Julie');
+  await page.fill('#companionLastName', 'Dupont');
+  await page.waitForSelector('.lil-compagnon-trouve', { timeout: 5000 });
+  (await page.locator('.lil-compagnon-nom').innerText()).includes('DUP')
+    ? ok('la fiche reconnue montre son prénom et trois lettres de nom')
+    : bad('nom mal présenté', await page.locator('.lil-compagnon-nom').innerText());
+  (await page.locator('.lil-compagnon-photo').count()) === 1
+    ? ok('avec sa photo, pour lever le doute')
+    : bad('pas de photo sur la fiche reconnue');
+
+  if (process.env.E2E_SHOTS) {
+    await page
+      .locator('.lil-compagnon')
+      .screenshot({ path: `${process.env.E2E_SHOTS}/compagnon.png` });
+  }
+
+  await page.getByRole('button', { name: 'Oui, c’est bien la personne' }).click();
+  await page.waitForTimeout(200);
+  (await page.locator('.lil-compagnon-confirme').count()) === 1
+    ? ok('confirmée, elle est rattachée')
+    : bad('la confirmation ne s’affiche pas');
+
+  // Changer un nom défait le rapprochement : il portait sur l'ancien.
+  await page.fill('#companionLastName', 'Duponte');
+  await page.waitForTimeout(200);
+  (await page.locator('.lil-compagnon-confirme').count()) === 0
+    ? ok('et un nom changé la défait')
+    : bad('la confirmation survit au changement de nom');
+  await page.fill('#companionLastName', 'Dupont');
+  await page.waitForSelector('.lil-compagnon-trouve', { timeout: 5000 });
+  await page.getByRole('button', { name: 'Oui, c’est bien la personne' }).click();
+  await page.waitForTimeout(200);
 
   await page.getByRole('radio', { name: 'Non, je viens seul·e' }).click();
   await page.waitForTimeout(300);
-  (await page.locator('.lil-partage').count()) === 0
+  (await page.locator('#companionFirstName').count()) === 0
     ? ok('et rien de tout ça pour qui vient seul')
-    : bad('le bloc de partage reste affiché');
+    : bad('les champs du compagnon restent affichés');
+  await page.getByRole('radio', { name: 'Oui' }).first().click();
+  await page.waitForTimeout(300);
   await next();
   const sources = await page.locator('#referral option').allInnerTexts();
   sources.some((o) => o.includes('Google')) && sources.some((o) => o.includes('ChatGPT'))
@@ -405,6 +505,37 @@ section('Parcours complet et envoi');
     ? ok('le remerciement parle du mail et des rencontres')
     : bad('texte de remerciement inattendu', remerciement.replace(/\n+/g, ' | '));
 
+  // L'en-tête a fait son travail avant l'envoi : le garder ici repoussait
+  // le partage et le service sous deux écrans de défilement.
+  (await page.locator('.lil-entete').count()) === 0
+    ? ok('l’écran de fin se passe de l’en-tête')
+    : bad('l’en-tête reste affiché après l’envoi');
+
+  // Le partage s'intercale entre le remerciement et la proposition : on
+  // pense à quelqu'un une fois qu'on a fini, pas pendant qu'on remplit.
+  (await page.locator('.lil-partage-lien').innerText()).includes('/inscription')
+    ? ok('le lien à partager s’affiche après l’envoi, en entier')
+    : bad('pas de lien à partager', await page.locator('.lil-partage-lien').innerText().catch(() => ''));
+  (await page.getByRole('button', { name: 'Partager le lien' }).count()) === 1
+    ? ok('avec de quoi l’envoyer en un geste')
+    : bad('pas de bouton de partage');
+  (await page.locator('.lil-partage').evaluate((el) => {
+    const done = document.querySelector('.lil-done');
+    const service = document.querySelector('.lil-service');
+    return Boolean(
+      done &&
+        service &&
+        done.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING &&
+        el.compareDocumentPosition(service) & Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  }))
+    ? ok('entre le remerciement et la proposition de matching')
+    : bad('le partage n’est pas à sa place');
+
+  if (process.env.E2E_SHOTS) {
+    await page.screenshot({ path: `${process.env.E2E_SHOTS}/fin.png`, fullPage: true });
+  }
+
   // --- Le service, proposé une fois la candidature partie ------------
   // Il était la dernière étape du formulaire. Le mettre après change
   // tout : plus personne n'a à refuser une offre pour pouvoir envoyer.
@@ -425,22 +556,24 @@ section('Parcours complet et envoi');
     ? ok('et ses questions attendent qu’on ait dit oui')
     : bad('les questions s’affichent sans qu’on ait accepté');
 
+  // Ce que le « oui » engage se lit avant de le donner : c'est ce clic
+  // qui vaut consentement, il n'y a plus de case à cocher derrière.
+  /origines/i.test(offre) && /religion/i.test(offre)
+    ? ok('la carte annonce les questions sensibles avant qu’on accepte')
+    : bad('le consentement n’est pas annoncé sur la carte', offre.replace(/\n+/g, ' | '));
+
   await page.getByRole('button', { name: 'Oui, ça m’intéresse' }).click();
   await page.waitForTimeout(400);
 
-  // Le consentement se donne en tête, avant la première question.
-  (await page.locator('.lil-matching-bloc').count()) === 0
-    ? ok('rien ne s’affiche tant que les conditions ne sont pas acceptées')
-    : bad('les questions s’affichent sans consentement');
   (await page.locator('.lil-confidentialite').count()) === 1
     ? ok('et la mention sur qui lit les réponses est là, avant de commencer')
     : bad('pas de mention de confidentialité');
-
-  await page.locator('.lil-service-consent input').check();
-  await page.waitForTimeout(400);
   (await page.locator('.lil-matching-bloc').count()) >= 8
-    ? ok('cochée, toutes les questions se déroulent d’un coup')
+    ? ok('le oui donné, toutes les questions se déroulent d’un coup')
     : bad('questions manquantes', String(await page.locator('.lil-matching-bloc').count()));
+  (await page.locator('.lil-service-consent').count()) === 0
+    ? ok('sans seconde case à cocher')
+    : bad('la case de consentement secondaire est encore là');
 
   const titres = (await page.locator('.lil-matching-bloc legend').allInnerTexts())
     .join(' | ')
@@ -487,6 +620,23 @@ section('Parcours complet et envoi');
     .getByRole('radio', { name: 'Divorcé(e) ou séparé(e)' })
     .click();
   await page.waitForTimeout(200);
+
+  // Le service est facultatif, ses questions ne le sont pas : une seule
+  // réponse sur trente partait sans que rien ne le dise, et ne servait à
+  // personne. L'envoi doit refuser, et montrer où il manque quelque chose.
+  await page.getByRole('button', { name: 'Envoyer mes réponses' }).click();
+  await page.waitForTimeout(400);
+  (await page.locator('.lil-service-merci').count()) === 0
+    ? ok('un questionnaire à moitié rempli ne part pas')
+    : bad('l’envoi est passé avec des questions sans réponse');
+  /questions? sans réponse/i.test(await page.locator('.lil-service .lil-error').innerText())
+    ? ok('et l’envoi dit combien il en reste')
+    : bad('pas de décompte des questions manquantes');
+  (await page.locator('.lil-matching-champ[data-manque]').count()) > 0
+    ? ok('chaque question laissée vide est signalée à sa place')
+    : bad('les questions manquantes ne sont pas repérables');
+
+  await repondreATout(page);
 
   await page.getByRole('button', { name: 'Envoyer mes réponses' }).click();
   await page.waitForTimeout(900);

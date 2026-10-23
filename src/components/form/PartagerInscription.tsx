@@ -10,12 +10,12 @@ import { BRAND } from '@/lib/brand';
 const LIEN = BRAND.inscriptionUrl.replace(/\/$/, '');
 
 /**
- * De quoi envoyer le formulaire à la personne qu'on amène.
+ * De quoi passer le formulaire à quelqu'un.
  *
- * Quelqu'un qui vient accompagné doit faire inscrire l'autre, et il n'y
- * avait rien pour ça : on prenait son prénom, et c'est tout — l'autre
- * n'était au courant de rien. Le lien s'affiche donc ici, en entier, avec
- * de quoi le partager en un geste.
+ * Il vivait au milieu des questions, pour qui venait accompagné. Il est
+ * remonté sur l'écran de fin : on pense à quelqu'un une fois qu'on a
+ * soi-même terminé, pas pendant qu'on remplit — et ça vaut aussi pour
+ * qui vient seul.
  *
  * Le partage natif quand le téléphone le propose, la copie sinon, et le
  * lien lisible dans les deux cas : on ne remplace pas ce qu'on peut lire
@@ -45,9 +45,10 @@ export function PartagerInscription() {
 
   return (
     <div className="lil-partage">
-      <p className="lil-partage-titre">Envoie-lui le formulaire</p>
+      <p className="lil-partage-titre">Partage-lui le formulaire</p>
       <p className="lil-field-help">
-        Chacun remplit le sien. Sans ça, on ne pourra pas vous placer sur la même soirée.
+        Quelqu’un que tu aimerais voir à cette soirée&nbsp;? Chacun remplit le sien — c’est
+        comme ça qu’on peut vous placer ensemble.
       </p>
       <p className="lil-partage-lien">{LIEN}</p>
       <button type="button" className="lil-btn-secondaire" onClick={partager}>

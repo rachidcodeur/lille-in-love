@@ -420,11 +420,13 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
     [index, done],
   );
 
-  /* --- Écran de fin ------------------------------------------------- */
+  /* --- Écran de fin -------------------------------------------------
+     Sans l'en-tête : la soirée et son prix ont fait leur travail, et ce
+     qui compte maintenant — le partage, puis le service — doit se voir
+     sans avoir à faire défiler deux écrans. */
   if (done) {
     return (
       <div className="lil-shell" ref={rootRef}>
-        <Entete />
         <div className="lil-card">
           <Remerciement
             firstName={done.firstName}
@@ -548,6 +550,7 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
                   error={errors[field.name]}
                   onChange={setValue}
                   onAdvance={isLast ? undefined : goNext}
+                  values={values}
                 />
               ),
             )}

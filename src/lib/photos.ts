@@ -92,6 +92,38 @@ async function reduire(
 }
 
 /**
+ * La première photo d'un membre, en vignette, dans la réponse elle-même.
+ *
+ * Pour la confirmation du compagnon : on montre un visage sans ouvrir
+ * d'adresse publique vers les photos. Pas d'URL à deviner, rien à
+ * parcourir en changeant un identifiant — l'image ne sort que par la
+ * porte qui l'a autorisée, et dans le même échange.
+ */
+export async function vignetteEnLigne(memberId: string): Promise<string | null> {
+  const db = supabaseAdmin();
+  const { data: photo } = await db
+    .from('lil_photos')
+    .select('storage_path')
+    .eq('member_id', memberId)
+    .order('position', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (!photo?.storage_path) return null;
+
+  const { data: fichier, error } = await db.storage
+    .from(env.storageBucket())
+    .download(photo.storage_path);
+  if (error || !fichier) return null;
+
+  const brut = Buffer.from(await fichier.arrayBuffer());
+  const reduit = await reduire(brut, 'vignette');
+  const octets = reduit?.octets ?? brut;
+  const type = reduit?.type ?? fichier.type ?? 'image/jpeg';
+  return `data:${type};base64,${octets.toString('base64')}`;
+}
+
+/**
  * La réponse HTTP d'une photo.
  *
  * `autorise` reçoit le member_id propriétaire et dit si celui qui demande a

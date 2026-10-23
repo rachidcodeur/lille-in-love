@@ -105,6 +105,15 @@ const MIGRATIONS: {
     colonne: 'matching_token',
     sans: 'le service de matching ne se propose pas après l’envoi',
   },
+  {
+    // La vue est interrogée, et pas la table : cette migration recrée
+    // l'une et l'autre, et « select m.* » fige les colonnes de la vue.
+    // Vérifier la table laisserait passer une vue restée en arrière.
+    fichier: '23_compagnon.sql',
+    table: 'lil_members_overview',
+    colonne: 'companion_last_name',
+    sans: 'le nom de la personne qu’on amène n’est ni enregistré ni visible en curation',
+  },
 ];
 
 /** Ce que la base ne connaît pas encore. */

@@ -13,6 +13,7 @@ import {
   type InscriptionInput,
 } from '@/lib/validation';
 import { HONEYPOT_FIELDS, MIN_FILL_SECONDS } from '@/lib/questions';
+import { chercherCompagnon } from '@/lib/compagnon';
 import { previenirEquipe, sendSequenceEmail } from '@/lib/mailer';
 import { randomUUID } from 'node:crypto';
 
@@ -55,7 +56,7 @@ function fullRow(data: InscriptionInput) {
     comes_with: data.comesWith === 'oui',
     companion_first_name: data.companionFirstName ?? null,
     companion_email: data.comesWith === 'oui' ? data.companionEmail || null : null,
-    referral: data.referral,
+    referral: data.referral ?? null,
     phone: normalizePhone(data.phone),
     birth_date: data.birthDate,
   };
@@ -73,19 +74,52 @@ function fullRow(data: InscriptionInput) {
 async function poserLesSupplements(
   db: ReturnType<typeof supabaseAdmin>,
   memberId: string,
-  valeurs: { referral_other: string | null; matching_token: string },
+  valeurs: {
+    referral_other: string | null;
+    matching_token: string;
+    companion_last_name: string | null;
+    companion_member_id: string | null;
+  },
 ): Promise<string | null> {
   const ensemble = await db.from('lil_members').update(valeurs).eq('id', memberId);
   if (!ensemble.error) return valeurs.matching_token;
 
-  // L'une des deux manque : on réessaie avec celle qui ouvre le service,
-  // des fois que ce soit l'autre qui ne soit pas encore là.
+  // Une colonne manque, on ne sait pas laquelle : on redescend d'un cran
+  // à chaque fois, jusqu'à celle qui ouvre le service. Mieux vaut perdre
+  // le nom du compagnon que la proposition de matching.
+  const sansCompagnon = await db
+    .from('lil_members')
+    .update({ referral_other: valeurs.referral_other, matching_token: valeurs.matching_token })
+    .eq('id', memberId);
+  if (!sansCompagnon.error) return valeurs.matching_token;
+
   const seul = await db
     .from('lil_members')
     .update({ matching_token: valeurs.matching_token })
     .eq('id', memberId);
 
   return seul.error ? null : valeurs.matching_token;
+}
+
+/**
+ * La fiche du compagnon, si elle est bien celle qu'on dit.
+ *
+ * Le navigateur envoie l'identifiant qu'on lui a rendu, et un navigateur
+ * n'est pas une autorité : on revérifie que cette fiche porte bien les
+ * deux noms saisis. Sans ça, n'importe qui pourrait se rattacher à
+ * n'importe quelle fiche en recopiant un identifiant.
+ */
+async function compagnonVerifie(data: {
+  comesWith?: string;
+  companionFirstName?: string;
+  companionLastName?: string;
+  companionMemberId?: string;
+}): Promise<string | null> {
+  if (data.comesWith !== 'oui') return null;
+  if (!data.companionMemberId || !data.companionFirstName || !data.companionLastName) return null;
+
+  const fiche = await chercherCompagnon(data.companionFirstName, data.companionLastName);
+  return fiche && fiche.id === data.companionMemberId ? fiche.id : null;
 }
 
 export async function POST(request: Request) {
@@ -308,6 +342,8 @@ export async function POST(request: Request) {
     : await poserLesSupplements(db, member.id, {
         referral_other: (data as { referralOther?: string }).referralOther ?? null,
         matching_token: randomUUID(),
+        companion_last_name: (data as { companionLastName?: string }).companionLastName || null,
+        companion_member_id: await compagnonVerifie(data as Parameters<typeof compagnonVerifie>[0]),
       });
 
   // --- Photos : on les range sous le membre ---------------------------

@@ -445,7 +445,7 @@ section('9. Le questionnaire de fin de soirée');
 section('10. Le formulaire de matching sur mesure');
 
 {
-  const { CHAMPS, nettoyerMatching } = await import(join(sortie, 'matching.js'));
+  const { CHAMPS, champsManquants, nettoyerMatching } = await import(join(sortie, 'matching.js'));
 
   new Set(CHAMPS.map((c) => c.nom)).size === CHAMPS.length
     ? ok('chaque champ a son nom, sans doublon')
@@ -495,6 +495,26 @@ section('10. Le formulaire de matching sur mesure');
   anime.animauxLequel === 'Un chat' && dedit.animauxLequel === undefined
     ? ok('« si oui, lequel » ne suit que le « oui »')
     : bad('précision conditionnelle mal filtrée', JSON.stringify([anime, dedit]));
+
+  // Le service est facultatif ; ses questions ne le sont pas. Un envoi
+  // vide partait sans rien dire et n'apprenait rien à personne.
+  champsManquants({}).length === CHAMPS.filter((c) => !c.siOption).length
+    ? ok('un questionnaire vide manque de toutes ses questions')
+    : bad('décompte des manques faux', String(champsManquants({}).length));
+
+  // Une précision fermée n'est pas une question qui manque : elle n'est
+  // pas posée.
+  !champsManquants({ animaux: 'non' }).includes('animauxLequel') &&
+  champsManquants({ animaux: 'oui' }).includes('animauxLequel')
+    ? ok('et une précision ne manque que lorsqu’elle est posée')
+    : bad('les précisions conditionnelles sont mal comptées');
+
+  // Une case décochée laisse un tableau vide, et un texte effacé une
+  // chaîne d'espaces : ni l'un ni l'autre n'est une réponse.
+  champsManquants({ typeVoyage: [], destinations: '   ' }).includes('typeVoyage') &&
+  champsManquants({ typeVoyage: [], destinations: '   ' }).includes('destinations')
+    ? ok('un tableau vide et des espaces ne comptent pas pour des réponses')
+    : bad('réponses vides acceptées comme remplies');
 
   const precise = nettoyerMatching(
     { typeVoyage: ['culturel', 'autre'], typeVoyageAutre: 'Plongée' },

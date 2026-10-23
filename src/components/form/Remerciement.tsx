@@ -1,4 +1,5 @@
 import { BRAND } from '@/lib/brand';
+import { PartagerInscription } from './PartagerInscription';
 import { ServiceMatching } from './ServiceMatching';
 
 type Props = {
@@ -78,6 +79,11 @@ export function Remerciement({
         <a href={`mailto:${BRAND.contactEmail}`}>{BRAND.contactEmail}</a>.
       </p>
       </div>
+
+      {/* Le partage vient ici, et plus au milieu des questions : on
+          pense à quelqu'un une fois qu'on a soi-même fini, pas pendant
+          qu'on remplit. */}
+      <PartagerInscription />
 
       {/* Après l'encart, et seulement pour qui vient d'envoyer : la
           candidature est en sécurité avant qu'on propose quoi que ce

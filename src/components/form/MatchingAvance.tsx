@@ -33,9 +33,12 @@ export type BrouillonMatching = Record<string, unknown>;
 export function MatchingAvance({
   valeurs,
   onChange,
+  manques = [],
 }: {
   valeurs: BrouillonMatching;
   onChange: (valeurs: BrouillonMatching) => void;
+  /** Les champs restés vides à l'envoi : signalés là où ils sont. */
+  manques?: string[];
 }) {
   const poser = (nom: string, valeur: unknown) => onChange({ ...valeurs, [nom]: valeur });
 
@@ -48,7 +51,13 @@ export function MatchingAvance({
           {bloc.champs
             .filter((champ) => conditionRemplie(champ, valeurs))
             .map((champ) => (
-              <Champ key={champ.nom} champ={champ} valeur={valeurs[champ.nom]} poser={poser} />
+              <Champ
+                key={champ.nom}
+                champ={champ}
+                valeur={valeurs[champ.nom]}
+                poser={poser}
+                manque={manques.includes(champ.nom)}
+              />
             ))}
         </fieldset>
       ))}
@@ -60,10 +69,12 @@ function Champ({
   champ,
   valeur,
   poser,
+  manque = false,
 }: {
   champ: ChampMatching;
   valeur: unknown;
   poser: (nom: string, valeur: unknown) => void;
+  manque?: boolean;
 }) {
   const choisies = Array.isArray(valeur) ? (valeur as string[]) : [];
 
@@ -81,7 +92,11 @@ function Champ({
   };
 
   return (
-    <div className="lil-matching-champ">
+    <div
+      className="lil-matching-champ"
+      data-nom={champ.nom}
+      data-manque={manque ? true : undefined}
+    >
       <p className="lil-field-label">{champ.libelle}</p>
       {champ.aide && <p className="lil-field-help">{champ.aide}</p>}
 

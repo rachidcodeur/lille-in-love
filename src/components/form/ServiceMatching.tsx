@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { champsManquants } from '@/lib/matching';
 import { MatchingAvance, type BrouillonMatching } from './MatchingAvance';
 
 /**
@@ -18,12 +19,42 @@ export function ServiceMatching({ token }: { token: string }) {
   const [valeurs, setValeurs] = useState<BrouillonMatching>({});
   const [occupe, setOccupe] = useState(false);
   const [souci, setSouci] = useState<string | null>(null);
+  const [manques, setManques] = useState<string[]>([]);
 
-  const consent = valeurs.consentSensible === true;
+  /**
+   * Le « oui » vaut consentement.
+   *
+   * Il n'y a plus de case à cocher en tête du formulaire : la carte
+   * annonce ce qu'on va demander, origines et religion comprises, et le
+   * bouton est l'acte par lequel on l'accepte. Rien n'est perdu au
+   * passage — refuser le service reste possible, et c'est ce qui rend
+   * l'accord libre.
+   */
+  function accepter() {
+    setValeurs({ ...valeurs, consentSensible: true });
+    setEtat('remplit');
+  }
 
   async function envoyer() {
+    // Le service est facultatif, ses questions ne le sont pas : un
+    // formulaire vide partait sans rien dire, et ne servait à personne.
+    const vides = champsManquants(valeurs);
+    if (vides.length > 0) {
+      setManques(vides);
+      setSouci(
+        vides.length === 1
+          ? 'Il reste une question sans réponse.'
+          : `Il reste ${vides.length} questions sans réponse.`,
+      );
+      document
+        .querySelector(`.lil-matching-champ[data-nom="${vides[0]}"]`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
     setOccupe(true);
     setSouci(null);
+    setManques([]);
     try {
       const r = await fetch('/api/matching', {
         method: 'POST',
@@ -61,58 +92,35 @@ export function ServiceMatching({ token }: { token: string }) {
       <section className="lil-service">
         <h2 className="lil-service-titre">Parle-nous de la personne que tu cherches</h2>
         <p className="lil-done-text">
-          Rien n’est obligatoire. Plus tu en dis, plus on cherche juste.
+          Réponds à tout&nbsp;: c’est sur ces réponses, et rien d’autre, qu’on cherchera.
         </p>
 
         <Confidentialite />
 
-        {/* En tête, avant la première question : on sait à quoi on
-            s'engage avant de commencer, et plus rien ne s'ouvre ni ne se
-            ferme en cours de route. */}
-        <label className="lil-consent lil-service-consent">
-          <input
-            type="checkbox"
-            checked={consent}
-            onChange={(e) => setValeurs({ ...valeurs, consentSensible: e.target.checked })}
-          />
-          <span>
-            J’accepte de répondre à des questions sur mes origines et sur la religion. Elles ne
-            servent qu’à te présenter quelqu’un, et je peux les retirer quand je veux.
-          </span>
-        </label>
+        <MatchingAvance valeurs={valeurs} onChange={setValeurs} manques={manques} />
 
-        {consent ? (
-          <>
-            <MatchingAvance valeurs={valeurs} onChange={setValeurs} />
-
-            {souci && (
-              <p className="lil-error" role="alert">
-                <span aria-hidden="true">↳</span>
-                <span>{souci}</span>
-              </p>
-            )}
-
-            <button
-              type="button"
-              className="lil-btn lil-service-envoyer"
-              disabled={occupe}
-              onClick={envoyer}
-            >
-              {occupe ? 'Un instant…' : 'Envoyer mes réponses'}
-            </button>
-          </>
-        ) : (
-          <p className="lil-field-help lil-service-attente">
-            Coche la case ci-dessus pour afficher les questions.
+        {souci && (
+          <p className="lil-error" role="alert">
+            <span aria-hidden="true">↳</span>
+            <span>{souci}</span>
           </p>
         )}
+
+        <button
+          type="button"
+          className="lil-btn lil-service-envoyer"
+          disabled={occupe}
+          onClick={envoyer}
+        >
+          {occupe ? 'Un instant…' : 'Envoyer mes réponses'}
+        </button>
       </section>
     );
   }
 
   return (
     <section className="lil-service lil-service-offre">
-      <p className="lil-service-chapeau">Pour aller plus loin</p>
+      <p className="lil-service-chapeau">Nouveauté</p>
       <h2 className="lil-service-titre">Service de matching personnalisé</h2>
 
       <p className="lil-done-text">
@@ -127,11 +135,13 @@ export function ServiceMatching({ token }: { token: string }) {
       </p>
       <p className="lil-done-note">
         C’est sans engagement, et ta candidature est déjà enregistrée&nbsp;: tu peux refuser sans
-        rien perdre.
+        rien perdre. En acceptant, tu acceptes aussi de répondre à des questions sur tes origines
+        et sur la religion&nbsp;; elles ne servent qu’à te présenter quelqu’un, et tu peux nous
+        demander de les effacer quand tu veux.
       </p>
 
       <div className="lil-service-choix">
-        <button type="button" className="lil-btn" onClick={() => setEtat('remplit')}>
+        <button type="button" className="lil-btn" onClick={accepter}>
           Oui, ça m’intéresse
         </button>
         <button type="button" className="lil-btn-secondaire" onClick={() => setEtat('refuse')}>

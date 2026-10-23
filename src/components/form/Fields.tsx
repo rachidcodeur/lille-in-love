@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import type { Field } from '@/lib/questions';
+import { ChampCompagnon } from './ChampCompagnon';
 import { MatchingAvance, type BrouillonMatching } from './MatchingAvance';
-import { PartagerInscription } from './PartagerInscription';
 
 /** Les mois en toutes lettres : « 09 » se retient mal, « septembre » non. */
 const MOIS = [
@@ -31,6 +31,11 @@ type FieldProps = {
   onChange: (name: string, value: unknown) => void;
   /** Appelé quand un choix unique doit enchaîner sur l'étape suivante. */
   onAdvance?: () => void;
+  /**
+   * Toutes les réponses de l'étape. Un seul champ en a besoin — celui du
+   * compagnon, qui tient trois valeurs à lui seul.
+   */
+  values?: Values;
 };
 
 function ErrorLine({ id, message }: { id: string; message: string }) {
@@ -260,7 +265,14 @@ function ChampCelibat({
   );
 }
 
-export function FieldControl({ field, value, error, onChange, onAdvance }: FieldProps) {
+export function FieldControl({
+  field,
+  value,
+  error,
+  onChange,
+  onAdvance,
+  values = {},
+}: FieldProps) {
   const errorId = `${field.name}-error`;
   const describedBy = error ? errorId : undefined;
 
@@ -386,9 +398,9 @@ export function FieldControl({ field, value, error, onChange, onAdvance }: Field
       );
     }
 
-    /* ---- Le lien à envoyer à qui l'on amène ---------------------- */
-    case 'partage':
-      return <PartagerInscription />;
+    /* ---- Qui l'on amène, et sa fiche si elle existe -------------- */
+    case 'compagnon':
+      return <ChampCompagnon values={values} onChange={onChange} />;
 
     /* ---- Depuis combien de temps célibataire --------------------- */
     case 'celibat':

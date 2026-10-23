@@ -96,6 +96,9 @@ export type MemberDetail = MemberSummary & {
   instagram: string | null;
   comes_with: boolean | null;
   companion_first_name: string | null;
+  companion_last_name?: string | null;
+  /** La fiche de cette personne, quand elle a été reconnue et confirmée. */
+  companion_member_id?: string | null;
   companion_email: string | null;
   referral: string | null;
   phone: string | null;
