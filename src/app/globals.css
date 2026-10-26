@@ -74,6 +74,57 @@ body {
   padding: 24px 20px 40px;
 }
 
+/* ------------------------------------------------------------------ */
+/* L'écran de fin : le mot d'envoi, et la nouveauté à côté             */
+/* ------------------------------------------------------------------ */
+
+/* Il s'élargit, et lui seul : le formulaire se remplit mieux en colonne
+   étroite, mais à la fin il n'y a plus de questions — il y a deux choses
+   à voir, et elles doivent tenir sur le même écran. */
+.lil-shell-fin {
+  max-width: 1000px;
+}
+
+.lil-fin {
+  display: grid;
+  gap: 20px;
+}
+
+/* Empilées, on s'arrêtait au premier écran — celui qui dit justement
+   qu'il n'y a rien à faire — sans découvrir la suite. */
+.lil-fin[data-deux] {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: start;
+}
+
+/* Deux colonnes dans un téléphone ne sont plus deux colonnes : elles
+   redeviennent une pile, dans l'ordre où on les lit. */
+@media (max-width: 880px) {
+  .lil-fin[data-deux] {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* La carte de droite commence en haut, comme celle de gauche : la marge
+   qui la décollait du remerciement n'a plus lieu d'être côte à côte. */
+.lil-fin > .lil-service {
+  margin-top: 0;
+}
+
+/* Les deux colonnes valent pour une proposition qui tient en un écran.
+   Le questionnaire ouvert, lui, fait trente questions : il reprend toute
+   la largeur, et le mot d'envoi repasse au-dessus. Sans « :has », il
+   reste dans sa colonne — plus étroit, mais entier. */
+.lil-fin[data-deux]:has(.lil-matching) {
+  grid-template-columns: 1fr;
+}
+
+/* L'adresse de contact ne se coupe pas en deux : « info@in- » sur une
+   ligne et « love.fr » sur la suivante se lit comme une faute. */
+.lil-done-note a {
+  white-space: nowrap;
+}
+
 .lil-card {
   background: var(--white);
   border: 1px solid var(--border);
@@ -1218,6 +1269,21 @@ body {
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--gold-deep, #a8946e);
+}
+
+/* « Nouveauté » n'est pas un surtitre de plus : c'est l'argument. Il
+   prend donc une pastille claire sur le fond marron, là où le regard
+   tombe d'abord. */
+.lil-service-offre .lil-service-chapeau {
+  display: inline-block;
+  margin-bottom: 12px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--gold-soft);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
 }
 
 .lil-service-titre {

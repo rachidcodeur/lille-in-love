@@ -35,8 +35,15 @@ export function Remerciement({
 }: Props) {
   const prenom = firstName ? `, ${firstName}` : '';
 
+  // Deux colonnes dès qu'il y a deux propos : le mot d'envoi d'un côté,
+  // la nouveauté de l'autre. Empilées, elles obligeaient à faire défiler
+  // pour découvrir qu'il se passait autre chose — et on s'arrêtait au
+  // premier écran, qui disait justement qu'il n'y avait rien à faire.
+  const avecService = !deja && Boolean(matchingToken);
+
   return (
-    <>
+    <div className="lil-fin" data-deux={avecService ? true : undefined}>
+      <div className="lil-card lil-fin-mot">
       <div className="lil-done lil-step">
       <div className="lil-done-seal" aria-hidden="true">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
@@ -84,11 +91,11 @@ export function Remerciement({
           pense à quelqu'un une fois qu'on a soi-même fini, pas pendant
           qu'on remplit. */}
       <PartagerInscription />
+      </div>
 
-      {/* Après l'encart, et seulement pour qui vient d'envoyer : la
-          candidature est en sécurité avant qu'on propose quoi que ce
-          soit. */}
-      {!deja && matchingToken && <ServiceMatching token={matchingToken} />}
-    </>
+      {/* Seulement pour qui vient d'envoyer : la candidature est en
+          sécurité avant qu'on propose quoi que ce soit. */}
+      {avecService && <ServiceMatching token={matchingToken as string} />}
+    </div>
   );
 }

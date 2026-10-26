@@ -532,6 +532,51 @@ section('Parcours complet et envoi');
     ? ok('entre le remerciement et la proposition de matching')
     : bad('le partage n’est pas à sa place');
 
+  // Au large, les deux cartes se mettent côte à côte : empilées, on
+  // s'arrêtait au premier écran — celui qui dit qu'il n'y a rien à faire
+  // — sans découvrir qu'il se passait autre chose en dessous.
+  await page.setViewportSize({ width: 1100, height: 1000 });
+  await page.waitForTimeout(300);
+  const cote = await page.evaluate(() => {
+    const mot = document.querySelector('.lil-fin-mot');
+    const service = document.querySelector('.lil-service');
+    if (!mot || !service) return null;
+    const a = mot.getBoundingClientRect();
+    const b = service.getBoundingClientRect();
+    return { memeHauteur: Math.abs(a.top - b.top) < 4, aDroite: b.left > a.right - 4 };
+  });
+  cote?.memeHauteur && cote?.aDroite
+    ? ok('au large, la nouveauté se place à côté du mot d’envoi')
+    : bad('les deux cartes restent empilées', JSON.stringify(cote));
+
+  (await page.locator('.lil-service-offre .lil-service-chapeau').evaluate((el) => {
+    const style = getComputedStyle(el);
+    return style.display === 'inline-block' && style.backgroundColor !== 'rgba(0, 0, 0, 0)';
+  }))
+    ? ok('et « Nouveauté » porte sa pastille, au lieu de se fondre en surtitre')
+    : bad('« Nouveauté » n’est pas mis en avant');
+
+  if (process.env.E2E_SHOTS) {
+    await page.screenshot({ path: `${process.env.E2E_SHOTS}/fin-large.png`, fullPage: true });
+  }
+
+  // Dans un téléphone, deux colonnes ne sont plus deux colonnes : elles
+  // redeviennent une pile, dans l'ordre où on les lit.
+  await page.setViewportSize({ width: 390, height: 1000 });
+  await page.waitForTimeout(300);
+  (await page.evaluate(() => {
+    const mot = document.querySelector('.lil-fin-mot');
+    const service = document.querySelector('.lil-service');
+    return mot && service
+      ? service.getBoundingClientRect().top > mot.getBoundingClientRect().bottom - 4
+      : false;
+  }))
+    ? ok('et dans un téléphone, elles se remettent l’une sous l’autre')
+    : bad('les colonnes se chevauchent sur petit écran');
+
+  await page.setViewportSize({ width: 680, height: 1000 });
+  await page.waitForTimeout(300);
+
   if (process.env.E2E_SHOTS) {
     await page.screenshot({ path: `${process.env.E2E_SHOTS}/fin.png`, fullPage: true });
   }
@@ -568,6 +613,22 @@ section('Parcours complet et envoi');
   (await page.locator('.lil-confidentialite').count()) === 1
     ? ok('et la mention sur qui lit les réponses est là, avant de commencer')
     : bad('pas de mention de confidentialité');
+
+  // Deux colonnes valent pour une proposition qui tient en un écran ; le
+  // questionnaire ouvert fait trente questions et reprend toute la place.
+  await page.setViewportSize({ width: 1100, height: 1000 });
+  await page.waitForTimeout(300);
+  (await page.evaluate(() => {
+    const mot = document.querySelector('.lil-fin-mot');
+    const service = document.querySelector('.lil-service');
+    return mot && service
+      ? service.getBoundingClientRect().top > mot.getBoundingClientRect().bottom - 4
+      : false;
+  }))
+    ? ok('le questionnaire ouvert reprend toute la largeur')
+    : bad('les trente questions restent dans une demi-colonne');
+  await page.setViewportSize({ width: 680, height: 1000 });
+  await page.waitForTimeout(300);
   (await page.locator('.lil-matching-bloc').count()) >= 8
     ? ok('le oui donné, toutes les questions se déroulent d’un coup')
     : bad('questions manquantes', String(await page.locator('.lil-matching-bloc').count()));

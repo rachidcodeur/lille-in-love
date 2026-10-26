@@ -38,15 +38,13 @@ export default async function MerciPage({ searchParams }: Props) {
       <Pixel />
       <HauteurIframe />
       <Entete />
-      <div className="lil-card">
-        {/* Le prénom passe par l'adresse, pour que le message reste celui
-            qu'on vient de lire dans le formulaire. Rien d'autre n'y transite. */}
-        <Remerciement
-          firstName={(p ?? '').slice(0, 40) || undefined}
-          deja={deja === '1'}
-          motif={motif === 'telephone' ? 'telephone' : 'email'}
-        />
-      </div>
+      {/* Le prénom passe par l'adresse, pour que le message reste celui
+          qu'on vient de lire dans le formulaire. Rien d'autre n'y transite. */}
+      <Remerciement
+        firstName={(p ?? '').slice(0, 40) || undefined}
+        deja={deja === '1'}
+        motif={motif === 'telephone' ? 'telephone' : 'email'}
+      />
     </div>
   );
 }

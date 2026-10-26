@@ -426,15 +426,13 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
      sans avoir à faire défiler deux écrans. */
   if (done) {
     return (
-      <div className="lil-shell" ref={rootRef}>
-        <div className="lil-card">
-          <Remerciement
-            firstName={done.firstName}
-            deja={done.already}
-            motif={done.motif}
-            matchingToken={done.matchingToken}
-          />
-        </div>
+      <div className="lil-shell lil-shell-fin" ref={rootRef}>
+        <Remerciement
+          firstName={done.firstName}
+          deja={done.already}
+          motif={done.motif}
+          matchingToken={done.matchingToken}
+        />
       </div>
     );
   }
