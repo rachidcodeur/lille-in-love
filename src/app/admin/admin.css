@@ -3013,8 +3013,26 @@ a.adm-btn:hover {
 }
 
 .adm-matching dt {
+  display: flex;
+  align-items: center;
+  gap: 7px;
   font-size: 12.5px;
   color: var(--text-2, #5b5048);
+}
+
+/* La mention portée par une ligne, et non par le bloc entier : plus
+   petite, elle ne doit pas faire croire à un titre. */
+.adm-matching dt .adm-matching-tag {
+  font-size: 10px;
+  padding: 1px 6px;
+}
+
+/* Les questions retirées depuis : on les garde, en retrait. Ce sont des
+   réponses qu'on nous a données, pas des erreurs. */
+.adm-matching-anciennes dt {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  opacity: 0.75;
 }
 
 .adm-matching dd {

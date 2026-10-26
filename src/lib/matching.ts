@@ -209,6 +209,16 @@ export const BLOCS: BlocMatching[] = [
         max: 200,
       },
       {
+        // La nationalité n'est pas une origine : la loi ne la range pas
+        // parmi les données sensibles, et elle se demande simplement.
+        // Elle vit ici plutôt qu'au milieu du parcours professionnel,
+        // où elle n'avait rien à faire.
+        nom: 'nationalite',
+        libelle: 'Quelle est ta nationalité ?',
+        type: 'ligne',
+        max: 80,
+      },
+      {
         nom: 'origines',
         libelle: 'Tu es de quelle origine ?',
         aide: 'Comme tu la décrirais toi-même.',

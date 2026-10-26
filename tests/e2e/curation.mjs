@@ -3460,6 +3460,71 @@ ficheJulie?.matching_token == null
   ? ok('et le jeton est consommé : on complète une fois, pas trois')
   : bad('le jeton resservira');
 
+// --- La fiche doit suivre le questionnaire ---------------------------
+// Les questions bougent : elles se renomment, se replient dans une autre,
+// disparaissent. La fiche ne doit donc jamais supposer que ce qu'elle lit
+// correspond à ce qu'elle connaît — une réponse donnée ne disparaît pas
+// parce qu'on a reformulé la question.
+// Écrit directement : « nettoyerMatching » écarte justement les clés
+// qu'il ne connaît plus, et c'est une fiche d'avant la refonte qu'on
+// veut ici.
+await fetch(`${FAKE}/rest/v1/lil_members?id=eq.${ficheJulie.id}`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+  body: JSON.stringify({
+    matching: {
+      consentSensible: true,
+      situationPro: 'autre',
+      situationProAutre: 'Chauffeuse de bus',
+      physiqueIdeal: 'Les yeux, surtout.',
+      nationalite: 'Française',
+      taPersonnalite: 'Entière.',
+      passions: 'La voile',
+    },
+  }),
+});
+
+await page.goto(`${BASE}/admin/${ficheJulie.id}`, { waitUntil: 'networkidle' });
+await page.locator('.adm-matching summary').click();
+await page.waitForTimeout(300);
+const matchingVu = await page.locator('.adm-matching').innerText();
+if (process.env.E2E_SHOTS) {
+  await page.locator('.adm-matching').screenshot({ path: `${process.env.E2E_SHOTS}/fiche.png` });
+}
+
+// « Dis-nous plus » n'est pas une question : affichée seule, on ne savait
+// plus de quoi elle répondait.
+/Autre\s+—\s+Chauffeuse de bus/.test(matchingVu.replace(/\n/g, ' '))
+  ? ok('une précision rejoint la question qu’elle précise')
+  : bad('la précision est affichée seule', matchingVu.replace(/\n+/g, ' | ').slice(0, 300));
+!/Dis-nous plus/.test(matchingVu)
+  ? ok('et ne fait plus une ligne à elle seule')
+  : bad('« Dis-nous plus » apparaît comme une question');
+
+// La nationalité est redemandée, et n'est pas une donnée sensible : elle
+// s'affiche comme les autres.
+/Quelle est ta nationalité/.test(matchingVu) && /Française/.test(matchingVu)
+  ? ok('la nationalité est de retour sur la fiche')
+  : bad('nationalité absente de la fiche');
+/Quelle est ta personnalité/.test(matchingVu) && /Entière/.test(matchingVu)
+  ? ok('la personnalité aussi, à côté d’elle')
+  : bad('personnalité absente de la fiche');
+
+// Un champ peut être sensible dans un bloc qui ne l'est pas : la couleur
+// de peau est nommée sous « qu'est-ce qui te fait craquer ».
+(await page
+  .locator('.adm-matching dt', { hasText: 'te fait craquer' })
+  .locator('.adm-matching-tag')
+  .count()) === 1
+  ? ok('une question sensible le dit, même dans un bloc qui ne l’est pas')
+  : bad('la mention « sensible » manque sur la ligne');
+
+// « Tes passions » a été repliée dans le style de vie. La réponse d'avant
+// reste lisible : on ne l'efface pas parce qu'on a changé d'avis.
+/questions retirées/i.test(matchingVu) && /La voile/.test(matchingVu)
+  ? ok('et une réponse à une question retirée reste sur la fiche')
+  : bad('une réponse a disparu avec sa question', matchingVu.replace(/\n+/g, ' | ').slice(0, 300));
+
 /* ====================================================================
    22. Reconnaître la personne qu'on amène
    ==================================================================== */
