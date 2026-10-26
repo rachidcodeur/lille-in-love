@@ -45,10 +45,9 @@ export function PartagerInscription() {
 
   return (
     <div className="lil-partage">
-      <p className="lil-partage-titre">Partage-lui le formulaire</p>
+      <p className="lil-partage-titre">Partage le formulaire à ton ami</p>
       <p className="lil-field-help">
-        Quelqu’un que tu aimerais voir à cette soirée&nbsp;? Chacun remplit le sien — c’est
-        comme ça qu’on peut vous placer ensemble.
+        Chacun remplit le sien — c’est comme ça qu’on peut vous placer sur la même soirée.
       </p>
       <p className="lil-partage-lien">{LIEN}</p>
       <button type="button" className="lil-btn-secondaire" onClick={partager}>

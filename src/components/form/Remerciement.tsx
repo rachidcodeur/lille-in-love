@@ -15,6 +15,12 @@ type Props = {
    * service qu'à celui qui vient d'envoyer sa candidature.
    */
   matchingToken?: string | null;
+  /**
+   * Vient-elle accompagnée ? Le lien à partager ne s'adresse qu'à celle
+   * qui a quelqu'un à faire inscrire : proposé à tout le monde, il
+   * demandait à qui vient seul de recruter pour nous.
+   */
+  avecQuelquun?: boolean;
 };
 
 /**
@@ -32,6 +38,7 @@ export function Remerciement({
   deja = false,
   motif = 'email',
   matchingToken = null,
+  avecQuelquun = false,
 }: Props) {
   const prenom = firstName ? `, ${firstName}` : '';
 
@@ -90,7 +97,7 @@ export function Remerciement({
       {/* Le partage vient ici, et plus au milieu des questions : on
           pense à quelqu'un une fois qu'on a soi-même fini, pas pendant
           qu'on remplit. */}
-      <PartagerInscription />
+      {avecQuelquun && <PartagerInscription />}
       </div>
 
       {/* Seulement pour qui vient d'envoyer : la candidature est en

@@ -627,6 +627,13 @@ section('Parcours complet et envoi');
   }))
     ? ok('le questionnaire ouvert reprend toute la largeur')
     : bad('les trente questions restent dans une demi-colonne');
+  const marges = await page.locator('.lil-service').evaluate((el) => {
+    const style = getComputedStyle(el);
+    return [parseFloat(style.paddingLeft), parseFloat(style.paddingRight)];
+  });
+  marges[0] >= 40 && marges[1] >= 40
+    ? ok('et respire sur les côtés plutôt que de courir d’un bord à l’autre')
+    : bad('le questionnaire colle aux bords', JSON.stringify(marges));
   await page.setViewportSize({ width: 680, height: 1000 });
   await page.waitForTimeout(300);
   (await page.locator('.lil-matching-bloc').count()) >= 8
@@ -661,6 +668,19 @@ section('Parcours complet et envoi');
   taille >= 16
     ? ok('les intitulés du second questionnaire se lisent de loin')
     : bad('intitulés trop petits', `${taille}px`);
+
+  // Les aides collées au champ se lisaient comme sa légende, et non comme
+  // la suite de la question. Plus grandes, et détachées de ce qui suit.
+  const aide = await page
+    .locator('.lil-matching-champ > .lil-field-help')
+    .first()
+    .evaluate((el) => {
+      const style = getComputedStyle(el);
+      return { taille: parseFloat(style.fontSize), bas: parseFloat(style.marginBottom) };
+    });
+  aide.taille >= 14 && aide.bas >= 10
+    ? ok('et leurs aides se lisent, détachées du champ qu’elles précèdent')
+    : bad('aides trop petites ou collées', JSON.stringify(aide));
 
   // « Si oui, lequel ? » n'a de sens qu'après un « oui » : affiché
   // d'avance, il demande de préciser ce qu'on n'a pas encore dit.
@@ -746,6 +766,24 @@ section('Parcours complet et envoi');
     ? ok('le brouillon est effacé après l’envoi')
     : bad('brouillon encore présent');
 
+  await page.close();
+}
+
+/* ================================================================== */
+/* ================================================================== */
+section('Le partage ne s’adresse qu’à qui vient accompagné');
+{
+  // Proposé à tout le monde, il demandait à qui vient seul de recruter
+  // pour nous. La page de remerciement autonome ne sait rien de personne :
+  // elle ne le propose donc pas.
+  const page = await browser.newPage({ viewport: { width: 680, height: 1000 } });
+  await page.goto(`${RACINE}/merci?p=Camille`, { waitUntil: 'networkidle' });
+  (await page.locator('.lil-done-title').innerText()).includes('C’est envoyé')
+    ? ok('la page de remerciement autonome dit bien que c’est envoyé')
+    : bad('message de remerciement absent');
+  (await page.locator('.lil-partage').count()) === 0
+    ? ok('et ne propose pas de partager à quelqu’un dont elle ignore tout')
+    : bad('le bloc de partage s’affiche pour qui vient seul');
   await page.close();
 }
 

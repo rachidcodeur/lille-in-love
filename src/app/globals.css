@@ -1019,6 +1019,36 @@ body {
   margin-top: 10px;
 }
 
+/* Le questionnaire ouvert prend toute la largeur de l'écran de fin :
+   à 22 px de marge, les trente questions couraient d'un bord à l'autre
+   et la ligne devenait trop longue pour se relire. On respire sur les
+   côtés — sur la carte entière, pour que le titre et les questions
+   restent alignés. */
+.lil-service:has(.lil-matching) {
+  padding-left: 56px;
+  padding-right: 56px;
+}
+
+@media (max-width: 700px) {
+  .lil-service:has(.lil-matching) {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
+/* Les aides du second questionnaire : à 13 px et collées au champ, elles
+   se lisaient comme une légende du champ plutôt que comme la suite de la
+   question — et à trente questions d'affilée, on finissait par ne plus
+   les voir du tout. Un peu plus grandes, et détachées des deux côtés. */
+.lil-matching .lil-field-help {
+  font-size: 14.5px;
+  line-height: 1.45;
+}
+
+.lil-matching-champ > .lil-field-help {
+  margin: 2px 0 11px;
+}
+
 .lil-matching-champ {
   margin-top: 22px;
 }

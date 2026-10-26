@@ -149,6 +149,8 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
       already: boolean;
       motif?: 'email' | 'telephone';
       matchingToken?: string | null;
+      /** Vient-elle accompagnée ? Le partage ne sert qu'à elle. */
+      avecQuelquun?: boolean;
     } | null
   >(null);
 
@@ -228,14 +230,19 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
   }, [index, done, errors, values]);
 
   /* --- Remonter en haut de l'iframe à chaque étape ------------------ */
+  // L'envoi compte comme une étape. Sans ça, on restait où la dernière
+  // question nous avait laissés : l'écran de fin est bien plus court que
+  // le formulaire — il n'a plus d'en-tête ni de questions — et la page
+  // qui nous héberge nous montrait son milieu plutôt que son début.
   useEffect(() => {
     if (window.parent !== window) {
       window.parent.postMessage({ type: 'lil:step', index }, '*');
     }
+    if (done) return;
     rootRef.current?.querySelector<HTMLElement>('input, textarea, select')?.focus({
       preventScroll: true,
     });
-  }, [index]);
+  }, [index, done]);
 
   /**
    * L'acceptation vaut pour les deux parcours.
@@ -369,6 +376,7 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
         already: deja,
         motif: result.motif,
         matchingToken: result.matchingToken ?? null,
+        avecQuelquun: valuesRef.current.comesWith === 'oui',
       });
 
       // La conversion, pour les campagnes. Une candidature déjà reçue n'en
@@ -432,6 +440,7 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
           deja={done.already}
           motif={done.motif}
           matchingToken={done.matchingToken}
+          avecQuelquun={done.avecQuelquun}
         />
       </div>
     );
