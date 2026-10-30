@@ -94,7 +94,7 @@
       // ensuite — le service de matching s'affiche sous le remerciement,
       // et la redirection l'emportait avant qu'on ait pu le lire. Le
       // pixel, lui, est déjà parti juste au-dessus : rien n'est perdu.
-      if (data.type === 'lil:done' && MERCI && !data.matching) {
+      if (data.type === 'lil:done' && MERCI && !data.reste && !data.matching) {
         setTimeout(function () {
           try {
             window.top.location.href = MERCI;

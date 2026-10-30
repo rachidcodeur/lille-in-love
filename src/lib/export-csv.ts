@@ -40,6 +40,11 @@ export const COLONNES = [
   'referral_other',
   'created_at',
   'id',
+  // Ajoutées à la fin, et non à leur place logique : le fichier reprend
+  // un format que l'équipe ouvre depuis des mois, et déplacer une colonne
+  // décalerait tout ce qui la suit.
+  'aisance',
+  'tranches_age',
 ] as const;
 
 const GENRE: Record<string, string> = { femme: 'F', homme: 'M' };
@@ -110,6 +115,8 @@ export function ligneExport(member: MemberDetail): string[] {
     texte(member.referral_other),
     horodatage(member.created_at),
     texte(member.id),
+    texte(member.aisance),
+    (member.tranches_age ?? []).join(' '),
   ];
 }
 

@@ -83,6 +83,35 @@ export const INTERESTS: Option[] = [
   { value: 'autre', label: 'Autre' },
 ];
 
+/**
+ * L'aisance en soirée, du plus réservé au plus à l'aise.
+ *
+ * On ne demande pas ça pour trier : on le demande pour placer. Quelqu'un
+ * de très timide à côté de quelqu'un de très à l'aise passe la soirée à
+ * écouter, et les deux repartent sans s'être rencontrés.
+ */
+export const AISANCE: Option[] = [
+  { value: 'tres_timide', label: 'Très timide' },
+  { value: 'timide', label: 'Timide' },
+  { value: 'a_laise', label: 'À l’aise' },
+  { value: 'tres_a_laise', label: 'Très à l’aise' },
+];
+
+/**
+ * Les tranches d'âge des soirées.
+ *
+ * Ce sont celles qu'on affiche sur les invitations, pas des intervalles
+ * de statisticien : elles se chevauchent d'un ou deux ans, et c'est
+ * voulu — quelqu'un de 35 ans peut se reconnaître dans les deux.
+ */
+export const TRANCHES_AGE: Option[] = [
+  { value: '18_25', label: '18 - 25 ans' },
+  { value: '25_35', label: '25 - 35 ans' },
+  { value: '34_45', label: '34 - 45 ans' },
+  { value: '44_55', label: '44 - 55 ans' },
+  { value: '54_67', label: '54 - 67 ans' },
+];
+
 /** Remis dans l'ordre du calendrier — la liste Tally était mélangée. */
 export const ZODIAC: Option[] = [
   { value: 'belier', label: 'Bélier' },
@@ -190,6 +219,22 @@ const ETAPES: Step[] = [
     ],
   },
   {
+    // Après « qu'est-ce que tu cherches » : on vient de dire quel genre
+    // de rencontre, on dit maintenant avec qui. Les deux se répondent.
+    id: 'tranches-age',
+    section: 'Profil',
+    title: 'À quelles soirées aimerais-tu participer ?',
+    help: 'Plusieurs réponses possibles — on te proposera celles qui correspondent.',
+    fields: [
+      {
+        name: 'tranchesAge',
+        type: 'multi',
+        required: true,
+        options: TRANCHES_AGE,
+      },
+    ],
+  },
+  {
     id: 'height',
     section: 'Profil',
     title: 'Quelle est ta taille ?',
@@ -226,6 +271,23 @@ const ETAPES: Step[] = [
         required: true,
         maxLength: 600,
         placeholder: 'Même une phrase honnête suffit.',
+      },
+    ],
+  },
+  {
+    // Juste après s'être raconté : on vient de dire qui on est, on dit
+    // maintenant comment on arrive dans une salle pleine de monde.
+    id: 'aisance',
+    section: 'Toi, en quelques mots',
+    title: 'En soirée, tu es plutôt…',
+    help: 'Ça nous sert à te placer à table, jamais à te juger.',
+    fields: [
+      {
+        name: 'aisance',
+        type: 'radio',
+        required: true,
+        advanceOnSelect: true,
+        options: AISANCE,
       },
     ],
   },

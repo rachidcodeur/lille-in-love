@@ -493,6 +493,19 @@ export function champsManquants(valeurs: Record<string, unknown>): string[] {
   return manque;
 }
 
+/**
+ * Le service est-il proposé ?
+ *
+ * Mis de côté, pas supprimé : le formulaire, la route d'écriture, les
+ * colonnes et la fiche de curation restent en place et continuent d'être
+ * éprouvés par les tests. Ce qui change, c'est qu'on ne le propose plus
+ * à la fin de l'inscription — les questions qui comptaient vraiment ont
+ * rejoint le premier formulaire.
+ *
+ * Remettre « true » suffit à le reproposer.
+ */
+export const SERVICE_MATCHING_ACTIF = false;
+
 /** Tous les champs, à plat. */
 export const CHAMPS: ChampMatching[] = BLOCS.flatMap((b) => b.champs);
 

@@ -1,4 +1,4 @@
-import { INTERESTS, REFERRALS, ZODIAC } from './questions';
+import { AISANCE, INTERESTS, REFERRALS, TRANCHES_AGE, ZODIAC } from './questions';
 
 /**
  * Les libellés lisibles du back-office.
@@ -68,6 +68,9 @@ export const label = {
 
   childrenPreference: (v: string | null) => (v ? (CHILDREN_PREFERENCE[v] ?? v) : null),
   zodiac: (v: string | null) => (v ? fromOptions(ZODIAC, v) : null),
+  aisance: (v: string | null) => (v ? fromOptions(AISANCE, v) : null),
+  tranchesAge: (list: string[] | null) =>
+    list?.length ? list.map((v) => fromOptions(TRANCHES_AGE, v)).join(' · ') : null,
   referral: (v: string | null) => (v ? fromOptions(REFERRALS, v) : null),
   interests: (list: string[] | null) =>
     list?.length ? list.map((v) => fromOptions(INTERESTS, v)).join(', ') : null,

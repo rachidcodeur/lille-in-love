@@ -659,7 +659,7 @@ const memeNumero = await (
     body: JSON.stringify({
       formVersion: 'complet',
       gender: 'homme', birthDate: '1992-05-14', city: 'Lille', postalCode: '59000',
-      orientation: 'hetero', lookingFor: 'relation_serieuse',
+      orientation: 'hetero', lookingFor: 'relation_serieuse', aisance: 'timide', tranchesAge: ['25_35'],
       singleSince: '8_mois',
       heightCm: 180, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
       profession: 'Essai', referral: 'instagram', comesWith: 'non',
@@ -678,7 +678,7 @@ const secondEnvoi = await (
     body: JSON.stringify({
       formVersion: 'complet',
       gender: 'homme', birthDate: '1992-05-14', city: 'Lille', postalCode: '59000',
-      orientation: 'hetero', lookingFor: 'relation_serieuse',
+      orientation: 'hetero', lookingFor: 'relation_serieuse', aisance: 'timide', tranchesAge: ['25_35'],
       singleSince: '8_mois',
       heightCm: 180, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
       profession: 'Essai', referral: 'instagram', comesWith: 'non',
@@ -890,9 +890,15 @@ const ENTETE =
   'children_preference,height_cm,zodiac_sign,' +
   'about_you,ideal_evening,interests,friend_name,friend_email,source,referral_other,created_at,id';
 
-lignes[0] === ENTETE
+// Les colonnes d'origine, dans leur ordre d'origine : l'équipe ouvre ce
+// fichier depuis des mois, et déplacer une colonne décalerait tout ce qui
+// la suit. Ce qui s'ajoute s'ajoute donc au bout, jamais au milieu.
+lignes[0].startsWith(ENTETE)
   ? ok('l’en-tête reprend exactement les colonnes de l’export existant')
   : bad('en-tête différent', lignes[0]);
+lignes[0].slice(ENTETE.length) === ',aisance,tranches_age'
+  ? ok('et les nouvelles colonnes s’ajoutent au bout, sans rien décaler')
+  : bad('colonnes ajoutées ailleurs qu’à la fin', lignes[0].slice(ENTETE.length));
 
 (reponse.headers.get('content-disposition') ?? '').includes('candidatures_femmes_C_27-35.csv')
   ? ok('le fichier porte le nom de la sélection')
@@ -3317,9 +3323,10 @@ await fetch(`${FAKE}/__reset`, { method: 'POST' });
 // l'insert, elles auraient emporté la candidature avec elles sur une base
 // où elles n'ont pas encore tourné : PostgREST refuse l'ordre entier pour
 // une colonne inconnue. Elles s'écrivent donc à part, après.
-await fetch(`${FAKE}/__colonnes-absentes?table=lil_members&colonnes=matching_token,referral_other`, {
-  method: 'POST',
-});
+await fetch(
+  `${FAKE}/__colonnes-absentes?table=lil_members&colonnes=matching_token,referral_other,aisance,tranches_age`,
+  { method: 'POST' },
+);
 
 const sansMigrations = await fetch(`${BASE}/api/inscription`, {
   method: 'POST',
@@ -3327,7 +3334,7 @@ const sansMigrations = await fetch(`${BASE}/api/inscription`, {
   body: JSON.stringify({
     formVersion: 'complet',
     gender: 'femme', birthDate: '1992-05-14', city: 'Lille', postalCode: '59000',
-    orientation: 'hetero', lookingFor: 'relation_serieuse', singleSince: '8_mois',
+    orientation: 'hetero', lookingFor: 'relation_serieuse', aisance: 'timide', tranchesAge: ['25_35'], singleSince: '8_mois',
     heightCm: 168, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
     profession: 'Essai', referral: 'autre', referralOther: 'Une amie',
     comesWith: 'non', firstName: 'Lucie', lastName: 'Retard',
@@ -3361,6 +3368,14 @@ const court = await (
 court.id && court.matchingToken == null
   ? ok('le parcours court s’enregistre sans ouvrir le service de matching')
   : bad('le parcours court reçoit un jeton', JSON.stringify(court));
+
+// Les deux nouvelles questions sont obligatoires à l'écran, mais leurs
+// colonnes viennent d'une migration récente : elles s'écrivent à part,
+// après l'insert. Une base en retard perd la réponse, jamais la
+// candidature — c'est tout l'objet de ce découpage.
+(await state()).members.some((m) => m.email === 'retard@example.com')
+  ? ok('et l’aisance et les tranches d’âge ne l’emportent pas avec elles')
+  : bad('la candidature a été perdue avec les colonnes manquantes');
 
 await fetch(`${FAKE}/__colonnes-absentes?table=lil_members&colonnes=`, { method: 'POST' });
 
@@ -3414,7 +3429,7 @@ const inscrit = await (
     body: JSON.stringify({
       formVersion: 'complet',
       gender: 'femme', birthDate: '1990-03-02', city: 'Lille', postalCode: '59000',
-      orientation: 'hetero', lookingFor: 'relation_serieuse', singleSince: '2_ans',
+      orientation: 'hetero', lookingFor: 'relation_serieuse', aisance: 'timide', tranchesAge: ['25_35'], singleSince: '2_ans',
       heightCm: 170, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
       profession: 'Essai', referral: 'instagram',
       comesWith: 'non', firstName: 'Julie', lastName: 'Dupont',
@@ -3484,7 +3499,19 @@ await fetch(`${FAKE}/rest/v1/lil_members?id=eq.${ficheJulie.id}`, {
   }),
 });
 
+// Les deux questions sur lesquelles on compose une soirée doivent se
+// lire sur la fiche : qui on invite, et à côté de qui on l'assoit.
 await page.goto(`${BASE}/admin/${ficheJulie.id}`, { waitUntil: 'networkidle' });
+// « textContent » et non « innerText » : la colonne des réponses est
+// repliée à cette largeur d'écran, et innerText ne rend que le visible.
+const ficheVue = await page.evaluate(() => document.body.textContent ?? '');
+/Soirées souhaitées/.test(ficheVue) && /25 - 35 ans/.test(ficheVue)
+  ? ok('les soirées souhaitées se lisent sur la fiche')
+  : bad('tranches d’âge absentes de la fiche');
+/En soirée/.test(ficheVue) && /Timide/.test(ficheVue)
+  ? ok('et l’aisance, pour le placement à table')
+  : bad('aisance absente de la fiche');
+
 await page.locator('.adm-matching summary').click();
 await page.waitForTimeout(300);
 const matchingVu = await page.locator('.adm-matching').innerText();
@@ -3573,7 +3600,7 @@ const rattacher = async (nomCompagnon, id) =>
       body: JSON.stringify({
         formVersion: 'complet',
         gender: 'homme', birthDate: '1988-07-19', city: 'Lille', postalCode: '59000',
-        orientation: 'hetero', lookingFor: 'relation_serieuse', singleSince: '1_ans',
+        orientation: 'hetero', lookingFor: 'relation_serieuse', aisance: 'timide', tranchesAge: ['25_35'], singleSince: '1_ans',
         heightCm: 180, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
         profession: 'Essai', referral: 'instagram',
         comesWith: 'oui',

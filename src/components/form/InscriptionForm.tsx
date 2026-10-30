@@ -11,6 +11,7 @@ import {
 } from '@/lib/questions';
 import { FieldControl, type Errors, type Values } from './Fields';
 import { PhotoUpload, type UploadedPhoto } from './PhotoUpload';
+import { SERVICE_MATCHING_ACTIF } from '@/lib/matching';
 import { Entete } from './Entete';
 import { useRouter } from 'next/navigation';
 import { suivreCandidature } from '@/lib/pixel';
@@ -385,16 +386,26 @@ export default function InscriptionForm({ apiBase = '', version = 'complet' }: P
 
       // La page WordPress peut vouloir réagir de son côté — son propre
       // pixel, sa propre redirection.
+      const resteAVoir =
+        valuesRef.current.comesWith === 'oui' ||
+        (SERVICE_MATCHING_ACTIF && Boolean(result.matchingToken));
+
       if (window.parent !== window) {
         window.parent.postMessage(
           {
             type: 'lil:done',
             already: deja,
             id: result.id,
-            // Dit à la page qui nous héberge de ne pas nous emporter : le
-            // service de matching s'affiche juste en dessous, et une
-            // redirection le ferait disparaître avant qu'on l'ait lu.
-            matching: Boolean(result.matchingToken),
+            // Dit à la page qui nous héberge de ne pas nous emporter
+            // quand il reste quelque chose à lire ici — le lien à
+            // partager, ou le service quand il est proposé. Une
+            // redirection le ferait disparaître avant qu'on l'ait vu.
+            //
+            // Les deux noms disent la même chose : « matching » est
+            // celui que connaissent les embed.js déjà en cache chez les
+            // visiteurs, et qu'on ne peut pas mettre à jour d'un coup.
+            reste: resteAVoir,
+            matching: resteAVoir,
           },
           '*',
         );

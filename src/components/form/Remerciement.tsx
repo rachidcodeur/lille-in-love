@@ -1,4 +1,5 @@
 import { BRAND } from '@/lib/brand';
+import { SERVICE_MATCHING_ACTIF } from '@/lib/matching';
 import { PartagerInscription } from './PartagerInscription';
 import { ServiceMatching } from './ServiceMatching';
 
@@ -46,7 +47,7 @@ export function Remerciement({
   // la nouveauté de l'autre. Empilées, elles obligeaient à faire défiler
   // pour découvrir qu'il se passait autre chose — et on s'arrêtait au
   // premier écran, qui disait justement qu'il n'y avait rien à faire.
-  const avecService = !deja && Boolean(matchingToken);
+  const avecService = SERVICE_MATCHING_ACTIF && !deja && Boolean(matchingToken);
 
   return (
     <div className="lil-fin" data-deux={avecService ? true : undefined}>

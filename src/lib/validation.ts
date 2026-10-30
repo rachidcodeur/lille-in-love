@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { INTERESTS, REFERRALS, ZODIAC } from './questions';
+import { AISANCE, INTERESTS, REFERRALS, TRANCHES_AGE, ZODIAC } from './questions';
 
 const values = (opts: { value: string }[]) => opts.map((o) => o.value) as [string, ...string[]];
 
@@ -46,6 +46,14 @@ export const inscriptionSchema = z
       .regex(/^(jamais|\d{1,2}_(mois|ans))$/, 'Indique depuis combien de temps'),
 
     lookingFor: z.enum(['relation_serieuse', 'bons_moments']),
+
+    aisance: z.enum(values(AISANCE)),
+    // Au moins une tranche : sans elle, on ne sait à quelle soirée
+    // convier quelqu'un, et c'est la première chose qu'on nous demande.
+    tranchesAge: z
+      .array(z.enum(values(TRANCHES_AGE)))
+      .min(1, 'Choisis au moins une tranche d’âge')
+      .max(TRANCHES_AGE.length),
 
     heightCm: z.coerce
       .number()

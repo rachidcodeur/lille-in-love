@@ -79,6 +79,8 @@ async function poserLesSupplements(
     matching_token: string;
     companion_last_name: string | null;
     companion_member_id: string | null;
+    aisance: string | null;
+    tranches_age: string[];
   },
 ): Promise<string | null> {
   const ensemble = await db.from('lil_members').update(valeurs).eq('id', memberId);
@@ -86,12 +88,23 @@ async function poserLesSupplements(
 
   // Une colonne manque, on ne sait pas laquelle : on redescend d'un cran
   // à chaque fois, jusqu'à celle qui ouvre le service. Mieux vaut perdre
-  // le nom du compagnon que la proposition de matching.
+  // le nom du compagnon que la candidature.
   const sansCompagnon = await db
+    .from('lil_members')
+    .update({
+      referral_other: valeurs.referral_other,
+      matching_token: valeurs.matching_token,
+      aisance: valeurs.aisance,
+      tranches_age: valeurs.tranches_age,
+    })
+    .eq('id', memberId);
+  if (!sansCompagnon.error) return valeurs.matching_token;
+
+  const sansLesDeux = await db
     .from('lil_members')
     .update({ referral_other: valeurs.referral_other, matching_token: valeurs.matching_token })
     .eq('id', memberId);
-  if (!sansCompagnon.error) return valeurs.matching_token;
+  if (!sansLesDeux.error) return valeurs.matching_token;
 
   const seul = await db
     .from('lil_members')
@@ -344,6 +357,8 @@ export async function POST(request: Request) {
         matching_token: randomUUID(),
         companion_last_name: (data as { companionLastName?: string }).companionLastName || null,
         companion_member_id: await compagnonVerifie(data as Parameters<typeof compagnonVerifie>[0]),
+        aisance: (data as { aisance?: string }).aisance ?? null,
+        tranches_age: (data as { tranchesAge?: string[] }).tranchesAge ?? [],
       });
 
   // --- Photos : on les range sous le membre ---------------------------

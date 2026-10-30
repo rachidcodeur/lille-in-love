@@ -301,12 +301,46 @@ section('Parcours complet et envoi');
   await next();
   await pick('Hétéro');
   await pick('Une relation sérieuse');
+
+  // Les soirées souhaitées suivent « qu'est-ce que tu cherches » : on
+  // vient de dire quel genre de rencontre, on dit avec qui.
+  (await page.locator('.lil-question').innerText()).includes('soirées')
+    ? ok('les tranches d’âge suivent ce qu’on cherche')
+    : bad('la question des soirées n’est pas à sa place', await page.locator('.lil-question').innerText());
+  const tranches = await page.locator('.lil-chips button').allInnerTexts();
+  tranches.length === 5 && tranches[0].includes('18') && tranches[4].includes('67')
+    ? ok('avec les cinq tranches, de 18-25 à 54-67')
+    : bad('tranches d’âge inattendues', tranches.join(' · '));
+  await next();
+  (await page.locator('.lil-error').count()) > 0
+    ? ok('et il en faut au moins une pour continuer')
+    : bad('on passe sans choisir de soirée');
+  if (process.env.E2E_SHOTS) {
+    await page.screenshot({ path: `${process.env.E2E_SHOTS}/tranches.png` });
+  }
+  await page.locator('.lil-chips button', { hasText: '25 - 35' }).click();
+  await page.locator('.lil-chips button', { hasText: '34 - 45' }).click();
+  await next();
+
   await page.fill('#heightCm', '168');
   await next();
   // Plus de longueur minimale : deux mots suffisent.
   await page.fill('#about', 'Deux mots.');
   await page.fill('#motivation', 'Marre des applis, envie de rencontrer des gens en vrai.');
   await next();
+
+  // L'aisance vient juste après s'être raconté : on dit qui on est, puis
+  // comment on arrive dans une salle pleine de monde.
+  (await page.locator('.lil-question').innerText()).includes('En soirée')
+    ? ok('l’aisance suit la présentation')
+    : bad('la question de l’aisance n’est pas à sa place', await page.locator('.lil-question').innerText());
+  (await page.locator('.lil-help').innerText()).includes('jamais à te juger')
+    ? ok('et dit à quoi elle sert, pour qu’on réponde honnêtement')
+    : bad('rien ne rassure sur l’usage de la réponse', await page.locator('.lil-help').innerText().catch(() => ''));
+  if (process.env.E2E_SHOTS) {
+    await page.screenshot({ path: `${process.env.E2E_SHOTS}/aisance.png` });
+  }
+  await pick('Timide');
   // Elle vient après qu'on s'est raconté, pas entre l'orientation et la
   // taille : à cet endroit elle prolonge ce qu'on vient d'écrire.
   (await page.locator('.lil-question').innerText()).includes('célibataire')
@@ -511,8 +545,8 @@ section('Parcours complet et envoi');
     ? ok('l’écran de fin se passe de l’en-tête')
     : bad('l’en-tête reste affiché après l’envoi');
 
-  // Le partage s'intercale entre le remerciement et la proposition : on
-  // pense à quelqu'un une fois qu'on a fini, pas pendant qu'on remplit.
+  // Le partage suit le remerciement : on pense à quelqu'un une fois
+  // qu'on a fini, pas pendant qu'on remplit.
   (await page.locator('.lil-partage-lien').innerText()).includes('/inscription')
     ? ok('le lien à partager s’affiche après l’envoi, en entier')
     : bad('pas de lien à partager', await page.locator('.lil-partage-lien').innerText().catch(() => ''));
@@ -521,217 +555,223 @@ section('Parcours complet et envoi');
     : bad('pas de bouton de partage');
   (await page.locator('.lil-partage').evaluate((el) => {
     const done = document.querySelector('.lil-done');
-    const service = document.querySelector('.lil-service');
-    return Boolean(
-      done &&
-        service &&
-        done.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING &&
-        el.compareDocumentPosition(service) & Node.DOCUMENT_POSITION_FOLLOWING,
-    );
+    return Boolean(done && done.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING);
   }))
-    ? ok('entre le remerciement et la proposition de matching')
+    ? ok('après le mot d’envoi, dans la même carte')
     : bad('le partage n’est pas à sa place');
 
-  // Au large, les deux cartes se mettent côte à côte : empilées, on
-  // s'arrêtait au premier écran — celui qui dit qu'il n'y a rien à faire
-  // — sans découvrir qu'il se passait autre chose en dessous.
-  await page.setViewportSize({ width: 1100, height: 1000 });
-  await page.waitForTimeout(300);
-  const cote = await page.evaluate(() => {
-    const mot = document.querySelector('.lil-fin-mot');
-    const service = document.querySelector('.lil-service');
-    if (!mot || !service) return null;
-    const a = mot.getBoundingClientRect();
-    const b = service.getBoundingClientRect();
-    return { memeHauteur: Math.abs(a.top - b.top) < 4, aDroite: b.left > a.right - 4 };
-  });
-  cote?.memeHauteur && cote?.aDroite
-    ? ok('au large, la nouveauté se place à côté du mot d’envoi')
-    : bad('les deux cartes restent empilées', JSON.stringify(cote));
-
-  (await page.locator('.lil-service-offre .lil-service-chapeau').evaluate((el) => {
-    const style = getComputedStyle(el);
-    return style.display === 'inline-block' && style.backgroundColor !== 'rgba(0, 0, 0, 0)';
-  }))
-    ? ok('et « Nouveauté » porte sa pastille, au lieu de se fondre en surtitre')
-    : bad('« Nouveauté » n’est pas mis en avant');
-
-  if (process.env.E2E_SHOTS) {
-    await page.screenshot({ path: `${process.env.E2E_SHOTS}/fin-large.png`, fullPage: true });
-  }
-
-  // Dans un téléphone, deux colonnes ne sont plus deux colonnes : elles
-  // redeviennent une pile, dans l'ordre où on les lit.
-  await page.setViewportSize({ width: 390, height: 1000 });
-  await page.waitForTimeout(300);
-  (await page.evaluate(() => {
-    const mot = document.querySelector('.lil-fin-mot');
-    const service = document.querySelector('.lil-service');
-    return mot && service
-      ? service.getBoundingClientRect().top > mot.getBoundingClientRect().bottom - 4
-      : false;
-  }))
-    ? ok('et dans un téléphone, elles se remettent l’une sous l’autre')
-    : bad('les colonnes se chevauchent sur petit écran');
-
-  await page.setViewportSize({ width: 680, height: 1000 });
-  await page.waitForTimeout(300);
-
-  if (process.env.E2E_SHOTS) {
-    await page.screenshot({ path: `${process.env.E2E_SHOTS}/fin.png`, fullPage: true });
-  }
-
-  // --- Le service, proposé une fois la candidature partie ------------
-  // Il était la dernière étape du formulaire. Le mettre après change
-  // tout : plus personne n'a à refuser une offre pour pouvoir envoyer.
-  (await page.locator('.lil-service-offre').count()) === 1
-    ? ok('le service de matching se propose après l’envoi, en seconde carte')
-    : bad('pas de carte de service après l’envoi');
-
-  // Le service s'ajoute aux rencontres, il ne les rattrape pas : rien
-  // dans ce texte ne doit laisser croire qu'elles tiennent du hasard.
-  const offre = await page.locator('.lil-service-offre').innerText();
-  (await page.locator('.lil-service-titre').innerText()) === 'Service de matching personnalisé'
-    ? ok('la carte porte le nom du service')
-    : bad('titre inattendu', await page.locator('.lil-service-titre').innerText());
-  !/hasard/i.test(offre)
-    ? ok('et son texte ne présente pas les rencontres comme un coup de chance')
-    : bad('le texte parle de hasard', offre.replace(/\n+/g, ' | '));
-  (await page.locator('.lil-matching-bloc').count()) === 0
-    ? ok('et ses questions attendent qu’on ait dit oui')
-    : bad('les questions s’affichent sans qu’on ait accepté');
-
-  // Ce que le « oui » engage se lit avant de le donner : c'est ce clic
-  // qui vaut consentement, il n'y a plus de case à cocher derrière.
-  /origines/i.test(offre) && /religion/i.test(offre)
-    ? ok('la carte annonce les questions sensibles avant qu’on accepte')
-    : bad('le consentement n’est pas annoncé sur la carte', offre.replace(/\n+/g, ' | '));
-
-  await page.getByRole('button', { name: 'Oui, ça m’intéresse' }).click();
-  await page.waitForTimeout(400);
-
-  (await page.locator('.lil-confidentialite').count()) === 1
-    ? ok('et la mention sur qui lit les réponses est là, avant de commencer')
-    : bad('pas de mention de confidentialité');
-
-  // Deux colonnes valent pour une proposition qui tient en un écran ; le
-  // questionnaire ouvert fait trente questions et reprend toute la place.
-  await page.setViewportSize({ width: 1100, height: 1000 });
-  await page.waitForTimeout(300);
-  (await page.evaluate(() => {
-    const mot = document.querySelector('.lil-fin-mot');
-    const service = document.querySelector('.lil-service');
-    return mot && service
-      ? service.getBoundingClientRect().top > mot.getBoundingClientRect().bottom - 4
-      : false;
-  }))
-    ? ok('le questionnaire ouvert reprend toute la largeur')
-    : bad('les trente questions restent dans une demi-colonne');
-  const marges = await page.locator('.lil-service').evaluate((el) => {
-    const style = getComputedStyle(el);
-    return [parseFloat(style.paddingLeft), parseFloat(style.paddingRight)];
-  });
-  marges[0] >= 40 && marges[1] >= 40
-    ? ok('et respire sur les côtés plutôt que de courir d’un bord à l’autre')
-    : bad('le questionnaire colle aux bords', JSON.stringify(marges));
-  await page.setViewportSize({ width: 680, height: 1000 });
-  await page.waitForTimeout(300);
-  (await page.locator('.lil-matching-bloc').count()) >= 8
-    ? ok('le oui donné, toutes les questions se déroulent d’un coup')
-    : bad('questions manquantes', String(await page.locator('.lil-matching-bloc').count()));
-  (await page.locator('.lil-service-consent').count()) === 0
-    ? ok('sans seconde case à cocher')
-    : bad('la case de consentement secondaire est encore là');
-
-  const titres = (await page.locator('.lil-matching-bloc legend').allInnerTexts())
-    .join(' | ')
-    .toLowerCase();
-  titres.includes('origines') && titres.includes('religion')
-    ? ok('origines et religion sont dans le fil, sans porte séparée')
-    : bad('blocs sensibles absents', titres);
-  titres.includes('voyages') && titres.includes('style de vie')
-    ? ok('avec les nouveaux blocs : voyages, style de vie')
-    : bad('nouveaux blocs absents', titres);
-
-  // Un cliché à la demande, pour juger de l'allure : « E2E_SHOTS=dossier ».
-  if (process.env.E2E_SHOTS) {
-    await page.locator('.lil-matching-bloc', { hasText: 'Tes habitudes' }).scrollIntoViewIfNeeded();
-    await page.screenshot({ path: `${process.env.E2E_SHOTS}/matching.png`, fullPage: true });
-  }
-
-  // Trente questions à la suite : l'intitulé doit se distinguer de
-  // l'aide et des options, sinon on ne sait plus ce qu'on lit.
-  const taille = await page
-    .locator('.lil-matching-champ .lil-field-label')
-    .first()
-    .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-  taille >= 16
-    ? ok('les intitulés du second questionnaire se lisent de loin')
-    : bad('intitulés trop petits', `${taille}px`);
-
-  // Les aides collées au champ se lisaient comme sa légende, et non comme
-  // la suite de la question. Plus grandes, et détachées de ce qui suit.
-  const aide = await page
-    .locator('.lil-matching-champ > .lil-field-help')
-    .first()
-    .evaluate((el) => {
-      const style = getComputedStyle(el);
-      return { taille: parseFloat(style.fontSize), bas: parseFloat(style.marginBottom) };
+  // Le service de matching est mis de côté : « SERVICE_MATCHING_ACTIF »
+  // à false, et la carte ne s'affiche plus. Tout ce qui suit ne vaut
+  // que s'il est reproposé — et reviendra tout seul le jour où on le
+  // rallumera, plutôt que de rester en commentaire à pourrir.
+  const servicePropose = (await page.locator('.lil-service-offre').count()) === 1;
+  if (!servicePropose) {
+    ok('le service de matching n’est plus proposé après l’envoi');
+    (await page.locator('.lil-service').count()) === 0
+      ? ok('et rien de lui ne traîne sur l’écran de fin')
+      : bad('une carte de service subsiste');
+  } else {
+    // Au large, les deux cartes se mettent côte à côte : empilées, on
+    // s'arrêtait au premier écran — celui qui dit qu'il n'y a rien à faire
+    // — sans découvrir qu'il se passait autre chose en dessous.
+    await page.setViewportSize({ width: 1100, height: 1000 });
+    await page.waitForTimeout(300);
+    const cote = await page.evaluate(() => {
+      const mot = document.querySelector('.lil-fin-mot');
+      const service = document.querySelector('.lil-service');
+      if (!mot || !service) return null;
+      const a = mot.getBoundingClientRect();
+      const b = service.getBoundingClientRect();
+      return { memeHauteur: Math.abs(a.top - b.top) < 4, aDroite: b.left > a.right - 4 };
     });
-  aide.taille >= 14 && aide.bas >= 10
-    ? ok('et leurs aides se lisent, détachées du champ qu’elles précèdent')
-    : bad('aides trop petites ou collées', JSON.stringify(aide));
+    cote?.memeHauteur && cote?.aDroite
+      ? ok('au large, la nouveauté se place à côté du mot d’envoi')
+      : bad('les deux cartes restent empilées', JSON.stringify(cote));
 
-  // « Si oui, lequel ? » n'a de sens qu'après un « oui » : affiché
-  // d'avance, il demande de préciser ce qu'on n'a pas encore dit.
-  const animaux = page.locator('.lil-matching-bloc', { hasText: 'Tes habitudes' });
-  const lequel = animaux.locator('.lil-matching-champ', { hasText: 'Si oui, lequel ?' });
-  const avant = await lequel.count();
-  await animaux
-    .locator('.lil-matching-champ', { hasText: 'As-tu un animal de compagnie' })
-    .getByRole('radio', { name: 'Oui' })
-    .click();
-  await page.waitForTimeout(200);
-  avant === 0 && (await lequel.count()) === 1
-    ? ok('« si oui, lequel ? » n’apparaît qu’après le « oui »')
-    : bad('précision sur l’animal mal conditionnée', `avant ${avant}`);
+    (await page.locator('.lil-service-offre .lil-service-chapeau').evaluate((el) => {
+      const style = getComputedStyle(el);
+      return style.display === 'inline-block' && style.backgroundColor !== 'rgba(0, 0, 0, 0)';
+    }))
+      ? ok('et « Nouveauté » porte sa pastille, au lieu de se fondre en surtitre')
+      : bad('« Nouveauté » n’est pas mis en avant');
 
-  await page
-    .locator('.lil-matching-bloc', { hasText: 'situation maritale' })
-    .getByRole('radio', { name: 'Divorcé(e) ou séparé(e)' })
-    .click();
-  await page.waitForTimeout(200);
+    if (process.env.E2E_SHOTS) {
+      await page.screenshot({ path: `${process.env.E2E_SHOTS}/fin-large.png`, fullPage: true });
+    }
 
-  // Le service est facultatif, ses questions ne le sont pas : une seule
-  // réponse sur trente partait sans que rien ne le dise, et ne servait à
-  // personne. L'envoi doit refuser, et montrer où il manque quelque chose.
-  await page.getByRole('button', { name: 'Envoyer mes réponses' }).click();
-  await page.waitForTimeout(400);
-  (await page.locator('.lil-service-merci').count()) === 0
-    ? ok('un questionnaire à moitié rempli ne part pas')
-    : bad('l’envoi est passé avec des questions sans réponse');
-  /questions? sans réponse/i.test(await page.locator('.lil-service .lil-error').innerText())
-    ? ok('et l’envoi dit combien il en reste')
-    : bad('pas de décompte des questions manquantes');
-  (await page.locator('.lil-matching-champ[data-manque]').count()) > 0
-    ? ok('chaque question laissée vide est signalée à sa place')
-    : bad('les questions manquantes ne sont pas repérables');
+    // Dans un téléphone, deux colonnes ne sont plus deux colonnes : elles
+    // redeviennent une pile, dans l'ordre où on les lit.
+    await page.setViewportSize({ width: 390, height: 1000 });
+    await page.waitForTimeout(300);
+    (await page.evaluate(() => {
+      const mot = document.querySelector('.lil-fin-mot');
+      const service = document.querySelector('.lil-service');
+      return mot && service
+        ? service.getBoundingClientRect().top > mot.getBoundingClientRect().bottom - 4
+        : false;
+    }))
+      ? ok('et dans un téléphone, elles se remettent l’une sous l’autre')
+      : bad('les colonnes se chevauchent sur petit écran');
 
-  await repondreATout(page);
+    await page.setViewportSize({ width: 680, height: 1000 });
+    await page.waitForTimeout(300);
 
-  await page.getByRole('button', { name: 'Envoyer mes réponses' }).click();
-  await page.waitForTimeout(900);
-  (await page.locator('.lil-service-merci').count()) === 1
-    ? ok('l’envoi des réponses est confirmé sur place')
-    : bad('pas de confirmation après l’envoi du matching');
+    if (process.env.E2E_SHOTS) {
+      await page.screenshot({ path: `${process.env.E2E_SHOTS}/fin.png`, fullPage: true });
+    }
 
-  matchingEnvoye?.token === '11111111-2222-4333-8444-555555555555'
-    ? ok('les réponses partent avec le jeton rendu à l’inscription')
-    : bad('jeton absent de l’envoi', JSON.stringify(matchingEnvoye));
-  matchingEnvoye?.reponses?.situationMaritale === 'divorce' &&
-  matchingEnvoye?.reponses?.consentSensible === true
-    ? ok('avec les réponses et le consentement donné en tête')
-    : bad('réponses de matching perdues', JSON.stringify(matchingEnvoye?.reponses ?? null));
+    // --- Le service, proposé une fois la candidature partie ------------
+    // Il était la dernière étape du formulaire. Le mettre après change
+    // tout : plus personne n'a à refuser une offre pour pouvoir envoyer.
+    (await page.locator('.lil-service-offre').count()) === 1
+      ? ok('le service de matching se propose après l’envoi, en seconde carte')
+      : bad('pas de carte de service après l’envoi');
+
+    // Le service s'ajoute aux rencontres, il ne les rattrape pas : rien
+    // dans ce texte ne doit laisser croire qu'elles tiennent du hasard.
+    const offre = await page.locator('.lil-service-offre').innerText();
+    (await page.locator('.lil-service-titre').innerText()) === 'Service de matching personnalisé'
+      ? ok('la carte porte le nom du service')
+      : bad('titre inattendu', await page.locator('.lil-service-titre').innerText());
+    !/hasard/i.test(offre)
+      ? ok('et son texte ne présente pas les rencontres comme un coup de chance')
+      : bad('le texte parle de hasard', offre.replace(/\n+/g, ' | '));
+    (await page.locator('.lil-matching-bloc').count()) === 0
+      ? ok('et ses questions attendent qu’on ait dit oui')
+      : bad('les questions s’affichent sans qu’on ait accepté');
+
+    // Ce que le « oui » engage se lit avant de le donner : c'est ce clic
+    // qui vaut consentement, il n'y a plus de case à cocher derrière.
+    /origines/i.test(offre) && /religion/i.test(offre)
+      ? ok('la carte annonce les questions sensibles avant qu’on accepte')
+      : bad('le consentement n’est pas annoncé sur la carte', offre.replace(/\n+/g, ' | '));
+
+    await page.getByRole('button', { name: 'Oui, ça m’intéresse' }).click();
+    await page.waitForTimeout(400);
+
+    (await page.locator('.lil-confidentialite').count()) === 1
+      ? ok('et la mention sur qui lit les réponses est là, avant de commencer')
+      : bad('pas de mention de confidentialité');
+
+    // Deux colonnes valent pour une proposition qui tient en un écran ; le
+    // questionnaire ouvert fait trente questions et reprend toute la place.
+    await page.setViewportSize({ width: 1100, height: 1000 });
+    await page.waitForTimeout(300);
+    (await page.evaluate(() => {
+      const mot = document.querySelector('.lil-fin-mot');
+      const service = document.querySelector('.lil-service');
+      return mot && service
+        ? service.getBoundingClientRect().top > mot.getBoundingClientRect().bottom - 4
+        : false;
+    }))
+      ? ok('le questionnaire ouvert reprend toute la largeur')
+      : bad('les trente questions restent dans une demi-colonne');
+    const marges = await page.locator('.lil-service').evaluate((el) => {
+      const style = getComputedStyle(el);
+      return [parseFloat(style.paddingLeft), parseFloat(style.paddingRight)];
+    });
+    marges[0] >= 40 && marges[1] >= 40
+      ? ok('et respire sur les côtés plutôt que de courir d’un bord à l’autre')
+      : bad('le questionnaire colle aux bords', JSON.stringify(marges));
+    await page.setViewportSize({ width: 680, height: 1000 });
+    await page.waitForTimeout(300);
+    (await page.locator('.lil-matching-bloc').count()) >= 8
+      ? ok('le oui donné, toutes les questions se déroulent d’un coup')
+      : bad('questions manquantes', String(await page.locator('.lil-matching-bloc').count()));
+    (await page.locator('.lil-service-consent').count()) === 0
+      ? ok('sans seconde case à cocher')
+      : bad('la case de consentement secondaire est encore là');
+
+    const titres = (await page.locator('.lil-matching-bloc legend').allInnerTexts())
+      .join(' | ')
+      .toLowerCase();
+    titres.includes('origines') && titres.includes('religion')
+      ? ok('origines et religion sont dans le fil, sans porte séparée')
+      : bad('blocs sensibles absents', titres);
+    titres.includes('voyages') && titres.includes('style de vie')
+      ? ok('avec les nouveaux blocs : voyages, style de vie')
+      : bad('nouveaux blocs absents', titres);
+
+    // Un cliché à la demande, pour juger de l'allure : « E2E_SHOTS=dossier ».
+    if (process.env.E2E_SHOTS) {
+      await page.locator('.lil-matching-bloc', { hasText: 'Tes habitudes' }).scrollIntoViewIfNeeded();
+      await page.screenshot({ path: `${process.env.E2E_SHOTS}/matching.png`, fullPage: true });
+    }
+
+    // Trente questions à la suite : l'intitulé doit se distinguer de
+    // l'aide et des options, sinon on ne sait plus ce qu'on lit.
+    const taille = await page
+      .locator('.lil-matching-champ .lil-field-label')
+      .first()
+      .evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+    taille >= 16
+      ? ok('les intitulés du second questionnaire se lisent de loin')
+      : bad('intitulés trop petits', `${taille}px`);
+
+    // Les aides collées au champ se lisaient comme sa légende, et non comme
+    // la suite de la question. Plus grandes, et détachées de ce qui suit.
+    const aide = await page
+      .locator('.lil-matching-champ > .lil-field-help')
+      .first()
+      .evaluate((el) => {
+        const style = getComputedStyle(el);
+        return { taille: parseFloat(style.fontSize), bas: parseFloat(style.marginBottom) };
+      });
+    aide.taille >= 14 && aide.bas >= 10
+      ? ok('et leurs aides se lisent, détachées du champ qu’elles précèdent')
+      : bad('aides trop petites ou collées', JSON.stringify(aide));
+
+    // « Si oui, lequel ? » n'a de sens qu'après un « oui » : affiché
+    // d'avance, il demande de préciser ce qu'on n'a pas encore dit.
+    const animaux = page.locator('.lil-matching-bloc', { hasText: 'Tes habitudes' });
+    const lequel = animaux.locator('.lil-matching-champ', { hasText: 'Si oui, lequel ?' });
+    const avant = await lequel.count();
+    await animaux
+      .locator('.lil-matching-champ', { hasText: 'As-tu un animal de compagnie' })
+      .getByRole('radio', { name: 'Oui' })
+      .click();
+    await page.waitForTimeout(200);
+    avant === 0 && (await lequel.count()) === 1
+      ? ok('« si oui, lequel ? » n’apparaît qu’après le « oui »')
+      : bad('précision sur l’animal mal conditionnée', `avant ${avant}`);
+
+    await page
+      .locator('.lil-matching-bloc', { hasText: 'situation maritale' })
+      .getByRole('radio', { name: 'Divorcé(e) ou séparé(e)' })
+      .click();
+    await page.waitForTimeout(200);
+
+    // Le service est facultatif, ses questions ne le sont pas : une seule
+    // réponse sur trente partait sans que rien ne le dise, et ne servait à
+    // personne. L'envoi doit refuser, et montrer où il manque quelque chose.
+    await page.getByRole('button', { name: 'Envoyer mes réponses' }).click();
+    await page.waitForTimeout(400);
+    (await page.locator('.lil-service-merci').count()) === 0
+      ? ok('un questionnaire à moitié rempli ne part pas')
+      : bad('l’envoi est passé avec des questions sans réponse');
+    /questions? sans réponse/i.test(await page.locator('.lil-service .lil-error').innerText())
+      ? ok('et l’envoi dit combien il en reste')
+      : bad('pas de décompte des questions manquantes');
+    (await page.locator('.lil-matching-champ[data-manque]').count()) > 0
+      ? ok('chaque question laissée vide est signalée à sa place')
+      : bad('les questions manquantes ne sont pas repérables');
+
+    await repondreATout(page);
+
+    await page.getByRole('button', { name: 'Envoyer mes réponses' }).click();
+    await page.waitForTimeout(900);
+    (await page.locator('.lil-service-merci').count()) === 1
+      ? ok('l’envoi des réponses est confirmé sur place')
+      : bad('pas de confirmation après l’envoi du matching');
+
+    matchingEnvoye?.token === '11111111-2222-4333-8444-555555555555'
+      ? ok('les réponses partent avec le jeton rendu à l’inscription')
+      : bad('jeton absent de l’envoi', JSON.stringify(matchingEnvoye));
+    matchingEnvoye?.reponses?.situationMaritale === 'divorce' &&
+    matchingEnvoye?.reponses?.consentSensible === true
+      ? ok('avec les réponses et le consentement donné en tête')
+      : bad('réponses de matching perdues', JSON.stringify(matchingEnvoye?.reponses ?? null));
+  }
 
   if (!sent) {
     bad('aucune requête d’inscription reçue');

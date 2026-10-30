@@ -114,6 +114,12 @@ const MIGRATIONS: {
     colonne: 'companion_last_name',
     sans: 'le nom de la personne qu’on amène n’est ni enregistré ni visible en curation',
   },
+  {
+    fichier: '24_aisance_tranches.sql',
+    table: 'lil_members_overview',
+    colonne: 'tranches_age',
+    sans: 'on ne sait pas à quelles soirées convier les inscrits, ni comment les placer à table',
+  },
 ];
 
 /** Ce que la base ne connaît pas encore. */

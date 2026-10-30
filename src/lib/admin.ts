@@ -95,6 +95,8 @@ export type MemberDetail = MemberSummary & {
   profession: string | null;
   instagram: string | null;
   comes_with: boolean | null;
+  aisance?: string | null;
+  tranches_age?: string[] | null;
   companion_first_name: string | null;
   companion_last_name?: string | null;
   /** La fiche de cette personne, quand elle a été reconnue et confirmée. */

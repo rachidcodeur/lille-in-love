@@ -87,6 +87,14 @@ export default async function FichePage({ params }: Props) {
       icone: 'enfants',
     },
     { terme: 'Cherche', valeur: label.lookingFor(member.looking_for), icone: 'loupe' },
+    // Les deux questions sur lesquelles on compose une soirée : qui on
+    // invite, et à côté de qui on l'assoit.
+    {
+      terme: 'Soirées souhaitées',
+      valeur: label.tranchesAge(member.tranches_age ?? null),
+      icone: 'duo',
+    },
+    { terme: 'En soirée', valeur: label.aisance(member.aisance ?? null), icone: 'personne' },
     { terme: 'Célibataire depuis', valeur: label.singleSince(member.single_since), icone: 'coeur' },
     { terme: 'Taille', valeur: member.height_cm ? `${member.height_cm} cm` : null, icone: 'taille' },
     { terme: 'Profession', valeur: member.profession, icone: 'mallette' },
