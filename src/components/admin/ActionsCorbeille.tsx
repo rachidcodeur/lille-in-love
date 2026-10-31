@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-type Action = 'corbeille' | 'restaurer' | 'effacer';
+type Action = 'corbeille' | 'restaurer' | 'effacer' | 'bloquer';
 
 type Props = {
   memberId: string;
@@ -26,6 +26,8 @@ export function ActionsCorbeille({ memberId, nom, place }: Props) {
   const [busy, setBusy] = useState<Action | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [aConfirmer, setAConfirmer] = useState(false);
+  const [aBloquer, setABloquer] = useState(false);
+  const [raison, setRaison] = useState('');
 
   async function agir(action: Action) {
     setBusy(action);
@@ -35,7 +37,7 @@ export function ActionsCorbeille({ memberId, nom, place }: Props) {
       const r = await fetch('/api/admin/corbeille', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ memberId, action }),
+        body: JSON.stringify({ memberId, action, raison: raison || undefined }),
       });
       const res = (await r.json()) as { ok?: boolean; error?: string };
 
@@ -57,6 +59,68 @@ export function ActionsCorbeille({ memberId, nom, place }: Props) {
     setBusy(null);
   }
 
+  /**
+   * Bloquer demande une confirmation, et la raison avec.
+   *
+   * Ce n'est pas une formalité : six mois plus tard, « bloqué » sans
+   * rien d'autre ne dit pas si c'était un comportement en soirée ou une
+   * erreur de manipulation, et personne n'ose débloquer.
+   */
+  const blocage = (
+    <div className="adm-blocage">
+      {aBloquer ? (
+        <>
+          <label className="adm-blocage-label" htmlFor={`raison-${memberId}`}>
+            Pourquoi bloquer {nom} ?
+          </label>
+          <input
+            id={`raison-${memberId}`}
+            className="adm-blocage-raison"
+            type="text"
+            maxLength={300}
+            placeholder="Ce qui s’est passé, en une phrase"
+            value={raison}
+            onChange={(e) => setRaison(e.target.value)}
+          />
+          <div className="adm-blocage-boutons">
+            <button
+              type="button"
+              className="adm-btn adm-btn-danger"
+              disabled={busy !== null}
+              onClick={() => agir('bloquer')}
+            >
+              {busy === 'bloquer' ? 'Blocage…' : 'Bloquer'}
+            </button>
+            <button
+              type="button"
+              className="adm-btn adm-btn-ghost"
+              disabled={busy !== null}
+              onClick={() => {
+                setABloquer(false);
+                setRaison('');
+              }}
+            >
+              Annuler
+            </button>
+          </div>
+          <p className="adm-hint">
+            Son email et son numéro ne pourront plus servir à s’inscrire. La fiche part à la
+            corbeille, où elle reste consultable — et le blocage se défait depuis là.
+          </p>
+        </>
+      ) : (
+        <button
+          type="button"
+          className="adm-btn adm-btn-ghost adm-btn-danger"
+          disabled={busy !== null}
+          onClick={() => setABloquer(true)}
+        >
+          Blacklister
+        </button>
+      )}
+    </div>
+  );
+
   if (place === 'fiche') {
     return (
       <div className="adm-actions">
@@ -72,6 +136,9 @@ export function ActionsCorbeille({ memberId, nom, place }: Props) {
           La fiche quitte la liste sans être effacée, et l’email de bienvenue encore en attente
           est arrêté. Tu la retrouveras dans la corbeille.
         </p>
+
+        {blocage}
+
         {erreur && (
           <div className="adm-feedback" data-kind="ko">
             {erreur}
@@ -91,6 +158,8 @@ export function ActionsCorbeille({ memberId, nom, place }: Props) {
       >
         {busy === 'restaurer' ? 'Un instant…' : 'Restaurer'}
       </button>
+
+      {blocage}
 
       {aConfirmer ? (
         <>

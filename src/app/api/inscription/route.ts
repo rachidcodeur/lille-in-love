@@ -13,6 +13,7 @@ import {
   type InscriptionInput,
 } from '@/lib/validation';
 import { HONEYPOT_FIELDS, MIN_FILL_SECONDS } from '@/lib/questions';
+import { estBloque } from '@/lib/blacklist';
 import { chercherCompagnon } from '@/lib/compagnon';
 import { previenirEquipe, sendSequenceEmail } from '@/lib/mailer';
 import { randomUUID } from 'node:crypto';
@@ -228,6 +229,24 @@ export async function POST(request: Request) {
     }
   }
 
+  // Le formulaire court ne demande pas de téléphone. Celui-ci sert deux
+  // fois : à reconnaître un bloqué, puis un doublon.
+  const telephone = isCourt ? null : normalizePhone((data as InscriptionInput).phone);
+
+  // --- Bloqué ? -------------------------------------------------------
+  // Avant toute écriture : quelqu'un qu'on a banni ne laisse pas de
+  // trace de plus en base. Le message ne dit pas « tu es banni » — il
+  // n'y a rien à gagner à ouvrir une discussion là-dessus — mais il
+  // n'invente rien non plus, et donne l'adresse pour nous écrire.
+  if (await estBloque(data.email, telephone)) {
+    return NextResponse.json(
+      {
+        error: `Nous ne pouvons pas donner suite à cette inscription. Écris-nous à ${BRAND.contactEmail} si tu penses qu'il s'agit d'une erreur.`,
+      },
+      { status: 403, headers: cors },
+    );
+  }
+
   // --- Déjà inscrit ? -------------------------------------------------
   /**
    * Une candidature porte-t-elle déjà cette valeur ?
@@ -265,10 +284,7 @@ export async function POST(request: Request) {
     );
   }
 
-  // Le même numéro, sous une autre adresse : c'est la même personne, et le
-  // formulaire court ne demande pas de téléphone.
-  const telephone = isCourt ? null : normalizePhone((data as InscriptionInput).phone);
-
+  // Le même numéro, sous une autre adresse : c'est la même personne.
   if (telephone && (await dejaPris('phone', telephone))) {
     return NextResponse.json(
       {

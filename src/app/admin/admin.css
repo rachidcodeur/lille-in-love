@@ -3040,3 +3040,67 @@ a.adm-btn:hover {
   font-size: 14px;
   line-height: 1.45;
 }
+
+/* ------------------------------------------------------------------ */
+/* Bloquer quelqu'un                                                   */
+/* ------------------------------------------------------------------ */
+
+/* Détaché de « mettre à la corbeille » par un trait : les deux gestes se
+   ressemblent à l'œil et n'ont rien à voir — l'un range, l'autre ferme
+   la porte. */
+.adm-blocage {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(0, 0, 0, 0.07);
+}
+
+.adm-blocage-label {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.adm-blocage-raison {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 14px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.adm-blocage-boutons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.adm-blocage .adm-hint {
+  margin-top: 10px;
+}
+
+/* Dans une ligne de corbeille, le trait n'a plus rien à séparer : les
+   boutons sont déjà côte à côte, et il ne faisait que couper celui du
+   milieu en deux. */
+.adm-corbeille-actions .adm-blocage {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* Dépliée, la raison a besoin de sa largeur : coincée entre deux
+   boutons, elle ne laissait écrire que trois mots. */
+.adm-corbeille-actions .adm-blocage:has(.adm-blocage-raison) {
+  flex: 1 0 100%;
+  margin-top: 10px;
+}
+
+/* Le second titre d'une page qui en porte deux : la corbeille, puis les
+   bloqués. Il respire au-dessus pour qu'on voie qu'on change de sujet. */
+.adm-title-second {
+  margin-top: 46px;
+}

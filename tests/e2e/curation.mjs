@@ -1282,6 +1282,32 @@ await page.goto(`${BASE}/admin/corbeille`, { waitUntil: 'networkidle' });
   ? ok('on la retrouve dans la corbeille')
   : bad('corbeille vide');
 
+// Un visage se reconnaît, un prénom non : « Julie », il y en a huit, et
+// c'est au moment de restaurer ou d'effacer qu'on veut être sûr.
+const PNG_1x1 = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64',
+);
+await fetch(`${FAKE}/storage/v1/object/candidatures/membres/jetee.png`, {
+  method: 'PUT',
+  headers: { 'Content-Type': 'image/png' },
+  body: PNG_1x1,
+});
+await fetch(`${FAKE}/rest/v1/lil_photos`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    member_id: idJetee,
+    storage_path: 'membres/jetee.png',
+    position: 0,
+    mime_type: 'image/png',
+  }),
+});
+await page.reload({ waitUntil: 'networkidle' });
+(await page.locator('.adm-row-corbeille img.adm-avatar').count()) === 1
+  ? ok('et on y voit sa photo, pas seulement son initiale')
+  : bad('la corbeille n’affiche pas les photos');
+
 await page.getByRole('button', { name: 'Restaurer' }).click();
 await page.waitForTimeout(1500);
 s = await state();
@@ -1318,6 +1344,116 @@ const refusEffacement = await (
 refusEffacement.error?.includes('corbeille')
   ? ok('effacer une fiche active est refusé : il faut passer par la corbeille')
   : bad('une fiche active a pu être effacée', JSON.stringify(refusEffacement));
+
+/* ====================================================================
+   13 bis. Bloquer quelqu'un
+   ==================================================================== */
+// Mettre à la corbeille retire de la curation, mais n'empêche rien : le
+// lendemain, le même formulaire repart avec la même adresse. Bloquer
+// garde de quoi reconnaître la personne — email et numéro — et refuse
+// l'inscription suivante.
+section('13 bis. La liste noire');
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
+const inscrireGenant = (email, phone) =>
+  fetch(`${BASE}/api/inscription`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      formVersion: 'complet',
+      gender: 'homme', birthDate: '1985-02-11', city: 'Lille', postalCode: '59000',
+      orientation: 'hetero', lookingFor: 'relation_serieuse',
+      aisance: 'tres_a_laise', tranchesAge: ['34_45'], singleSince: '3_ans',
+      heightCm: 182, about: 'Essai.', motivation: 'Essai.', interests: ['sorties'],
+      profession: 'Essai', referral: 'instagram', comesWith: 'non',
+      firstName: 'Gênant', lastName: 'Personnage',
+      phone, email, consent: true, elapsedMs: 60000,
+      photos: [{ path: 'pending/66666666-6666-4666-8666-666666666666.jpg' }],
+    }),
+  });
+
+await inscrireGenant('genant@example.com', '06 12 34 56 78');
+s = await state();
+const genant = s.members.find((m) => m.email === 'genant@example.com');
+
+// Le bouton vit sur la fiche, à côté de « mettre à la corbeille » : les
+// deux gestes se ressemblent à l'œil et n'ont rien à voir.
+await page.goto(`${BASE}/admin/${genant.id}`, { waitUntil: 'networkidle' });
+await page.getByRole('button', { name: 'Blacklister' }).click();
+await page.waitForTimeout(200);
+(await page.locator('.adm-blocage-raison').count()) === 1
+  ? ok('bloquer demande d’abord pourquoi')
+  : bad('aucune raison n’est demandée');
+await page.fill('.adm-blocage-raison', 'Comportement déplacé en soirée.');
+await page.getByRole('button', { name: 'Bloquer', exact: true }).click();
+await page.waitForTimeout(1500);
+
+s = await state();
+const ligne = (s.blacklist ?? []).find((b) => b.email === 'genant@example.com');
+ligne
+  ? ok('l’email rejoint la liste noire')
+  : bad('rien dans la liste noire', JSON.stringify(s.blacklist ?? null));
+ligne?.phone === '+33612345678'
+  ? ok('et le numéro avec, normalisé comme à l’inscription')
+  : bad('numéro absent ou non normalisé', JSON.stringify(ligne?.phone ?? null));
+ligne?.raison === 'Comportement déplacé en soirée.'
+  ? ok('avec la raison, pour celui qui relira dans six mois')
+  : bad('raison perdue', JSON.stringify(ligne?.raison ?? null));
+s.members.find((m) => m.id === genant.id)?.deleted_at
+  ? ok('et la fiche part à la corbeille du même geste')
+  : bad('la fiche est restée dans la liste');
+
+// Le même email, puis le même numéro sous une autre adresse.
+const retour = await (await inscrireGenant('genant@example.com', '07 77 77 77 77')).json();
+retour.error && !retour.ok
+  ? ok('la même adresse ne permet plus de s’inscrire')
+  : bad('une inscription bloquée est passée', JSON.stringify(retour));
+!/banni|blacklist|bloqu/i.test(retour.error ?? '')
+  ? ok('et le refus n’ouvre pas de discussion sur le bannissement')
+  : bad('le message annonce le bannissement', retour.error);
+
+const autreMail = await (await inscrireGenant('autre.adresse@example.com', '06 12 34 56 78')).json();
+autreMail.error && !autreMail.ok
+  ? ok('le même numéro sous une autre adresse non plus')
+  : bad('le numéro bloqué est passé', JSON.stringify(autreMail));
+
+(await state()).members.filter((m) => m.last_name === 'Personnage').length === 1
+  ? ok('et aucune de ces tentatives ne laisse de trace en base')
+  : bad('une fiche a été créée malgré le blocage');
+
+// Quelqu'un qui n'a rien à voir passe toujours.
+const innocent = await (await inscrireGenant('innocent@example.com', '06 55 55 55 55')).json();
+innocent.id
+  ? ok('pendant que les autres s’inscrivent normalement')
+  : bad('une inscription valable a été refusée', JSON.stringify(innocent));
+
+// Débloquer depuis la corbeille, et la porte se rouvre.
+await page.goto(`${BASE}/admin/corbeille`, { waitUntil: 'networkidle' });
+const vueCorbeille = await page.evaluate(() => document.body.textContent ?? '');
+if (process.env.E2E_SHOTS) {
+  await page.screenshot({ path: `${process.env.E2E_SHOTS}/corbeille.png`, fullPage: true });
+}
+/Comportement déplacé en soirée/.test(vueCorbeille)
+  ? ok('la liste noire se lit sous la corbeille, raison comprise')
+  : bad('la liste noire ne s’affiche pas');
+
+await page.getByRole('button', { name: /Débloquer/ }).click();
+await page.waitForTimeout(1200);
+((await state()).blacklist ?? []).length === 0
+  ? ok('débloquer lève le blocage')
+  : bad('le blocage persiste');
+
+// La porte se rouvre : l'envoi n'est plus refusé. Il tombe ensuite sur
+// le filet anti-doublon — la fiche d'origine est à la corbeille mais
+// garde l'adresse, et l'unicité de l'email vaut pour toute la base.
+// C'est une réponse polie, pas un refus.
+const revenu = await (await inscrireGenant('genant@example.com', '06 12 34 56 78')).json();
+revenu.ok && !revenu.error
+  ? ok('et l’inscription n’est plus refusée')
+  : bad('toujours bloqué après déblocage', JSON.stringify(revenu));
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
@@ -3512,45 +3648,52 @@ const ficheVue = await page.evaluate(() => document.body.textContent ?? '');
   ? ok('et l’aisance, pour le placement à table')
   : bad('aisance absente de la fiche');
 
-await page.locator('.adm-matching summary').click();
-await page.waitForTimeout(300);
-const matchingVu = await page.locator('.adm-matching').innerText();
-if (process.env.E2E_SHOTS) {
-  await page.locator('.adm-matching').screenshot({ path: `${process.env.E2E_SHOTS}/fiche.png` });
+// Le service de matching est mis de côté : sa carte ne s'affiche plus
+// sur la fiche. Rien n'est effacé en base, et tout ce qui suit revient
+// de lui-même le jour où on le rallume.
+if ((await page.locator('.adm-matching').count()) === 0) {
+  ok('les réponses du second formulaire ne s’affichent plus en curation');
+} else {
+  await page.locator('.adm-matching summary').click();
+  await page.waitForTimeout(300);
+  const matchingVu = await page.locator('.adm-matching').innerText();
+  if (process.env.E2E_SHOTS) {
+    await page.locator('.adm-matching').screenshot({ path: `${process.env.E2E_SHOTS}/fiche.png` });
+  }
+
+  // « Dis-nous plus » n'est pas une question : affichée seule, on ne savait
+  // plus de quoi elle répondait.
+  /Autre\s+—\s+Chauffeuse de bus/.test(matchingVu.replace(/\n/g, ' '))
+    ? ok('une précision rejoint la question qu’elle précise')
+    : bad('la précision est affichée seule', matchingVu.replace(/\n+/g, ' | ').slice(0, 300));
+  !/Dis-nous plus/.test(matchingVu)
+    ? ok('et ne fait plus une ligne à elle seule')
+    : bad('« Dis-nous plus » apparaît comme une question');
+
+  // La nationalité est redemandée, et n'est pas une donnée sensible : elle
+  // s'affiche comme les autres.
+  /Quelle est ta nationalité/.test(matchingVu) && /Française/.test(matchingVu)
+    ? ok('la nationalité est de retour sur la fiche')
+    : bad('nationalité absente de la fiche');
+  /Quelle est ta personnalité/.test(matchingVu) && /Entière/.test(matchingVu)
+    ? ok('la personnalité aussi, à côté d’elle')
+    : bad('personnalité absente de la fiche');
+
+  // Un champ peut être sensible dans un bloc qui ne l'est pas : la couleur
+  // de peau est nommée sous « qu'est-ce qui te fait craquer ».
+  (await page
+    .locator('.adm-matching dt', { hasText: 'te fait craquer' })
+    .locator('.adm-matching-tag')
+    .count()) === 1
+    ? ok('une question sensible le dit, même dans un bloc qui ne l’est pas')
+    : bad('la mention « sensible » manque sur la ligne');
+
+  // « Tes passions » a été repliée dans le style de vie. La réponse d'avant
+  // reste lisible : on ne l'efface pas parce qu'on a changé d'avis.
+  /questions retirées/i.test(matchingVu) && /La voile/.test(matchingVu)
+    ? ok('et une réponse à une question retirée reste sur la fiche')
+    : bad('une réponse a disparu avec sa question', matchingVu.replace(/\n+/g, ' | ').slice(0, 300));
 }
-
-// « Dis-nous plus » n'est pas une question : affichée seule, on ne savait
-// plus de quoi elle répondait.
-/Autre\s+—\s+Chauffeuse de bus/.test(matchingVu.replace(/\n/g, ' '))
-  ? ok('une précision rejoint la question qu’elle précise')
-  : bad('la précision est affichée seule', matchingVu.replace(/\n+/g, ' | ').slice(0, 300));
-!/Dis-nous plus/.test(matchingVu)
-  ? ok('et ne fait plus une ligne à elle seule')
-  : bad('« Dis-nous plus » apparaît comme une question');
-
-// La nationalité est redemandée, et n'est pas une donnée sensible : elle
-// s'affiche comme les autres.
-/Quelle est ta nationalité/.test(matchingVu) && /Française/.test(matchingVu)
-  ? ok('la nationalité est de retour sur la fiche')
-  : bad('nationalité absente de la fiche');
-/Quelle est ta personnalité/.test(matchingVu) && /Entière/.test(matchingVu)
-  ? ok('la personnalité aussi, à côté d’elle')
-  : bad('personnalité absente de la fiche');
-
-// Un champ peut être sensible dans un bloc qui ne l'est pas : la couleur
-// de peau est nommée sous « qu'est-ce qui te fait craquer ».
-(await page
-  .locator('.adm-matching dt', { hasText: 'te fait craquer' })
-  .locator('.adm-matching-tag')
-  .count()) === 1
-  ? ok('une question sensible le dit, même dans un bloc qui ne l’est pas')
-  : bad('la mention « sensible » manque sur la ligne');
-
-// « Tes passions » a été repliée dans le style de vie. La réponse d'avant
-// reste lisible : on ne l'efface pas parce qu'on a changé d'avis.
-/questions retirées/i.test(matchingVu) && /La voile/.test(matchingVu)
-  ? ok('et une réponse à une question retirée reste sur la fiche')
-  : bad('une réponse a disparu avec sa question', matchingVu.replace(/\n+/g, ' | ').slice(0, 300));
 
 /* ====================================================================
    22. Reconnaître la personne qu'on amène
@@ -3634,6 +3777,93 @@ const menteur = s.members.find((m) => m.email === 'marc.durand@example.com');
 menteur && menteur.companion_member_id == null
   ? ok('un identifiant qui ne correspond pas aux noms n’est pas repris')
   : bad('rattachement accepté sans vérification', JSON.stringify(menteur?.companion_member_id ?? null));
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
+/* ====================================================================
+   23. La fiche montre tout le questionnaire
+   ==================================================================== */
+// Le questionnaire bouge : des questions s'ajoutent, d'autres partent.
+// Une réponse donnée qui ne s'affiche nulle part est pire qu'une question
+// qu'on n'a pas posée — on l'a demandée, la personne a répondu, et on ne
+// la lit pas. Ce test répond à toutes les questions du formulaire, puis
+// cherche chaque réponse sur la fiche.
+section('23. Rien de ce qu’on demande ne se perd');
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
+const complete = await (
+  await fetch(`${BASE}/api/inscription`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      formVersion: 'complet',
+      gender: 'femme',
+      birthDate: '1991-09-23',
+      city: 'Roubaix',
+      postalCode: '59100',
+      orientation: 'hetero',
+      lookingFor: 'relation_serieuse',
+      tranchesAge: ['34_45', '44_55'],
+      heightCm: 171,
+      about: 'Je ris fort et je marche beaucoup.',
+      motivation: 'Marre des applications, envie de vrai.',
+      aisance: 'a_laise',
+      singleSince: '14_mois',
+      zodiac: 'balance',
+      profession: 'Orthophoniste',
+      instagram: '@claire.ortho',
+      comesWith: 'oui',
+      companionFirstName: 'Nadia',
+      companionLastName: 'Berger',
+      referral: 'autre',
+      referralOther: 'Une collègue de bureau',
+      firstName: 'Claire',
+      lastName: 'Lemoine',
+      phone: '06 24 68 13 57',
+      email: 'claire.lemoine@example.com',
+      consent: true,
+      elapsedMs: 60000,
+      photos: [{ path: 'pending/99999999-9999-4999-8999-999999999999.jpg' }],
+    }),
+  })
+).json();
+
+complete.id
+  ? ok('une candidature qui répond à tout est acceptée')
+  : bad('inscription refusée', JSON.stringify(complete));
+
+await page.goto(`${BASE}/admin/${complete.id}`, { waitUntil: 'networkidle' });
+const ficheComplete = await page.evaluate(() => document.body.textContent ?? '');
+
+// Chaque question du formulaire, et où sa réponse doit se lire.
+const attendus = [
+  ['le prénom et le nom', /Claire\s*Lemoine/],
+  ['l’email', /claire\.lemoine@example\.com/],
+  ['le téléphone', /\+33624681357/],
+  ['le genre', /Je suis[\s\S]{0,40}Femme/],
+  ['l’âge et la date de naissance', /Âge[\s\S]{0,60}ans/],
+  ['la ville et le code postal', /Roubaix[\s\S]{0,20}59100/],
+  ['l’orientation', /Orientation/],
+  ['ce qu’elle cherche', /Cherche[\s\S]{0,60}relation/i],
+  ['les soirées souhaitées', /34 - 45 ans[\s\S]{0,20}44 - 55 ans/],
+  ['l’aisance en soirée', /En soirée[\s\S]{0,30}À l’aise/],
+  ['depuis quand célibataire', /Célibataire depuis[\s\S]{0,30}14 mois/],
+  ['la taille', /171 cm/],
+  ['la profession', /Orthophoniste/],
+  ['le signe astrologique', /Balance/],
+  ['l’Instagram', /@claire\.ortho/],
+  ['la source, et sa précision', /Une collègue de bureau/],
+  ['qui elle amène', /Nadia Berger/],
+  ['sa présentation', /Je ris fort et je marche beaucoup/],
+  ['pourquoi elle vient', /Marre des applications/],
+];
+
+for (const [quoi, motif] of attendus) {
+  motif.test(ficheComplete)
+    ? ok(`la fiche montre ${quoi}`)
+    : bad(`la fiche ne montre pas ${quoi}`);
+}
 
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 

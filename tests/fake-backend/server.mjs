@@ -25,6 +25,7 @@ const tables = {
   lil_crush_matches: [],
   lil_crush_push: [],
   lil_crush_questionnaires: [],
+  lil_blacklist: [],
 };
 
 const storage = new Map();       // chemin -> { contentType, size }
@@ -646,6 +647,7 @@ async function traiter(req, res) {
       reviews: tables.lil_reviews,
       photos: tables.lil_photos,
       curators: tables.lil_curators,
+      blacklist: tables.lil_blacklist,
       sent: sentEmails,
       cancelled: [...cancelled],
       storage: [...storage.keys()],
@@ -664,6 +666,7 @@ async function traiter(req, res) {
     tables.lil_crush_matches = [];
     tables.lil_crush_push = [];
     tables.lil_crush_questionnaires = [];
+    tables.lil_blacklist = [];
     refuseBatch = false;
     sentEmails.length = 0;
     cancelled.clear();

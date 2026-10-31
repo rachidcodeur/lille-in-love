@@ -120,6 +120,12 @@ const MIGRATIONS: {
     colonne: 'tranches_age',
     sans: 'on ne sait pas à quelles soirées convier les inscrits, ni comment les placer à table',
   },
+  {
+    fichier: '25_blacklist.sql',
+    table: 'lil_blacklist',
+    colonne: 'email',
+    sans: 'on ne peut bloquer personne : une inscription retirée repart le lendemain',
+  },
 ];
 
 /** Ce que la base ne connaît pas encore. */

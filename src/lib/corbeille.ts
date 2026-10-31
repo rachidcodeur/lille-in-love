@@ -1,5 +1,6 @@
 import { env } from './env';
 import { supabaseAdmin } from './supabase';
+import { bloquer } from './blacklist';
 import { cancelPendingDecisionEmails } from './decision';
 import type { MemberSummary } from './admin';
 
@@ -27,6 +28,38 @@ export async function mettreALaCorbeille(memberId: string): Promise<{ envoiArret
 
   if (error) throw new Error(error.message);
   return { envoiArrete: !echec };
+}
+
+/**
+ * Bloque quelqu'un, et le range.
+ *
+ * Deux gestes en un, parce qu'ils n'ont de sens qu'ensemble : on ne
+ * bannit pas quelqu'un en le laissant dans la liste des candidatures.
+ * La fiche part à la corbeille — d'où elle reste consultable et
+ * effaçable — et son email et son numéro rejoignent la liste noire.
+ *
+ * Si la table manque encore, on le dit : le blocage n'a pas eu lieu, et
+ * laisser croire le contraire serait pire que de ne rien faire.
+ */
+export async function bloquerEtRanger(
+  memberId: string,
+  raison?: string,
+): Promise<{ bloque: boolean; envoiArrete: boolean }> {
+  const { data: membre } = await supabaseAdmin()
+    .from('lil_members')
+    .select('email, phone, first_name, last_name, deleted_at')
+    .eq('id', memberId)
+    .maybeSingle();
+
+  if (!membre) throw new Error('candidature introuvable');
+
+  const bloque = await bloquer(membre, raison);
+
+  // Déjà à la corbeille : on n'y touche pas, et rien n'est à annuler.
+  if (membre.deleted_at) return { bloque, envoiArrete: true };
+
+  const { envoiArrete } = await mettreALaCorbeille(memberId);
+  return { bloque, envoiArrete };
 }
 
 export async function restaurer(memberId: string): Promise<void> {

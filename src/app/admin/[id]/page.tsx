@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getEmailLog, getMember, photosDe } from '@/lib/admin';
 import { env } from '@/lib/env';
+import { SERVICE_MATCHING_ACTIF } from '@/lib/matching';
 import {
   EMAIL_STATUS_LABELS,
   formatDate,
@@ -234,14 +235,17 @@ export default async function FichePage({ params }: Props) {
             <GroupePicker memberId={member.id} groupe={member.soiree_group} />
           </div>
 
-          {/* Replié : la curation se fait sur les photos et quelques mots,
-              pas sur trente lignes de préférences. On l'ouvre le jour où
-              l'on cherche quelqu'un pour quelqu'un. */}
+          {/* Le service de matching est mis de côté : ses réponses ne
+              s'affichent plus sur la fiche. Rien n'est effacé en base, et
+              « SERVICE_MATCHING_ACTIF » à true les remet à l'écran
+              telles qu'elles étaient. */}
+          {SERVICE_MATCHING_ACTIF && (
           <FicheMatching
             optin={member.matching_optin}
             reponses={(member.matching ?? {}) as Record<string, string | string[]>}
             consentLe={member.matching_consent_at}
           />
+          )}
 
           <div className="adm-card adm-decision">
             <div className="adm-card-head">
