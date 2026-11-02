@@ -126,6 +126,12 @@ const MIGRATIONS: {
     colonne: 'email',
     sans: 'on ne peut bloquer personne : une inscription retirée repart le lendemain',
   },
+  {
+    fichier: '26_facebook.sql',
+    table: 'lil_members_overview',
+    colonne: 'facebook',
+    sans: 'le profil Facebook est demandé mais n’est pas conservé',
+  },
 ];
 
 /** Ce que la base ne connaît pas encore. */

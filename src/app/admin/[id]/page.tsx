@@ -101,6 +101,7 @@ export default async function FichePage({ params }: Props) {
     { terme: 'Profession', valeur: member.profession, icone: 'mallette' },
     { terme: 'Signe', valeur: label.zodiac(member.zodiac), icone: 'etoile' },
     { terme: 'Instagram', valeur: member.instagram, icone: 'instagram' },
+    { terme: 'Facebook', valeur: member.facebook ?? null, icone: 'instagram' },
     {
       terme: 'Nous a connus par',
       valeur: [label.referral(member.referral), member.referral_other]

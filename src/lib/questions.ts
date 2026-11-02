@@ -339,17 +339,28 @@ const ETAPES: Step[] = [
     ],
   },
   {
-    id: 'instagram',
+    // Les deux sur la même étape, et au même titre : tout le monde n'est
+    // pas sur Instagram, et demander Facebook sur un écran à part le
+    // ferait passer pour une question de second ordre.
+    id: 'reseaux',
     section: 'Toi, en quelques mots',
-    title: 'Ton Instagram ?',
+    title: 'Tes réseaux ?',
     facultatif: true,
-    help: 'On ne le partage jamais.',
+    help: 'On ne les partage jamais. L’un, l’autre, les deux ou aucun.',
     fields: [
       {
         name: 'instagram',
         type: 'text',
+        label: 'Instagram',
         maxLength: 60,
         placeholder: '@ton_compte',
+      },
+      {
+        name: 'facebook',
+        type: 'text',
+        label: 'Facebook',
+        maxLength: 120,
+        placeholder: 'Ton profil, ou le lien',
       },
     ],
   },

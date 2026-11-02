@@ -381,7 +381,22 @@ section('Parcours complet et envoi');
   await next();
   await page.fill('#profession', 'Architecte');
   await next();
+  // Les deux réseaux sur le même écran, et au même titre : tout le monde
+  // n'est pas sur Instagram.
+  (await page.locator('.lil-question').innerText()).includes('réseaux')
+    ? ok('Instagram et Facebook se demandent ensemble')
+    : bad('l’étape des réseaux a changé de titre', await page.locator('.lil-question').innerText());
+  (await page.locator('#instagram').count()) === 1 &&
+  (await page.locator('#facebook').count()) === 1
+    ? ok('avec un champ pour chacun')
+    : bad('un des deux champs manque');
+
+  if (process.env.E2E_SHOTS) {
+    await page.screenshot({ path: `${process.env.E2E_SHOTS}/reseaux.png` });
+  }
+
   await page.fill('#instagram', 'https://instagram.com/camille.d/');
+  await page.fill('#facebook', 'https://www.facebook.com/camille.durand/');
   await next();
   // Qui vient accompagné donne deux noms : « Julie » toute seule ne
   // désigne personne, et deux amis finissaient sur deux soirées.
@@ -785,6 +800,9 @@ section('Parcours complet et envoi');
     sent.singleSince === '8_mois'
       ? ok('la durée de célibat part telle qu’elle a été écrite')
       : bad('durée de célibat mal transmise', String(sent.singleSince));
+    sent.facebook === 'https://www.facebook.com/camille.durand/'
+      ? ok('le profil Facebook part tel qu’il a été collé')
+      : bad('Facebook non transmis', String(sent.facebook));
     sent.referralOther === 'Une amie du club de sport'
       ? ok('et la précision de « Autrement » suit')
       : bad('précision de source perdue', String(sent.referralOther));

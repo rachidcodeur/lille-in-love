@@ -896,7 +896,7 @@ const ENTETE =
 lignes[0].startsWith(ENTETE)
   ? ok('l’en-tête reprend exactement les colonnes de l’export existant')
   : bad('en-tête différent', lignes[0]);
-lignes[0].slice(ENTETE.length) === ',aisance,tranches_age'
+lignes[0].slice(ENTETE.length) === ',aisance,tranches_age,facebook'
   ? ok('et les nouvelles colonnes s’ajoutent au bout, sans rien décaler')
   : bad('colonnes ajoutées ailleurs qu’à la fin', lignes[0].slice(ENTETE.length));
 
@@ -3781,6 +3781,61 @@ menteur && menteur.companion_member_id == null
 await fetch(`${FAKE}/__reset`, { method: 'POST' });
 
 /* ====================================================================
+   22 bis. Un profil Facebook, sous ses trois formes
+   ==================================================================== */
+// Un pseudo, une adresse, ou « profile.php?id=… » pour les comptes sans
+// nom d'utilisateur. La dernière porte tout dans sa requête : la couper
+// laisserait « profile.php », qui ne mène nulle part.
+section('22 bis. Les trois façons de donner son Facebook');
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
+const avecFacebook = async (email, phone, facebook) => {
+  await fetch(`${BASE}/api/inscription`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      formVersion: 'complet',
+      gender: 'homme', birthDate: '1987-04-04', city: 'Lille', postalCode: '59000',
+      orientation: 'hetero', lookingFor: 'relation_serieuse',
+      aisance: 'timide', tranchesAge: ['34_45'], singleSince: '2_ans',
+      heightCm: 178, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
+      profession: 'Essai', referral: 'instagram', comesWith: 'non',
+      firstName: 'Fab', lastName: 'Essai', phone, email, facebook,
+      consent: true, elapsedMs: 60000,
+      photos: [{ path: 'pending/12121212-1212-4121-8121-121212121212.jpg' }],
+    }),
+  });
+  return (await state()).members.find((m) => m.email === email)?.facebook ?? null;
+};
+
+(await avecFacebook('fb1@example.com', '06 10 10 10 10', '@MonPseudo')) === 'MonPseudo'
+  ? ok('un pseudo reste un pseudo, sans son arobase')
+  : bad('pseudo mal normalisé');
+
+(await avecFacebook('fb2@example.com', '06 20 20 20 20', 'https://www.facebook.com/mon.pseudo/')) ===
+'mon.pseudo'
+  ? ok('une adresse complète se ramène au pseudo')
+  : bad('adresse mal normalisée');
+
+(await avecFacebook(
+  'fb3@example.com',
+  '06 30 30 30 30',
+  'https://facebook.com/profile.php?id=100078912345&sk=about',
+)) === 'https://facebook.com/profile.php?id=100078912345'
+  ? ok('et un compte sans pseudo garde son adresse, identifiant compris')
+  : bad('profile.php tronqué');
+
+// Ce qu'on ne reconnaît pas vaut mieux conservé qu'effacé : un nom à
+// chercher à la main reste plus utile qu'un champ vide.
+(await avecFacebook('fb4@example.com', '06 40 40 40 40', 'Jean Dupont (celui de Lille)')) ===
+'Jean Dupont (celui de Lille)'
+  ? ok('ce qui ne ressemble à rien de connu est gardé tel quel')
+  : bad('une réponse inattendue a été effacée');
+
+await fetch(`${FAKE}/__reset`, { method: 'POST' });
+
+/* ====================================================================
    23. La fiche montre tout le questionnaire
    ==================================================================== */
 // Le questionnaire bouge : des questions s'ajoutent, d'autres partent.
@@ -3813,6 +3868,7 @@ const complete = await (
       zodiac: 'balance',
       profession: 'Orthophoniste',
       instagram: '@claire.ortho',
+      facebook: 'https://www.facebook.com/claire.lemoine.9',
       comesWith: 'oui',
       companionFirstName: 'Nadia',
       companionLastName: 'Berger',
@@ -3853,6 +3909,7 @@ const attendus = [
   ['la profession', /Orthophoniste/],
   ['le signe astrologique', /Balance/],
   ['l’Instagram', /@claire\.ortho/],
+  ['le Facebook', /claire\.lemoine\.9/],
   ['la source, et sa précision', /Une collègue de bureau/],
   ['qui elle amène', /Nadia Berger/],
   ['sa présentation', /Je ris fort et je marche beaucoup/],

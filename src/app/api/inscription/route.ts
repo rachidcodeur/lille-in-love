@@ -7,6 +7,7 @@ import {
   ageFromBirthDate,
   inscriptionCourteSchema,
   inscriptionSchema,
+  normalizeFacebook,
   normalizeInstagram,
   normalizePhone,
   type InscriptionCourteInput,
@@ -82,6 +83,7 @@ async function poserLesSupplements(
     companion_member_id: string | null;
     aisance: string | null;
     tranches_age: string[];
+    facebook: string | null;
   },
 ): Promise<string | null> {
   const ensemble = await db.from('lil_members').update(valeurs).eq('id', memberId);
@@ -97,6 +99,7 @@ async function poserLesSupplements(
       matching_token: valeurs.matching_token,
       aisance: valeurs.aisance,
       tranches_age: valeurs.tranches_age,
+      facebook: valeurs.facebook,
     })
     .eq('id', memberId);
   if (!sansCompagnon.error) return valeurs.matching_token;
@@ -375,6 +378,7 @@ export async function POST(request: Request) {
         companion_member_id: await compagnonVerifie(data as Parameters<typeof compagnonVerifie>[0]),
         aisance: (data as { aisance?: string }).aisance ?? null,
         tranches_age: (data as { tranchesAge?: string[] }).tranchesAge ?? [],
+        facebook: normalizeFacebook((data as { facebook?: string }).facebook) ?? null,
       });
 
   // --- Photos : on les range sous le membre ---------------------------

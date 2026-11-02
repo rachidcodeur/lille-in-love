@@ -45,6 +45,7 @@ export const COLONNES = [
   // décalerait tout ce qui la suit.
   'aisance',
   'tranches_age',
+  'facebook',
 ] as const;
 
 const GENRE: Record<string, string> = { femme: 'F', homme: 'M' };
@@ -117,6 +118,7 @@ export function ligneExport(member: MemberDetail): string[] {
     texte(member.id),
     texte(member.aisance),
     (member.tranches_age ?? []).join(' '),
+    texte(member.facebook),
   ];
 }
 

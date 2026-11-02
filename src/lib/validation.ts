@@ -74,6 +74,7 @@ export const inscriptionSchema = z
     zodiac: z.enum(values(ZODIAC)).optional(),
     profession: trimmed.min(1, 'Indique ta profession').max(120),
     instagram: optionalText(60),
+    facebook: optionalText(120),
 
     comesWith: z.enum(['oui', 'non']),
     companionFirstName: optionalText(60),
@@ -230,6 +231,36 @@ export function normalizePhone(raw: string): string {
 }
 
 /** « @Compte » et les URLs complètes ramenés à un simple pseudo. */
+/**
+ * Un profil Facebook, ramené à ce qui permet de le retrouver.
+ *
+ * Trois formes arrivent : un pseudo, une adresse « facebook.com/pseudo »,
+ * et « facebook.com/profile.php?id=10000… » pour les comptes sans nom
+ * d'utilisateur. La dernière porte tout dans sa requête — la couper
+ * reviendrait à garder « profile.php », qui ne mène nulle part. On la
+ * laisse donc entière.
+ *
+ * Ce qu'on ne reconnaît pas est conservé tel quel : mieux vaut un nom et
+ * une ville à chercher à la main qu'un champ vidé par excès de zèle.
+ */
+export function normalizeFacebook(raw: string | undefined): string | undefined {
+  const brut = raw?.trim();
+  if (!brut) return undefined;
+
+  const sansHote = brut.replace(
+    /^https?:\/\/(?:www\.|m\.|web\.|fr-fr\.)?facebook\.com\//i,
+    '',
+  );
+  if (sansHote === brut && /^https?:\/\//i.test(brut)) return brut;
+
+  if (/^profile\.php\?id=\d+/i.test(sansHote)) {
+    return `https://facebook.com/${sansHote.split('&')[0]}`;
+  }
+
+  const pseudo = sansHote.replace(/\/+$/, '').replace(/^@/, '').split(/[/?]/)[0];
+  return pseudo || undefined;
+}
+
 export function normalizeInstagram(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
   const handle = raw

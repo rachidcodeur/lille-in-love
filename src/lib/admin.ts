@@ -94,6 +94,7 @@ export type MemberDetail = MemberSummary & {
   zodiac: string | null;
   profession: string | null;
   instagram: string | null;
+  facebook?: string | null;
   comes_with: boolean | null;
   aisance?: string | null;
   tranches_age?: string[] | null;
