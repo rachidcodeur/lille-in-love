@@ -10,7 +10,22 @@
  * URL d'export en changeant le chemin.
  */
 
-export const GROUPES = ['A', 'B', 'C', 'G'] as const;
+/**
+ * Une tranche de soirée, reconnue à sa forme et non à un catalogue.
+ *
+ * Le filtre n'a pas besoin de connaître la liste : « 25_35 » se valide et
+ * se lit tout seul. Ajouter une soirée au formulaire suffit donc à la
+ * rendre filtrable, sans toucher à ce fichier — et sans le faire dépendre
+ * des questions, qu'il n'a par ailleurs aucune raison de connaître.
+ */
+const FORME_TRANCHE = /^\d{2}_\d{2}$/;
+
+function trancheLisible(valeur: string): string {
+  const [debut, fin] = valeur.split('_');
+  return `${debut}-${fin} ans`;
+}
+
+export const GROUPES = ['A', 'B', 'C', 'G', 'S'] as const;
 export type Groupe = (typeof GROUPES)[number];
 
 /** Les cases qu'on peut cocher. Aucune cochée vaut « tous les groupes ». */
@@ -46,6 +61,13 @@ export type Filtres = {
   orientation: string;
   ageMin: number | null;
   ageMax: number | null;
+  /**
+   * Les soirées demandées par la personne elle-même, et non l'âge qu'elle
+   * a. Les deux ne disent pas la même chose : quelqu'un de 36 ans peut
+   * demander la soirée 25-35 autant que la 34-45, et c'est sa réponse qui
+   * décide de qui on invite.
+   */
+  tranches: string[];
 };
 
 export const FILTRES_PAR_DEFAUT: Filtres = {
@@ -56,6 +78,7 @@ export const FILTRES_PAR_DEFAUT: Filtres = {
   orientation: 'tous',
   ageMin: null,
   ageMax: null,
+  tranches: [],
 };
 
 export type ParamsBruts = Record<string, string | string[] | undefined>;
@@ -99,6 +122,12 @@ export function parseFiltres(params: ParamsBruts, statutsConnus: readonly string
     orientation: parmi(params.orientation, ORIENTATION_CHOIX, 'tous'),
     ageMin,
     ageMax,
+    // « tranche=25_35,34_45 », comme les groupes : on compose souvent une
+    // soirée avec deux tranches voisines.
+    tranches: (premier(params.tranche) ?? '')
+      .split(',')
+      .map((v) => v.trim())
+      .filter((v) => FORME_TRANCHE.test(v)),
   };
 }
 
@@ -113,6 +142,7 @@ export function versParams(filtres: Filtres, remplace: Partial<Filtres> = {}): U
   if (f.orientation !== 'tous') params.set('orientation', f.orientation);
   if (f.ageMin !== null) params.set('ageMin', String(f.ageMin));
   if (f.ageMax !== null) params.set('ageMax', String(f.ageMax));
+  if (f.tranches.length > 0) params.set('tranche', f.tranches.join(','));
   return params;
 }
 
@@ -149,6 +179,13 @@ export function resume(filtres: Filtres): string[] {
   } else if (filtres.ageMax !== null) {
     morceaux.push(`${filtres.ageMax} ans et moins`);
   }
+  if (filtres.tranches.length > 0) {
+    morceaux.push(
+      `soirée${filtres.tranches.length > 1 ? 's' : ''} ${filtres.tranches
+        .map(trancheLisible)
+        .join(' et ')}`,
+    );
+  }
   return morceaux;
 }
 
@@ -164,6 +201,7 @@ export function nomFichier(filtres: Filtres): string {
   if (filtres.ageMin !== null || filtres.ageMax !== null) {
     bouts.push(`${filtres.ageMin ?? ''}-${filtres.ageMax ?? ''}`);
   }
+  if (filtres.tranches.length > 0) bouts.push(`soiree-${filtres.tranches.join('-')}`);
   return `${bouts.join('_')}.csv`;
 }
 
@@ -182,6 +220,7 @@ export type FicheFiltrable = {
   gender: string | null;
   orientation: string | null;
   age: number | null;
+  tranches_age?: string[] | null;
 };
 
 /**
@@ -211,6 +250,13 @@ export function correspond(fiche: FicheFiltrable, filtres: Filtres): boolean {
 
   if (filtres.ageMin !== null && (fiche.age === null || fiche.age < filtres.ageMin)) return false;
   if (filtres.ageMax !== null && (fiche.age === null || fiche.age > filtres.ageMax)) return false;
+
+  // Une seule tranche en commun suffit : on cherche qui accepterait de
+  // venir, pas qui n'a demandé que ça.
+  if (filtres.tranches.length > 0) {
+    const siennes = fiche.tranches_age ?? [];
+    if (!filtres.tranches.some((t) => siennes.includes(t))) return false;
+  }
 
   return true;
 }

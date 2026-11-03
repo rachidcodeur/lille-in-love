@@ -73,8 +73,8 @@ export const inscriptionSchema = z
 
     zodiac: z.enum(values(ZODIAC)).optional(),
     profession: trimmed.min(1, 'Indique ta profession').max(120),
-    instagram: optionalText(60),
-    facebook: optionalText(120),
+    instagram: optionalText(120),
+    facebook: optionalText(200),
 
     comesWith: z.enum(['oui', 'non']),
     companionFirstName: optionalText(60),
@@ -232,16 +232,21 @@ export function normalizePhone(raw: string): string {
 
 /** « @Compte » et les URLs complètes ramenés à un simple pseudo. */
 /**
- * Un profil Facebook, ramené à ce qui permet de le retrouver.
+ * Un profil Facebook, gardé sous la forme la plus sûre.
  *
- * Trois formes arrivent : un pseudo, une adresse « facebook.com/pseudo »,
- * et « facebook.com/profile.php?id=10000… » pour les comptes sans nom
- * d'utilisateur. La dernière porte tout dans sa requête — la couper
- * reviendrait à garder « profile.php », qui ne mène nulle part. On la
- * laisse donc entière.
+ * On garde le lien quand on en reçoit un, et on ne le réduit pas à un
+ * pseudo : deux comptes peuvent porter le même nom, et c'est l'adresse
+ * qui lève le doute au moment de vérifier qui l'on invite. On se
+ * contente de la rendre canonique — même hôte, pas de barre finale, pas
+ * de paramètres de suivi — pour que deux fois la même personne se
+ * reconnaisse.
  *
- * Ce qu'on ne reconnaît pas est conservé tel quel : mieux vaut un nom et
- * une ville à chercher à la main qu'un champ vidé par excès de zèle.
+ * « profile.php?id=… », pour les comptes sans nom d'utilisateur, porte
+ * tout dans sa requête : celle-là reste.
+ *
+ * Un pseudo seul reste un pseudo, et ce qu'on ne reconnaît pas est gardé
+ * tel quel — un nom et une ville à chercher à la main valent mieux qu'un
+ * champ vidé par excès de zèle.
  */
 export function normalizeFacebook(raw: string | undefined): string | undefined {
   const brut = raw?.trim();
@@ -251,14 +256,20 @@ export function normalizeFacebook(raw: string | undefined): string | undefined {
     /^https?:\/\/(?:www\.|m\.|web\.|fr-fr\.)?facebook\.com\//i,
     '',
   );
-  if (sansHote === brut && /^https?:\/\//i.test(brut)) return brut;
+
+  // Une adresse qui n'est pas celle de Facebook : on n'y touche pas.
+  if (sansHote === brut) {
+    if (/^https?:\/\//i.test(brut)) return brut;
+    const pseudo = brut.replace(/\/+$/, '').replace(/^@/, '');
+    return pseudo || undefined;
+  }
 
   if (/^profile\.php\?id=\d+/i.test(sansHote)) {
     return `https://facebook.com/${sansHote.split('&')[0]}`;
   }
 
-  const pseudo = sansHote.replace(/\/+$/, '').replace(/^@/, '').split(/[/?]/)[0];
-  return pseudo || undefined;
+  const chemin = sansHote.replace(/\/+$/, '').split('?')[0];
+  return chemin ? `https://facebook.com/${chemin}` : undefined;
 }
 
 export function normalizeInstagram(raw: string | undefined): string | undefined {

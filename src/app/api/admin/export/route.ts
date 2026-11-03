@@ -45,6 +45,7 @@ export async function GET(request: Request) {
           last_name: m.last_name,
           email: m.email,
           city: m.city,
+          tranches_age: m.tranches_age,
         },
         filtres,
       ),

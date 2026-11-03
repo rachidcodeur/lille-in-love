@@ -142,6 +142,7 @@ function filtrer<Q extends {
   or(conditions: string): Q;
   gte(colonne: string, valeur: number): Q;
   lte(colonne: string, valeur: number): Q;
+  overlaps(colonne: string, valeurs: string[]): Q;
 }>(query: Q, filtres: Filtres, idsRecherche?: string[]): Q {
   // La corbeille ne se mêle jamais aux listes : ni dans les fiches, ni dans
   // les compteurs, ni dans l'export.
@@ -178,6 +179,13 @@ function filtrer<Q extends {
   // vaut l'absence qu'un âge supposé.
   if (filtres.ageMin !== null) q = q.gte('age', filtres.ageMin);
   if (filtres.ageMax !== null) q = q.lte('age', filtres.ageMax);
+
+  // Une seule tranche en commun suffit : « ov » est l'intersection de deux
+  // tableaux, et c'est bien la question posée — qui accepterait de venir
+  // à l'une de ces soirées.
+  if (filtres.tranches.length > 0) {
+    q = q.overlaps('tranches_age', filtres.tranches);
+  }
 
   return q;
 }
@@ -254,9 +262,24 @@ export async function membersForExport(
 export async function facettes(): Promise<FicheFiltrable[]> {
   const { data, error } = await supabaseAdmin()
     .from('lil_members_overview')
-    .select('id, status, soiree_group, gender, orientation, age, first_name, last_name, email, city')
+    .select(
+      'id, status, soiree_group, gender, orientation, age, first_name, last_name, email, city, tranches_age',
+    )
     .is('deleted_at', null)
     .limit(5000);
+
+  // « tranches_age » vient de la migration 24 : sur une base en retard, on
+  // relit sans elle plutôt que de laisser la page entière en panne.
+  if (error && colonneAbsente(error)) {
+    const repli = await supabaseAdmin()
+      .from('lil_members_overview')
+      .select('id, status, soiree_group, gender, orientation, age, first_name, last_name, email, city')
+      .is('deleted_at', null)
+      .limit(5000);
+    if (repli.error) throw new Error(repli.error.message);
+    return (repli.data ?? []) as FicheFiltrable[];
+  }
+
   if (error) throw new Error(error.message);
   return (data ?? []) as FicheFiltrable[];
 }

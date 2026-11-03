@@ -17,8 +17,10 @@ type Trouvee = { id: string; prenom: string; nom: string; photo: string | null }
  * pas nous : un nom qui se ressemble n'est pas un rapprochement. Tant
  * que personne n'a cliqué, rien n'est rattaché.
  *
- * Rien de tout cela n'est obligatoire : on peut amener quelqu'un qui ne
- * s'est pas encore inscrit, et c'est même le cas le plus fréquent.
+ * Rien de tout cela n'est obligatoire, et les deux champs le disent : on
+ * peut amener quelqu'un dont on n'a pas le nom de famille sous la main,
+ * ou qui ne s'est pas encore inscrit — c'est même le cas le plus
+ * fréquent. Le formulaire part sans.
  */
 export function ChampCompagnon({
   values,
@@ -77,7 +79,7 @@ export function ChampCompagnon({
     <div className="lil-compagnon">
       <div className="lil-compagnon-noms">
         <label className="lil-field-label" htmlFor="companionFirstName">
-          Son prénom
+          Son prénom <span className="lil-facultatif">(facultatif)</span>
         </label>
         <input
           id="companionFirstName"
@@ -94,7 +96,7 @@ export function ChampCompagnon({
 
       <div className="lil-compagnon-noms">
         <label className="lil-field-label" htmlFor="companionLastName">
-          Son nom de famille
+          Son nom de famille <span className="lil-facultatif">(facultatif)</span>
         </label>
         <input
           id="companionLastName"

@@ -346,21 +346,23 @@ const ETAPES: Step[] = [
     section: 'Toi, en quelques mots',
     title: 'Tes réseaux ?',
     facultatif: true,
-    help: 'On ne les partage jamais. L’un, l’autre, les deux ou aucun.',
+    help:
+      'On ne les partage jamais. L’un, l’autre, les deux ou aucun — et le lien plutôt que le ' +
+      'pseudo si tu l’as sous la main : deux comptes peuvent porter le même nom.',
     fields: [
       {
         name: 'instagram',
         type: 'text',
         label: 'Instagram',
-        maxLength: 60,
-        placeholder: '@ton_compte',
+        maxLength: 120,
+        placeholder: 'Le lien, ou @ton_compte',
       },
       {
         name: 'facebook',
         type: 'text',
         label: 'Facebook',
-        maxLength: 120,
-        placeholder: 'Ton profil, ou le lien',
+        maxLength: 200,
+        placeholder: 'Le lien de ton profil, ou ton pseudo',
       },
     ],
   },

@@ -172,6 +172,17 @@ function applyFilters(rows, params) {
     const [op, ...rest] = raw.split('.');
     const value = rest.join('.');
 
+    // « ov.{a,b} » : les deux tableaux ont-ils une valeur en commun ?
+    // C'est le filtre des soirées demandées.
+    if (op === 'ov') {
+      const voulues = value.replace(/^\{|\}$/g, '').split(',').filter(Boolean);
+      out = out.filter((row) => {
+        const siennes = Array.isArray(row[key]) ? row[key] : [];
+        return voulues.some((v) => siennes.includes(v));
+      });
+      continue;
+    }
+
     if (op === 'eq') {
       out = out.filter((row) => {
         const actual = row[key];

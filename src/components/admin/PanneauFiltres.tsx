@@ -14,6 +14,7 @@ import {
   type FicheFiltrable,
   type Filtres,
 } from '@/lib/groupes';
+import { TRANCHES_AGE } from '@/lib/questions';
 import { Icone } from './Icones';
 
 type Props = {
@@ -58,6 +59,15 @@ export function PanneauFiltres({ filtres, fiches, criteres }: Props) {
         ? avant.groupes.filter((g) => g !== choix)
         : [...avant.groupes, choix],
     }));
+  /** Cocher ou décocher une soirée demandée, sans toucher aux autres. */
+  const basculerTranche = (choix: string) =>
+    setBrouillon((avant) => ({
+      ...avant,
+      tranches: avant.tranches.includes(choix)
+        ? avant.tranches.filter((t) => t !== choix)
+        : [...avant.tranches, choix],
+    }));
+
   const parGenre = useMemo(
     () => compter(fiches, brouillon, 'genre', GENRE_CHOIX),
     [fiches, brouillon],
@@ -212,6 +222,30 @@ export function PanneauFiltres({ filtres, fiches, criteres }: Props) {
                   ))}
                 </select>
               </label>
+
+              {/* L'âge qu'on a et la soirée qu'on demande ne disent pas la
+                  même chose : quelqu'un de 36 ans peut vouloir la 25-35
+                  autant que la 34-45, et c'est sa réponse qui décide. */}
+              <fieldset className="adm-tri-cases adm-tri-tranches">
+                <legend>Soirées demandées</legend>
+                {TRANCHES_AGE.map((tranche) => (
+                  <label
+                    key={tranche.value}
+                    data-on={brouillon.tranches.includes(tranche.value)}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={brouillon.tranches.includes(tranche.value)}
+                      onChange={() => basculerTranche(tranche.value)}
+                    />
+                    <span>{tranche.label}</span>
+                  </label>
+                ))}
+              </fieldset>
+
+              {brouillon.tranches.length > 0 && (
+                <input type="hidden" name="tranche" value={brouillon.tranches.join(',')} />
+              )}
 
               <div className="adm-tri-champ">
                 <span>Âge</span>

@@ -735,9 +735,9 @@ await ranger({
   interests: ['culture', 'voyages', 'autre'], interests_other: 'la poterie',
   companion_first_name: 'Lucie', companion_email: 'lucie@example.com',
 });
-await ranger({ first_name: 'Carmen', email: 'carmen@example.com', birth_date: '1984-01-20', soiree_group: 'C' });
-await ranger({ first_name: 'David', email: 'david@example.com', birth_date: '1997-05-05', gender: 'homme', soiree_group: 'C' });
-await ranger({ first_name: 'Elise', email: 'elise@example.com', birth_date: '1995-07-07', soiree_group: 'A' });
+await ranger({ first_name: 'Carmen', email: 'carmen@example.com', birth_date: '1984-01-20', soiree_group: 'C', tranches_age: ['34_45', '44_55'] });
+await ranger({ first_name: 'David', email: 'david@example.com', birth_date: '1997-05-05', gender: 'homme', soiree_group: 'C', tranches_age: ['25_35'] });
+await ranger({ first_name: 'Elise', email: 'elise@example.com', birth_date: '1995-07-07', soiree_group: 'A', tranches_age: ['25_35', '34_45'] });
 await ranger({ first_name: 'Flore', email: 'flore@example.com', form_version: 'court', soiree_group: 'C' });
 
 // --- Attribuer un groupe depuis la fiche --------------------------
@@ -989,6 +989,63 @@ s = await state();
 s.members.find((m) => m.id === idAmande)?.soiree_group == null
   ? ok('la touche « — » retire la candidature de tout groupe')
   : bad('groupe non retiré', String(s.members.find((m) => m.id === idAmande)?.soiree_group));
+
+/* ---------------------------------------------------------------- */
+// L'âge qu'on a et la soirée qu'on demande ne disent pas la même chose :
+// Carmen a 42 ans et demande aussi la 44-55, Elise en a 31 et demande
+// aussi la 34-45. C'est leur réponse qui décide de qui l'on invite.
+section('11 ter. Filtrer sur la soirée demandée');
+
+const parSoiree = async (tranche) => {
+  const r = await fetch(`${BASE}/api/admin/export?tranche=${tranche}`);
+  return (await r.text())
+    .trim()
+    .split('\n')
+    .slice(1)
+    .map((l) => l.split(',')[1]);
+};
+
+const trenteCinq = await parSoiree('25_35');
+trenteCinq.length === 2 && trenteCinq.includes('David') && trenteCinq.includes('Elise')
+  ? ok('la soirée 25-35 ne retient que ceux qui l’ont demandée')
+  : bad('filtre par soirée faux', trenteCinq.join(', ') || '(vide)');
+
+const quarante = await parSoiree('44_55');
+quarante.length === 1 && quarante[0] === 'Carmen'
+  ? ok('et la 44-55 n’en retient qu’une, malgré ses 42 ans')
+  : bad('la tranche haute ramène autre chose', quarante.join(', ') || '(vide)');
+
+// Deux tranches cochées : on cherche qui accepterait l'une OU l'autre.
+const deux = await parSoiree('25_35,44_55');
+deux.length === 3
+  ? ok('deux soirées cochées réunissent les deux publics')
+  : bad('le croisement de deux tranches est faux', deux.join(', ') || '(vide)');
+
+// Croisé avec les autres filtres, comme on compose vraiment une soirée.
+const croise = (await (await fetch(`${BASE}/api/admin/export?tranche=25_35&genre=femme`)).text())
+  .trim()
+  .split('\n')
+  .slice(1)
+  .map((l) => l.split(',')[1]);
+croise.length === 1 && croise[0] === 'Elise'
+  ? ok('et le critère se croise avec les autres')
+  : bad('croisement soirée + genre faux', croise.join(', ') || '(vide)');
+
+// Le panneau doit proposer les cases, sinon le filtre n'existe que dans
+// l'URL — et personne ne l'écrit à la main.
+await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+await page.locator('.adm-filtres-bouton').click();
+await page.waitForTimeout(400);
+(await page.locator('.adm-tri-tranches input[type="checkbox"]').count()) === 5
+  ? ok('le panneau propose les cinq soirées')
+  : bad('cases de soirée absentes du panneau');
+
+// Et le groupe S, demandé en plus des autres.
+(await page.locator('.adm-tri-cases label[data-groupe="S"]').count()) === 1
+  ? ok('et le groupe S est proposé avec les autres')
+  : bad('le groupe S manque dans les filtres');
+await page.keyboard.press('Escape');
+await page.waitForTimeout(300);
 
 /* ---------------------------------------------------------------- */
 section('11 bis. Chercher quelqu’un');
@@ -3644,9 +3701,12 @@ const ficheVue = await page.evaluate(() => document.body.textContent ?? '');
 /Soirées souhaitées/.test(ficheVue) && /25 - 35 ans/.test(ficheVue)
   ? ok('les soirées souhaitées se lisent sur la fiche')
   : bad('tranches d’âge absentes de la fiche');
-/En soirée/.test(ficheVue) && /Timide/.test(ficheVue)
-  ? ok('et l’aisance, pour le placement à table')
-  : bad('aisance absente de la fiche');
+// L'aisance est demandée et conservée, mais n'encombre plus la fiche :
+// elle sert au placement, qui se décide ailleurs. Elle reste dans
+// l'export, où on la cherche au moment de dresser les tables.
+!/En soirée/.test(ficheVue)
+  ? ok('tandis que « En soirée » a quitté la fiche')
+  : bad('« En soirée » est encore affiché');
 
 // Le service de matching est mis de côté : sa carte ne s'affiche plus
 // sur la fiche. Rien n'est effacé en base, et tout ce qui suit revient
@@ -3813,9 +3873,11 @@ const avecFacebook = async (email, phone, facebook) => {
   ? ok('un pseudo reste un pseudo, sans son arobase')
   : bad('pseudo mal normalisé');
 
+// On garde le lien plutôt que de le réduire : deux comptes peuvent
+// porter le même nom, et c'est l'adresse qui lève le doute.
 (await avecFacebook('fb2@example.com', '06 20 20 20 20', 'https://www.facebook.com/mon.pseudo/')) ===
-'mon.pseudo'
-  ? ok('une adresse complète se ramène au pseudo')
+'https://facebook.com/mon.pseudo'
+  ? ok('une adresse reste une adresse, rendue canonique')
   : bad('adresse mal normalisée');
 
 (await avecFacebook(
@@ -3903,7 +3965,6 @@ const attendus = [
   ['l’orientation', /Orientation/],
   ['ce qu’elle cherche', /Cherche[\s\S]{0,60}relation/i],
   ['les soirées souhaitées', /34 - 45 ans[\s\S]{0,20}44 - 55 ans/],
-  ['l’aisance en soirée', /En soirée[\s\S]{0,30}À l’aise/],
   ['depuis quand célibataire', /Célibataire depuis[\s\S]{0,30}14 mois/],
   ['la taille', /171 cm/],
   ['la profession', /Orthophoniste/],
