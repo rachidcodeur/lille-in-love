@@ -290,7 +290,12 @@ const ETAPES: Step[] = [
     // maintenant comment on arrive dans une salle pleine de monde.
     id: 'aisance',
     section: 'Toi, en quelques mots',
-    title: 'En soirée, tu es plutôt…',
+    // La question nomme la situation plutôt que la personne : « es-tu
+    // timide ? » demande de s'étiqueter, et on répond ce qu'on aimerait
+    // être. « Dans une pièce où tu ne connais personne » décrit très
+    // exactement nos soirées, et là-dessus tout le monde se répond
+    // honnêtement.
+    title: 'Dans une pièce où tu ne connais personne, tu es plutôt…',
     help: 'Ça nous sert à te placer à table, jamais à te juger.',
     fields: [
       {

@@ -352,7 +352,7 @@ section('Parcours complet et envoi');
 
   // L'aisance vient juste après s'être raconté : on dit qui on est, puis
   // comment on arrive dans une salle pleine de monde.
-  (await page.locator('.lil-question').innerText()).includes('En soirée')
+  (await page.locator('.lil-question').innerText()).includes('tu ne connais personne')
     ? ok('l’aisance suit la présentation')
     : bad('la question de l’aisance n’est pas à sa place', await page.locator('.lil-question').innerText());
   (await page.locator('.lil-help').innerText()).includes('jamais à te juger')
