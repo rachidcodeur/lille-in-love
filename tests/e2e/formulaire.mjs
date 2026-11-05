@@ -308,9 +308,12 @@ section('Parcours complet et envoi');
     ? ok('les tranches d’âge suivent ce qu’on cherche')
     : bad('la question des soirées n’est pas à sa place', await page.locator('.lil-question').innerText());
   const tranches = await page.locator('.lil-chips button').allInnerTexts();
-  tranches.length === 5 && tranches[0].includes('18') && tranches[4].includes('67')
+  tranches.length === 6 && tranches[0].includes('18') && tranches[4].includes('67')
     ? ok('avec les cinq tranches, de 18-25 à 54-67')
     : bad('tranches d’âge inattendues', tranches.join(' · '));
+  tranches[5] === 'Je ne sais pas'
+    ? ok('et une porte de sortie, puisque la question est obligatoire')
+    : bad('pas de « Je ne sais pas »', tranches.join(' · '));
   await next();
   (await page.locator('.lil-error').count()) > 0
     ? ok('et il en faut au moins une pour continuer')
@@ -318,8 +321,26 @@ section('Parcours complet et envoi');
   if (process.env.E2E_SHOTS) {
     await page.screenshot({ path: `${process.env.E2E_SHOTS}/tranches.png` });
   }
-  await page.locator('.lil-chips button', { hasText: '25 - 35' }).click();
-  await page.locator('.lil-chips button', { hasText: '34 - 45' }).click();
+  // « Je ne sais pas » coché avec trois tranches ne veut plus rien dire :
+  // il les annule, et elles l'annulent.
+  const coche = async (texte) => {
+    await page.locator('.lil-chips button', { hasText: texte }).click();
+    await page.waitForTimeout(120);
+  };
+  const cochees = () => page.locator('.lil-chips button[aria-pressed="true"]').allInnerTexts();
+
+  await coche('25 - 35');
+  await coche('Je ne sais pas');
+  JSON.stringify(await cochees()) === JSON.stringify(['Je ne sais pas'])
+    ? ok('« Je ne sais pas » efface les tranches cochées')
+    : bad('les deux cohabitent', (await cochees()).join(' · '));
+
+  await coche('25 - 35');
+  JSON.stringify(await cochees()) === JSON.stringify(['25 - 35 ans'])
+    ? ok('et une tranche cochée ensuite l’efface à son tour')
+    : bad('« Je ne sais pas » survit à une tranche', (await cochees()).join(' · '));
+
+  await coche('34 - 45');
   await next();
 
   await page.fill('#heightCm', '168');

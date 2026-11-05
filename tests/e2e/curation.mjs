@@ -1036,8 +1036,10 @@ croise.length === 1 && croise[0] === 'Elise'
 await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
 await page.locator('.adm-filtres-bouton').click();
 await page.waitForTimeout(400);
-(await page.locator('.adm-tri-tranches input[type="checkbox"]').count()) === 5
-  ? ok('le panneau propose les cinq soirées')
+// Cinq soirées, plus « Je ne sais pas » : ceux-là aussi sont un groupe
+// à retrouver — ce sont les gens à rappeler pour en décider avec eux.
+(await page.locator('.adm-tri-tranches input[type="checkbox"]').count()) === 6
+  ? ok('le panneau propose les cinq soirées, et les indécis')
   : bad('cases de soirée absentes du panneau');
 
 // Et le groupe S, demandé en plus des autres.

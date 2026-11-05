@@ -329,14 +329,21 @@ export function FieldControl({
                   type="button"
                   aria-pressed={isOn}
                   className="lil-chip"
-                  onClick={() =>
+                  onClick={() => {
+                    // « Je ne sais pas » annule les autres, et les autres
+                    // l'annulent : coché avec trois tranches, il ne veut
+                    // plus rien dire.
+                    if (field.exclusive === option.value) {
+                      return onChange(field.name, isOn ? [] : [option.value]);
+                    }
+                    const sansExclusive = selected.filter((v) => v !== field.exclusive);
                     onChange(
                       field.name,
                       isOn
-                        ? selected.filter((v) => v !== option.value)
-                        : [...selected, option.value],
-                    )
-                  }
+                        ? sansExclusive.filter((v) => v !== option.value)
+                        : [...sansExclusive, option.value],
+                    );
+                  }}
                 >
                   {option.label}
                 </button>

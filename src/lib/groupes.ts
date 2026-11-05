@@ -20,7 +20,16 @@
  */
 const FORME_TRANCHE = /^\d{2}_\d{2}$/;
 
+/** « Je ne sais pas » est une réponse, et donc un filtre : ce sont les
+    gens à rappeler pour en décider avec eux. */
+const TRANCHE_INDECIS = 'sais_pas';
+
+function trancheValide(valeur: string): boolean {
+  return FORME_TRANCHE.test(valeur) || valeur === TRANCHE_INDECIS;
+}
+
 function trancheLisible(valeur: string): string {
+  if (valeur === TRANCHE_INDECIS) return 'sans préférence';
   const [debut, fin] = valeur.split('_');
   return `${debut}-${fin} ans`;
 }
@@ -127,7 +136,7 @@ export function parseFiltres(params: ParamsBruts, statutsConnus: readonly string
     tranches: (premier(params.tranche) ?? '')
       .split(',')
       .map((v) => v.trim())
-      .filter((v) => FORME_TRANCHE.test(v)),
+      .filter(trancheValide),
   };
 }
 

@@ -37,6 +37,11 @@ export type Field = {
   help?: string;
   /** Affiche « (facultatif) » à côté du libellé — visible, pas enfoui dans l'aide. */
   facultatif?: boolean;
+  /**
+   * Pour un choix multiple : l'option qui annule les autres. « Je ne sais
+   * pas » coché avec trois tranches ne veut rien dire.
+   */
+  exclusive?: string;
   required?: boolean;
   options?: Option[];
   min?: number;
@@ -110,6 +115,11 @@ export const TRANCHES_AGE: Option[] = [
   { value: '34_45', label: '34 - 45 ans' },
   { value: '44_55', label: '44 - 55 ans' },
   { value: '54_67', label: '54 - 67 ans' },
+  // La question devient obligatoire : sans une porte de sortie, elle
+  // force à cocher au hasard, et une tranche cochée au hasard vaut moins
+  // qu'un « je ne sais pas » assumé — au moins on sait qu'il faut en
+  // parler.
+  { value: 'sais_pas', label: 'Je ne sais pas' },
 ];
 
 /** Remis dans l'ordre du calendrier — la liste Tally était mélangée. */
@@ -230,6 +240,7 @@ const ETAPES: Step[] = [
         name: 'tranchesAge',
         type: 'multi',
         required: true,
+        exclusive: 'sais_pas',
         options: TRANCHES_AGE,
       },
     ],
