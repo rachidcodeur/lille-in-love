@@ -90,6 +90,9 @@ export default async function FichePage({ params }: Props) {
       valeur: label.tranchesAge(member.tranches_age ?? null),
       icone: 'duo',
     },
+    // « Timide ou pas » plutôt que « Aisance » : on compose les tables en
+    // lisant vite, et le mot qu'on cherche à cet instant est celui-là.
+    { terme: 'Timide ou pas', valeur: label.aisance(member.aisance ?? null), icone: 'personne' },
     { terme: 'Célibataire depuis', valeur: label.singleSince(member.single_since), icone: 'coeur' },
     { terme: 'Taille', valeur: member.height_cm ? `${member.height_cm} cm` : null, icone: 'taille' },
     { terme: 'Profession', valeur: member.profession, icone: 'mallette' },

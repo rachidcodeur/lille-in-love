@@ -3703,12 +3703,11 @@ const ficheVue = await page.evaluate(() => document.body.textContent ?? '');
 /Soirées souhaitées/.test(ficheVue) && /25 - 35 ans/.test(ficheVue)
   ? ok('les soirées souhaitées se lisent sur la fiche')
   : bad('tranches d’âge absentes de la fiche');
-// L'aisance est demandée et conservée, mais n'encombre plus la fiche :
-// elle sert au placement, qui se décide ailleurs. Elle reste dans
-// l'export, où on la cherche au moment de dresser les tables.
-!/En soirée/.test(ficheVue)
-  ? ok('tandis que « En soirée » a quitté la fiche')
-  : bad('« En soirée » est encore affiché');
+// On compose les tables en lisant vite : le mot qu'on cherche à cet
+// instant, c'est « timide ».
+/Timide ou pas/.test(ficheVue) && /Timide/.test(ficheVue)
+  ? ok('et la timidité, pour le placement à table')
+  : bad('la timidité n’est pas sur la fiche');
 
 // Le service de matching est mis de côté : sa carte ne s'affiche plus
 // sur la fiche. Rien n'est effacé en base, et tout ce qui suit revient
@@ -3973,6 +3972,7 @@ const attendus = [
   ['le signe astrologique', /Balance/],
   ['l’Instagram', /@claire\.ortho/],
   ['le Facebook', /claire\.lemoine\.9/],
+  ['si la personne est timide', /Timide ou pas[\s\S]{0,40}À l’aise/],
   ['la source, et sa précision', /Une collègue de bureau/],
   ['qui elle amène', /Nadia Berger/],
   ['sa présentation', /Je ris fort et je marche beaucoup/],
