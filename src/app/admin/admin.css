@@ -3045,58 +3045,109 @@ a.adm-btn:hover {
 /* Bloquer quelqu'un                                                   */
 /* ------------------------------------------------------------------ */
 
-/* Détaché de « mettre à la corbeille » par un trait : les deux gestes se
-   ressemblent à l'œil et n'ont rien à voir — l'un range, l'autre ferme
-   la porte. */
+/* Fermé, le bouton se détache de « mettre à la corbeille » par un trait :
+   les deux gestes se ressemblent à l'œil et n'ont rien à voir — l'un
+   range, l'autre ferme la porte. */
 .adm-blocage {
   margin-top: 16px;
   padding-top: 14px;
   border-top: 1px solid rgba(0, 0, 0, 0.07);
 }
 
+/* Ouvert, il devient un encadré à lui : on est en train de faire quelque
+   chose de sérieux, et ça doit se voir avant de cliquer. La teinte reprend
+   celle de l'effacement définitif, le seul autre geste qui ne se rattrape
+   pas tout seul. */
+.adm-blocage[data-ouvert] {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid rgba(179, 38, 30, 0.28);
+  border-radius: var(--radius);
+  background: rgba(179, 38, 30, 0.035);
+}
+
+.adm-blocage-titre {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--error);
+}
+
+.adm-blocage-quoi {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-soft, #5b5048);
+}
+
 .adm-blocage-label {
   display: block;
+  margin: 14px 0 6px;
   font-size: 12.5px;
   font-weight: 600;
-  margin-bottom: 6px;
 }
 
 .adm-blocage-raison {
   width: 100%;
   box-sizing: border-box;
-  padding: 9px 11px;
+  padding: 10px 12px;
   font: inherit;
   font-size: 14px;
-  border: 1px solid rgba(0, 0, 0, 0.14);
+  border: 1px solid rgba(179, 38, 30, 0.3);
   border-radius: 8px;
   background: #fff;
 }
 
-.adm-blocage-boutons {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 10px;
+.adm-blocage-raison:focus-visible {
+  outline: 2px solid rgba(179, 38, 30, 0.45);
+  outline-offset: 1px;
+  border-color: transparent;
 }
 
-.adm-blocage .adm-hint {
-  margin-top: 10px;
+.adm-blocage-boutons {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+/* La raison, là où on la relit : une citation, pas une ligne de plus dans
+   la fiche technique. C'est quelqu'un qui l'a écrite. */
+.adm-bloque-raison {
+  margin: 6px 0 0;
+  padding-left: 10px;
+  border-left: 2px solid rgba(179, 38, 30, 0.3);
+  font-size: 13.5px;
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--ink-soft, #5b5048);
 }
 
 /* Dans une ligne de corbeille, le trait n'a plus rien à séparer : les
    boutons sont déjà côte à côte, et il ne faisait que couper celui du
-   milieu en deux. */
-.adm-corbeille-actions .adm-blocage {
+   milieu en deux. Fermé seulement — ouvert, l'encadré garde tout. */
+.adm-corbeille-actions .adm-blocage:not([data-ouvert]) {
   margin-top: 0;
   padding-top: 0;
   border-top: 0;
 }
 
-/* Dépliée, la raison a besoin de sa largeur : coincée entre deux
-   boutons, elle ne laissait écrire que trois mots. */
-.adm-corbeille-actions .adm-blocage:has(.adm-blocage-raison) {
+/* Ouvert, l'encadré ne tient pas dans une ligne de liste : la ligne
+   entière passe en colonne, et il se déplie sous le nom plutôt que de
+   lui passer dessus. */
+.adm-row-corbeille:has(.adm-blocage[data-ouvert]) {
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.adm-row-corbeille:has(.adm-blocage[data-ouvert]) .adm-corbeille-actions {
   flex: 1 0 100%;
-  margin-top: 10px;
+}
+
+.adm-corbeille-actions .adm-blocage[data-ouvert] {
+  flex: 1 0 100%;
+  margin-top: 4px;
 }
 
 /* Le second titre d'une page qui en porte deux : la corbeille, puis les

@@ -1444,6 +1444,11 @@ await page.waitForTimeout(200);
 (await page.locator('.adm-blocage-raison').count()) === 1
   ? ok('bloquer demande d’abord pourquoi')
   : bad('aucune raison n’est demandée');
+if (process.env.E2E_SHOTS) {
+  await page
+    .locator('.adm-actions', { has: page.locator('.adm-blocage') })
+    .screenshot({ path: `${process.env.E2E_SHOTS}/bloc-fiche.png` });
+}
 await page.fill('.adm-blocage-raison', 'Comportement déplacé en soirée.');
 await page.getByRole('button', { name: 'Bloquer', exact: true }).click();
 await page.waitForTimeout(1500);
@@ -1492,6 +1497,14 @@ await page.goto(`${BASE}/admin/corbeille`, { waitUntil: 'networkidle' });
 const vueCorbeille = await page.evaluate(() => document.body.textContent ?? '');
 if (process.env.E2E_SHOTS) {
   await page.screenshot({ path: `${process.env.E2E_SHOTS}/corbeille.png`, fullPage: true });
+  await page.locator('.adm-row-corbeille').first().getByRole('button', { name: 'Blacklister' }).click();
+  await page.waitForTimeout(300);
+  await page
+    .locator('.adm-row-corbeille')
+    .first()
+    .screenshot({ path: `${process.env.E2E_SHOTS}/bloc-corbeille.png` });
+  await page.getByRole('button', { name: 'Annuler' }).click();
+  await page.waitForTimeout(200);
 }
 /Comportement déplacé en soirée/.test(vueCorbeille)
   ? ok('la liste noire se lit sous la corbeille, raison comprise')

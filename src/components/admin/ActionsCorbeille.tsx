@@ -67,25 +67,35 @@ export function ActionsCorbeille({ memberId, nom, place }: Props) {
    * erreur de manipulation, et personne n'ose débloquer.
    */
   const blocage = (
-    <div className="adm-blocage">
+    <div className="adm-blocage" data-ouvert={aBloquer || undefined}>
       {aBloquer ? (
         <>
+          <p className="adm-blocage-titre">Bloquer {nom}</p>
+          {/* Ce que le geste fait se lit avant d'écrire, pas après avoir
+              cliqué : c'est maintenant qu'on peut encore changer d'avis. */}
+          <p className="adm-blocage-quoi">
+            Son email et son numéro ne pourront plus servir à s’inscrire. La fiche part à la
+            corbeille, où elle reste consultable — et le blocage se défait depuis là.
+          </p>
+
           <label className="adm-blocage-label" htmlFor={`raison-${memberId}`}>
-            Pourquoi bloquer {nom} ?
+            Pourquoi&nbsp;?
           </label>
           <input
             id={`raison-${memberId}`}
             className="adm-blocage-raison"
             type="text"
             maxLength={300}
+            autoFocus
             placeholder="Ce qui s’est passé, en une phrase"
             value={raison}
             onChange={(e) => setRaison(e.target.value)}
           />
+
           <div className="adm-blocage-boutons">
             <button
               type="button"
-              className="adm-btn adm-btn-danger"
+              className="adm-btn adm-btn-effacer"
               disabled={busy !== null}
               onClick={() => agir('bloquer')}
             >
@@ -103,10 +113,6 @@ export function ActionsCorbeille({ memberId, nom, place }: Props) {
               Annuler
             </button>
           </div>
-          <p className="adm-hint">
-            Son email et son numéro ne pourront plus servir à s’inscrire. La fiche part à la
-            corbeille, où elle reste consultable — et le blocage se défait depuis là.
-          </p>
         </>
       ) : (
         <button

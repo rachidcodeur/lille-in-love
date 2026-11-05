@@ -146,7 +146,7 @@ export default async function CorbeillePage() {
                   {[bloque.email, bloque.phone].filter(Boolean).join(' · ')}
                   {` · bloqué ${relative(bloque.created_at)}`}
                 </p>
-                {bloque.raison && <p className="adm-row-meta">« {bloque.raison} »</p>}
+                {bloque.raison && <p className="adm-bloque-raison">{bloque.raison}</p>}
               </div>
 
               <Debloquer blocageId={bloque.id} nom={bloque.first_name ?? ''} />
