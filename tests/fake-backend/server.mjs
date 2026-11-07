@@ -149,7 +149,27 @@ function applyFilters(rows, params) {
     // « or=(a.neq.x,a.is.null) » : une ligne passe si l'une des conditions
     // passe. On réutilise le même moteur, condition par condition.
     if (key === 'or') {
-      const conditions = raw.replace(/^\(|\)$/g, '').split(',');
+      // On ne peut pas découper bêtement sur les virgules : « ov.{A,C} »
+      // en contient une qui appartient au tableau, pas à la liste des
+      // conditions. On ne coupe donc qu'en dehors des accolades.
+      const decouper = (texte) => {
+        const bouts = [];
+        let courant = '';
+        let profondeur = 0;
+        for (const c of texte) {
+          if (c === '{') profondeur += 1;
+          else if (c === '}') profondeur -= 1;
+          if (c === ',' && profondeur === 0) {
+            bouts.push(courant);
+            courant = '';
+            continue;
+          }
+          courant += c;
+        }
+        if (courant) bouts.push(courant);
+        return bouts;
+      };
+      const conditions = decouper(raw.replace(/^\(|\)$/g, ''));
       out = out.filter((row) =>
         conditions.some((condition) => {
           const [colonne, operateur, ...valeur] = condition.split('.');
@@ -157,6 +177,20 @@ function applyFilters(rows, params) {
           const actuel = row[colonne];
           if (operateur === 'is') return v === 'null' && (actuel === null || actuel === undefined);
           if (operateur === 'neq') return actuel !== undefined && actuel !== null && String(actuel) !== v;
+          if (operateur === 'ov') {
+            const voulues = v.replace(/^\{|\}$/g, '').split(',').filter(Boolean);
+            const siennes = Array.isArray(actuel) ? actuel : [];
+            return voulues.some((x) => siennes.includes(x));
+          }
+          // « eq.{} » : l'ensemble vide. Comparer les chaînes dirait que
+          // « {} » vaut « » et laisserait passer n'importe quoi.
+          if (operateur === 'eq' && v.startsWith('{') && v.endsWith('}')) {
+            const attendues = v.replace(/^\{|\}$/g, '').split(',').filter(Boolean);
+            const siennes = Array.isArray(actuel) ? actuel : [];
+            return (
+              siennes.length === attendues.length && attendues.every((x) => siennes.includes(x))
+            );
+          }
           if (operateur === 'eq') return String(actuel) === v;
           if (operateur === 'ilike') return ilike(actuel, v);
           if (operateur === 'in') {
@@ -179,6 +213,15 @@ function applyFilters(rows, params) {
       out = out.filter((row) => {
         const siennes = Array.isArray(row[key]) ? row[key] : [];
         return voulues.some((v) => siennes.includes(v));
+      });
+      continue;
+    }
+
+    if (op === 'eq' && value.startsWith('{') && value.endsWith('}')) {
+      const attendues = value.replace(/^\{|\}$/g, '').split(',').filter(Boolean);
+      out = out.filter((row) => {
+        const siennes = Array.isArray(row[key]) ? row[key] : [];
+        return siennes.length === attendues.length && attendues.every((x) => siennes.includes(x));
       });
       continue;
     }

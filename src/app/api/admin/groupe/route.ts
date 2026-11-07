@@ -8,12 +8,12 @@ export const dynamic = 'force-dynamic';
 
 const schema = z.object({
   memberId: z.string().uuid(),
-  // null retire la candidature de tout groupe.
-  groupe: z.enum([...GROUPES] as [Groupe, ...Groupe[]]).nullable(),
+  // Un tableau vide retire la candidature de tout groupe.
+  groupes: z.array(z.enum([...GROUPES] as [Groupe, ...Groupe[]])).max(GROUPES.length),
 });
 
 /**
- * Range une candidature dans un groupe de soirée (A, B, C), ou l'en retire.
+ * Range une candidature dans des groupes de soirée, ou l'en retire.
  * Aucun email n'est envoyé, aucun statut n'est touché.
  */
 export async function POST(request: Request) {
@@ -27,8 +27,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    await setGroup(parsed.data.memberId, parsed.data.groupe);
-    return NextResponse.json({ ok: true, groupe: parsed.data.groupe });
+    await setGroup(parsed.data.memberId, parsed.data.groupes);
+    return NextResponse.json({ ok: true, groupes: parsed.data.groupes });
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : String(cause);
     console.error('[admin/groupe]', message);

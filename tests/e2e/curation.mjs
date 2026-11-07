@@ -715,7 +715,7 @@ const ranger = async (m) => {
       status: 'valide',
       form_version: 'complet',
       consent_at: new Date().toISOString(),
-      soiree_group: null,
+      soiree_groups: [],
       ...m,
     }),
   });
@@ -726,7 +726,7 @@ const ranger = async (m) => {
 // fonctionner, pas chaque filtre pris isolément.
 const idAmande = await ranger({ first_name: 'Amande', email: 'amande@example.com', birth_date: '1996-03-10' });
 await ranger({
-  first_name: 'Bea', email: 'bea@example.com', birth_date: '1998-02-05', soiree_group: 'C',
+  first_name: 'Bea', email: 'bea@example.com', birth_date: '1998-02-05', soiree_groups: ['C'],
   phone: '0612345678', city: 'Lille', postal_code: '59000', profession: 'Libraire',
   instagram: '@bea', looking_for: 'relation_serieuse', orientation: 'hetero',
   has_children: false, height_cm: 167, zodiac: 'verseau', referral: 'affiche',
@@ -735,22 +735,22 @@ await ranger({
   interests: ['culture', 'voyages', 'autre'], interests_other: 'la poterie',
   companion_first_name: 'Lucie', companion_email: 'lucie@example.com',
 });
-await ranger({ first_name: 'Carmen', email: 'carmen@example.com', birth_date: '1984-01-20', soiree_group: 'C', tranches_age: ['34_45', '44_55'] });
-await ranger({ first_name: 'David', email: 'david@example.com', birth_date: '1997-05-05', gender: 'homme', soiree_group: 'C', tranches_age: ['25_35'] });
-await ranger({ first_name: 'Elise', email: 'elise@example.com', birth_date: '1995-07-07', soiree_group: 'A', tranches_age: ['25_35', '34_45'] });
-await ranger({ first_name: 'Flore', email: 'flore@example.com', form_version: 'court', soiree_group: 'C' });
+await ranger({ first_name: 'Carmen', email: 'carmen@example.com', birth_date: '1984-01-20', soiree_groups: ['C'], tranches_age: ['34_45', '44_55'] });
+await ranger({ first_name: 'David', email: 'david@example.com', birth_date: '1997-05-05', gender: 'homme', soiree_groups: ['C'], tranches_age: ['25_35'] });
+await ranger({ first_name: 'Elise', email: 'elise@example.com', birth_date: '1995-07-07', soiree_groups: ['A'], tranches_age: ['25_35', '34_45'] });
+await ranger({ first_name: 'Flore', email: 'flore@example.com', form_version: 'court', soiree_groups: ['C'] });
 
 // --- Attribuer un groupe depuis la fiche --------------------------
 await page.goto(`${BASE}/admin/${idAmande}`, { waitUntil: 'networkidle' });
 await page.locator('.adm-groupes[data-compact="false"] [title="Groupe C"]').click();
 await jusqua(async () =>
-  (await state()).members.find((m) => m.id === idAmande)?.soiree_group === 'C',
+  (await state()).members.find((m) => m.id === idAmande)?.soiree_groups?.join('') === 'C',
 );
 
 s = await state();
-s.members.find((m) => m.id === idAmande)?.soiree_group === 'C'
+s.members.find((m) => m.id === idAmande)?.soiree_groups?.join('') === 'C'
   ? ok('un clic sur « C » range la candidature dans le groupe C')
-  : bad('groupe non enregistré depuis la fiche', String(s.members.find((m) => m.id === idAmande)?.soiree_group));
+  : bad('groupe non enregistré depuis la fiche', JSON.stringify(s.members.find((m) => m.id === idAmande)?.soiree_groups));
 s.members.find((m) => m.id === idAmande)?.status === 'valide'
   ? ok('le statut n’a pas bougé : un groupe n’est pas une décision')
   : bad('le statut a changé avec le groupe');
@@ -844,6 +844,8 @@ noms.length === 2 && noms.every((n) => /Amande|Bea/.test(n))
   : bad('un âge inconnu est passé au travers du filtre');
 
 // --- Attribuer un groupe depuis la liste, sans quitter la page ----
+// On compose souvent deux soirées en même temps : une touche s'ajoute aux
+// précédentes au lieu de les remplacer.
 await page.locator('.adm-row', { hasText: 'Amande' }).locator('[title="Groupe B"]').click();
 await page.waitForTimeout(1200);
 page.url().includes('/admin?')
@@ -851,14 +853,23 @@ page.url().includes('/admin?')
   : bad('la fiche s’est ouverte', page.url());
 
 s = await state();
-s.members.find((m) => m.id === idAmande)?.soiree_group === 'B'
-  ? ok('le groupe se change aussi depuis la liste')
-  : bad('groupe non enregistré depuis la liste', String(s.members.find((m) => m.id === idAmande)?.soiree_group));
+const deuxGroupes = s.members.find((m) => m.id === idAmande)?.soiree_groups ?? [];
+deuxGroupes.includes('C') && deuxGroupes.includes('B')
+  ? ok('une seconde touche s’ajoute à la première : la fiche tient dans deux groupes')
+  : bad('groupe non ajouté depuis la liste', JSON.stringify(deuxGroupes));
 
 await page.waitForTimeout(600);
-(await page.locator('.adm-row-name').allInnerTexts()).length === 1
-  ? ok('la fiche sort de la sélection dès qu’elle change de groupe')
+(await page.locator('.adm-row-name').allInnerTexts()).length === 2
+  ? ok('et elle reste dans la sélection du groupe C, qu’elle n’a pas quitté')
   : bad('la liste ne s’est pas rafraîchie');
+
+// Rallumer la même touche l'éteint : c'est ainsi qu'on retire un groupe.
+await page.locator('.adm-row', { hasText: 'Amande' }).locator('[title="Groupe B"]').click();
+await page.waitForTimeout(1200);
+s = await state();
+(s.members.find((m) => m.id === idAmande)?.soiree_groups ?? []).join('') === 'C'
+  ? ok('et la rallumer la retire, sans toucher à l’autre')
+  : bad('la touche ne se retire pas', JSON.stringify(s.members.find((m) => m.id === idAmande)?.soiree_groups));
 
 // --- L'export CSV de cette même sélection --------------------------
 /** Les enregistrements d'un CSV : un champ entre guillemets peut contenir
@@ -904,9 +915,10 @@ lignes[0].slice(ENTETE.length) === ',aisance,tranches_age,facebook'
   ? ok('le fichier porte le nom de la sélection')
   : bad('nom de fichier', reponse.headers.get('content-disposition'));
 
-// Amande vient de passer en B : l'export doit suivre la liste, pas la traîner.
-lignes.length === 2
-  ? ok('l’export contient exactement la sélection affichée (1 fiche)')
+// Amande est passée par B puis en est revenue : elle n'a jamais quitté C,
+// et l'export doit montrer exactement ce que la liste montre.
+lignes.length === 3
+  ? ok('l’export contient exactement la sélection affichée (2 fiches)')
   : bad('lignes exportées', String(lignes.length - 1));
 
 const bea = lignes[1] ?? '';
@@ -986,9 +998,9 @@ await page.goto(`${BASE}/admin/${idAmande}`, { waitUntil: 'networkidle' });
 await page.locator('.adm-groupes[data-compact="false"] .adm-groupe-btn-vide').click();
 await page.waitForTimeout(900);
 s = await state();
-s.members.find((m) => m.id === idAmande)?.soiree_group == null
+s.members.find((m) => m.id === idAmande)?.soiree_groups?.length === 0
   ? ok('la touche « — » retire la candidature de tout groupe')
-  : bad('groupe non retiré', String(s.members.find((m) => m.id === idAmande)?.soiree_group));
+  : bad('groupe non retiré', JSON.stringify(s.members.find((m) => m.id === idAmande)?.soiree_groups));
 
 /* ---------------------------------------------------------------- */
 // L'âge qu'on a et la soirée qu'on demande ne disent pas la même chose :
@@ -1146,9 +1158,9 @@ await page.goto(`${BASE}/admin/${idGael}`, { waitUntil: 'networkidle' });
 await page.locator('.adm-groupes[data-compact="false"] [title="Groupe G"]').click();
 await page.waitForTimeout(900);
 s = await state();
-s.members.find((m) => m.id === idGael)?.soiree_group === 'G'
+s.members.find((m) => m.id === idGael)?.soiree_groups?.join('') === 'G'
   ? ok('le groupe G s’attribue comme les trois autres')
-  : bad('groupe G non enregistré', String(s.members.find((m) => m.id === idGael)?.soiree_group));
+  : bad('groupe G non enregistré', JSON.stringify(s.members.find((m) => m.id === idGael)?.soiree_groups));
 
 await page.goto(`${BASE}/admin?orientation=gay`, { waitUntil: 'networkidle' });
 const gays = (await page.locator('.adm-row-name').allInnerTexts()).map((t) => t.trim());
@@ -1647,7 +1659,7 @@ await poser('lil_members', [
     gender: 'femme',
     city: 'Tourcoing',
     status: 'nouveau',
-    soiree_group: 'B',
+    soiree_groups: ['B'],
     admin_notes: 'Une note écrite à la main, qui ne doit pas disparaître.',
     source: 'wordpress:/inscription/',
     created_at: '2026-06-20T12:00:00.000Z',
@@ -1731,9 +1743,9 @@ solene?.last_name === '' && solene?.id === '11111111-1111-4111-8111-111111111111
   ? ok('le nom de famille reste vide et l’identifiant d’origine est conservé')
   : bad('identité mal reprise', JSON.stringify({ last_name: solene?.last_name, id: solene?.id }));
 
-solene?.soiree_group === 'C' && solene?.created_at.startsWith('2026-06-01')
+solene?.soiree_groups?.join('') === 'C' && solene?.created_at.startsWith('2026-06-01')
   ? ok('le groupe et la date d’origine sont conservés')
-  : bad('groupe ou date perdus', JSON.stringify({ g: solene?.soiree_group, d: solene?.created_at }));
+  : bad('groupe ou date perdus', JSON.stringify({ g: solene?.soiree_groups, d: solene?.created_at }));
 
 marius?.comes_with === true && marius?.companion_email === 'paul.ancien@example.com'
   ? ok('l’accompagnant est repris')
@@ -2064,7 +2076,7 @@ const fiches = await (
         orientation: 'hetero',
         city: 'Lille',
         birth_date: '1994-01-01',
-        soiree_group: groupe,
+        soiree_groups: groupe ? [groupe] : [],
         status: 'valide',
         consent_at: new Date().toISOString(),
       })),

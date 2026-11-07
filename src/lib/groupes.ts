@@ -1,9 +1,13 @@
 /**
  * Les groupes de soirée et le tri de la liste.
  *
- * Un groupe (A, B, C) répond à « pour quelle table ? », pas à « on la
- * garde ? » — cette question-là, c'est le statut. Attribuer un groupe
- * n'envoie aucun email et ne change aucun statut.
+ * Un groupe répond à « pour quelle table ? », pas à « on la garde ? » —
+ * cette question-là, c'est le statut. Attribuer un groupe n'envoie aucun
+ * email et ne change aucun statut.
+ *
+ * Une candidature peut appartenir à plusieurs groupes : on compose
+ * souvent deux soirées en même temps, et quelqu'un peut convenir aux
+ * deux. L'obliger à choisir revenait à l'écarter de l'une.
  *
  * Ce fichier est la seule définition des filtres : la page, l'export CSV et
  * les tests lisent tous la même chose, et une URL de liste se transforme en
@@ -34,7 +38,7 @@ function trancheLisible(valeur: string): string {
   return `${debut}-${fin} ans`;
 }
 
-export const GROUPES = ['A', 'B', 'C', 'G', 'S'] as const;
+export const GROUPES = ['A', 'B', 'C', 'D', 'G', 'S'] as const;
 export type Groupe = (typeof GROUPES)[number];
 
 /** Les cases qu'on peut cocher. Aucune cochée vaut « tous les groupes ». */
@@ -225,7 +229,7 @@ export type FicheFiltrable = {
   last_name: string;
   email: string;
   city: string | null;
-  soiree_group: string | null;
+  soiree_groups?: string[] | null;
   gender: string | null;
   orientation: string | null;
   age: number | null;
@@ -246,8 +250,13 @@ export function correspond(fiche: FicheFiltrable, filtres: Filtres): boolean {
   // Aucune case cochée veut dire « tous les groupes » : on ne force
   // personne à tout cocher pour voir tout le monde.
   if (filtres.groupes.length > 0) {
-    const sien = fiche.soiree_group ?? 'aucun';
-    if (!filtres.groupes.includes(sien)) return false;
+    const siens = fiche.soiree_groups ?? [];
+    // Rangée nulle part : elle ne répond qu'à la case « sans groupe ».
+    const retenue =
+      siens.length === 0
+        ? filtres.groupes.includes('aucun')
+        : siens.some((g) => filtres.groupes.includes(g));
+    if (!retenue) return false;
   }
 
   if (filtres.genre !== 'tous' && fiche.gender !== filtres.genre) return false;

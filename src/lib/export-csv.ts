@@ -84,7 +84,7 @@ function texte(valeur: string | number | null | undefined): string {
 /** Une ligne du fichier, dans l'ordre de COLONNES. */
 export function ligneExport(member: MemberDetail): string[] {
   return [
-    texte(member.soiree_group),
+    (member.soiree_groups ?? []).join(' '),
     texte(member.first_name),
     member.gender ? (GENRE[member.gender] ?? member.gender) : '',
     texte(member.age),

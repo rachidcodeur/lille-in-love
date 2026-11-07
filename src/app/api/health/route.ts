@@ -132,6 +132,12 @@ const MIGRATIONS: {
     colonne: 'facebook',
     sans: 'le profil Facebook est demandé mais n’est pas conservé',
   },
+  {
+    fichier: '27_groupes_multiples.sql',
+    table: 'lil_members_overview',
+    colonne: 'soiree_groups',
+    sans: 'les groupes de composition ne s’affichent plus et ne s’enregistrent pas',
+  },
 ];
 
 /** Ce que la base ne connaît pas encore. */

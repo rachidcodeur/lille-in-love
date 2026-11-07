@@ -233,7 +233,7 @@ function convertir(ligne) {
   const nomAmi = ouRien(ligne.friend_name);
   const emailAmi = ouRien(ligne.friend_email);
 
-  const groupe = ['A', 'B', 'C', 'G'].includes(ligne.soiree_group) ? ligne.soiree_group : null;
+  const groupe = ['A', 'B', 'C', 'D', 'G', 'S'].includes(ligne.soiree_group) ? ligne.soiree_group : null;
 
   const fiche = {
     id: ligne.id || undefined,
@@ -284,7 +284,7 @@ function convertir(ligne) {
     status: 'valide',
     decided_at: decidee,
     form_version: 'complet',
-    soiree_group: groupe,
+    soiree_groups: groupe ? [groupe] : [],
     children_preference: ouRien(ligne.children_preference),
     admin_notes: ouRien(ligne.admin_notes),
     source: 'ancien-site',

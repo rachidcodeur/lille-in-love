@@ -37,7 +37,7 @@ export async function GET(request: Request) {
         {
           id: m.id,
           status: m.status,
-          soiree_group: m.soiree_group,
+          soiree_groups: m.soiree_groups,
           gender: m.gender,
           orientation: m.orientation,
           age: m.age,

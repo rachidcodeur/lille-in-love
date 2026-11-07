@@ -13,7 +13,7 @@ export type Candidat = {
   gender: 'femme' | 'homme';
   age: number | null;
   city: string | null;
-  soiree_group: string | null;
+  soiree_groups: string[] | null;
   photo: string | null;
   /** Déjà inscrit à cette soirée : on le montre, on ne le recoche pas. */
   deja: boolean;
@@ -58,10 +58,13 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
   const [erreur, setErreur] = useState<string | null>(null);
 
   const parGroupe = useMemo(() => {
+    // Une personne de deux groupes compte dans les deux : c'est bien le
+    // nombre de gens que chaque case ferait apparaître.
     const compte: Record<string, number> = { aucun: 0 };
     for (const c of candidats) {
-      const cle = c.soiree_group ?? 'aucun';
-      compte[cle] = (compte[cle] ?? 0) + 1;
+      const siens = c.soiree_groups ?? [];
+      if (siens.length === 0) compte.aucun += 1;
+      for (const g of siens) compte[g] = (compte[g] ?? 0) + 1;
     }
     return compte;
   }, [candidats]);
@@ -71,7 +74,12 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
     const terme = sansAccent(recherche.trim());
     return candidats.filter((c) => {
       // Aucune case cochée veut dire « tous les groupes ».
-      if (groupes.size > 0 && !groupes.has(c.soiree_group ?? 'aucun')) return false;
+      if (groupes.size > 0) {
+        const siens = c.soiree_groups ?? [];
+        const retenu =
+          siens.length === 0 ? groupes.has('aucun') : siens.some((g) => groupes.has(g));
+        if (!retenu) return false;
+      }
       if (!terme) return true;
       return sansAccent(`${c.first_name} ${c.last_name} ${c.city ?? ''}`).includes(terme);
     });
@@ -251,7 +259,9 @@ export function CrushComposer({ soireeId, date, candidats, manchesPosees }: Prop
                       .join(' · ')}
                   </p>
                 </div>
-                {c.soiree_group && <span className="adm-choix-groupe">{c.soiree_group}</span>}
+                {(c.soiree_groups ?? []).length > 0 && (
+                  <span className="adm-choix-groupe">{(c.soiree_groups ?? []).join(' ')}</span>
+                )}
               </label>
             ))}
 

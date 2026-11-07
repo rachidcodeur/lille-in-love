@@ -267,7 +267,7 @@ export default async function AdminListPage({ searchParams }: Props) {
                   <span className="adm-chip" data-status={member.status}>
                     {label.status(member.status)}
                   </span>
-                  <GroupePicker memberId={member.id} groupe={member.soiree_group} compact />
+                  <GroupePicker memberId={member.id} groupes={member.soiree_groups ?? []} compact />
                 </div>
               </article>
             </Fragment>

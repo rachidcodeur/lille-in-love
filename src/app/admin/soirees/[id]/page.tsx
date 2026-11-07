@@ -57,7 +57,7 @@ export default async function CrushPage({ params }: Props) {
         gender: f.gender,
         age: f.age,
         city: f.city,
-        soiree_group: f.soiree_group,
+        soiree_groups: f.soiree_groups ?? [],
         photo: apercus.get(f.id) ?? null,
         deja: inscrits.has(String(f.email).toLowerCase()),
       }));

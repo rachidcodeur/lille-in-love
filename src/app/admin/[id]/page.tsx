@@ -219,7 +219,7 @@ export default async function FichePage({ params }: Props) {
           </div>
 
           <div className="adm-card">
-            <GroupePicker memberId={member.id} groupe={member.soiree_group} />
+            <GroupePicker memberId={member.id} groupes={member.soiree_groups ?? []} />
           </div>
 
           {/* Le service de matching est mis de côté : ses réponses ne

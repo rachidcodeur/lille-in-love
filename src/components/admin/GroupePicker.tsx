@@ -6,8 +6,8 @@ import { GROUPES, type Groupe } from '@/lib/groupes';
 
 type Props = {
   memberId: string;
-  groupe: Groupe | null;
-  /** Dans la liste : quatre petites touches. Sur la fiche : la version lisible. */
+  groupes: Groupe[];
+  /** Dans la liste : de petites touches. Sur la fiche : la version lisible. */
   compact?: boolean;
 };
 
@@ -18,18 +18,22 @@ type Props = {
  * statut ne bouge pas, et on peut changer d'avis autant de fois qu'on veut.
  * D'où l'affichage optimiste — la touche s'allume tout de suite, et ne
  * revient en arrière que si la base refuse.
+ *
+ * Plusieurs touches peuvent être allumées : on compose souvent deux
+ * soirées en même temps, et quelqu'un peut convenir aux deux. Le « — »
+ * les éteint toutes.
  */
-export function GroupePicker({ memberId, groupe, compact = false }: Props) {
+export function GroupePicker({ memberId, groupes, compact = false }: Props) {
   const router = useRouter();
-  const [valeur, setValeur] = useState<Groupe | null>(groupe);
+  const [valeurs, setValeurs] = useState<Groupe[]>(groupes);
   const [busy, setBusy] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
 
-  async function choisir(cible: Groupe | null) {
-    if (busy || cible === valeur) return;
+  async function choisir(cibles: Groupe[]) {
+    if (busy) return;
 
-    const precedent = valeur;
-    setValeur(cible);
+    const precedent = valeurs;
+    setValeurs(cibles);
     setBusy(true);
     setErreur(null);
 
@@ -37,19 +41,19 @@ export function GroupePicker({ memberId, groupe, compact = false }: Props) {
       const response = await fetch('/api/admin/groupe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ memberId, groupe: cible }),
+        body: JSON.stringify({ memberId, groupes: cibles }),
       });
       const result = (await response.json()) as { ok?: boolean; error?: string };
 
       if (!response.ok || !result.ok) {
-        setValeur(precedent);
+        setValeurs(precedent);
         setErreur(result.error ?? 'Le groupe n’a pas pu être enregistré.');
       } else {
         // Les compteurs des filtres se recalculent côté serveur.
         router.refresh();
       }
     } catch {
-      setValeur(precedent);
+      setValeurs(precedent);
       setErreur('Connexion interrompue. Réessaie.');
     }
 
@@ -61,28 +65,35 @@ export function GroupePicker({ memberId, groupe, compact = false }: Props) {
       {!compact && <p className="adm-card-title">Groupe de soirée</p>}
 
       <div className="adm-groupes-choix" role="group" aria-label="Groupe de soirée">
-        {GROUPES.map((lettre) => (
-          <button
-            key={lettre}
-            type="button"
-            className="adm-groupe-btn"
-            data-on={valeur === lettre}
-            disabled={busy}
-            aria-pressed={valeur === lettre}
-            title={`Groupe ${lettre}`}
-            onClick={() => choisir(lettre)}
-          >
-            {lettre}
-          </button>
-        ))}
+        {GROUPES.map((lettre) => {
+          const allumee = valeurs.includes(lettre);
+          return (
+            <button
+              key={lettre}
+              type="button"
+              className="adm-groupe-btn"
+              data-on={allumee}
+              disabled={busy}
+              aria-pressed={allumee}
+              title={`Groupe ${lettre}`}
+              onClick={() =>
+                choisir(
+                  allumee ? valeurs.filter((g) => g !== lettre) : [...valeurs, lettre],
+                )
+              }
+            >
+              {lettre}
+            </button>
+          );
+        })}
         <button
           type="button"
           className="adm-groupe-btn adm-groupe-btn-vide"
-          data-on={valeur === null}
+          data-on={valeurs.length === 0}
           disabled={busy}
-          aria-pressed={valeur === null}
+          aria-pressed={valeurs.length === 0}
           title="Aucun groupe"
-          onClick={() => choisir(null)}
+          onClick={() => choisir([])}
         >
           <span aria-hidden="true">—</span>
           <span className="adm-visuellement-cache">Aucun groupe</span>
@@ -91,8 +102,8 @@ export function GroupePicker({ memberId, groupe, compact = false }: Props) {
 
       {!compact && (
         <p className="adm-hint">
-          Pour composer les tables d’une soirée. Aucun email n’est envoyé, le statut ne change
-          pas.
+          Pour composer les tables d’une soirée — plusieurs groupes possibles. Aucun email n’est
+          envoyé, le statut ne change pas.
         </p>
       )}
 

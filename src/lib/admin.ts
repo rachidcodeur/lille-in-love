@@ -60,7 +60,7 @@ export type MemberSummary = {
   form_version: 'court' | 'complet';
   deleted_at?: string | null;
   /** Groupe de composition d'une soirée : A, B ou C. Vide tant qu'on n'a pas trié. */
-  soiree_group: Groupe | null;
+  soiree_groups?: Groupe[] | null;
   /**
    * Candidature reprise de l'ancien site. Facultative : la colonne n'existe
    * qu'une fois supabase/12_anciennes.sql exécuté.
@@ -162,9 +162,12 @@ function filtrer<Q extends {
     const lettres = filtres.groupes.filter((g) => g !== 'aucun');
     const sansGroupe = filtres.groupes.includes('aucun');
 
-    if (sansGroupe && lettres.length === 0) q = q.is('soiree_group', null);
-    else if (!sansGroupe) q = q.in('soiree_group', lettres);
-    else q = q.or(`soiree_group.in.(${lettres.join(',')}),soiree_group.is.null`);
+    // Une candidature peut tenir dans plusieurs groupes : « ov » est
+    // l'intersection des deux ensembles. « Sans groupe » est l'ensemble
+    // vide, qu'aucune intersection ne trouve — d'où le « eq.{} ».
+    if (sansGroupe && lettres.length === 0) q = q.eq('soiree_groups', '{}');
+    else if (!sansGroupe) q = q.overlaps('soiree_groups', lettres);
+    else q = q.or(`soiree_groups.ov.{${lettres.join(',')}},soiree_groups.eq.{}`);
   }
 
   if (filtres.genre !== 'tous') q = q.eq('gender', filtres.genre);
@@ -242,7 +245,7 @@ export async function membersForExport(
   const query = supabaseAdmin()
     .from('lil_members_overview')
     .select('*')
-    .order('soiree_group', { ascending: true, nullsFirst: false })
+    .order('soiree_groups', { ascending: true, nullsFirst: false })
     .order('gender', { ascending: true })
     .order('age', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: true })
@@ -263,7 +266,7 @@ export async function facettes(): Promise<FicheFiltrable[]> {
   const { data, error } = await supabaseAdmin()
     .from('lil_members_overview')
     .select(
-      'id, status, soiree_group, gender, orientation, age, first_name, last_name, email, city, tranches_age',
+      'id, status, soiree_groups, gender, orientation, age, first_name, last_name, email, city, tranches_age',
     )
     .is('deleted_at', null)
     .limit(5000);
@@ -273,7 +276,7 @@ export async function facettes(): Promise<FicheFiltrable[]> {
   if (error && colonneAbsente(error)) {
     const repli = await supabaseAdmin()
       .from('lil_members_overview')
-      .select('id, status, soiree_group, gender, orientation, age, first_name, last_name, email, city')
+      .select('id, status, soiree_groups, gender, orientation, age, first_name, last_name, email, city')
       .is('deleted_at', null)
       .limit(5000);
     if (repli.error) throw new Error(repli.error.message);
@@ -285,15 +288,18 @@ export async function facettes(): Promise<FicheFiltrable[]> {
 }
 
 /**
- * Range une candidature dans un groupe de soirée — ou l'en retire.
+ * Range une candidature dans des groupes de soirée — ou l'en retire.
+ *
+ * Plusieurs d'un coup : on compose souvent deux soirées en même temps, et
+ * quelqu'un peut convenir aux deux.
  *
  * C'est une étiquette de travail : aucun email ne part, le statut ne bouge
  * pas. On peut donc se tromper et corriger sans conséquence.
  */
-export async function setGroup(memberId: string, groupe: Groupe | null): Promise<void> {
+export async function setGroup(memberId: string, groupes: Groupe[]): Promise<void> {
   const { error } = await supabaseAdmin()
     .from('lil_members')
-    .update({ soiree_group: groupe })
+    .update({ soiree_groups: groupes })
     .eq('id', memberId);
   if (error) throw new Error(error.message);
 }

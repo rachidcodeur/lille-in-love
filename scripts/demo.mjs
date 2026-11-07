@@ -142,7 +142,7 @@ async function remplir() {
       motivation: 'Rencontrer des gens autrement qu’en balayant un écran.',
       interests: ['culture', 'voyages'],
       referral: 'instagram',
-      soiree_group: groupe,
+      soiree_groups: groupe ? [groupe] : [],
       status: index % 3 === 0 ? 'valide' : 'nouveau',
       consent_at: new Date().toISOString(),
       created_at: new Date(Date.now() - index * 36e5).toISOString(),
