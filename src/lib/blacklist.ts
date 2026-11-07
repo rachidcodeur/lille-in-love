@@ -61,8 +61,19 @@ export async function estBloque(email: string, phone?: string | null): Promise<b
 /**
  * Bloque quelqu'un, à partir de sa fiche.
  *
- * Rend « false » si la table n'existe pas encore : le geste n'a pas eu
- * lieu, et l'écran doit le dire plutôt que de laisser croire au contraire.
+ * On cherche la ligne, puis on l'écrit — plutôt qu'un « upsert ». Les
+ * index uniques de cette table sont partiels (« where email is not
+ * null »), et PostgreSQL refuse d'inférer un index partiel pour un
+ * ON CONFLICT : l'upsert échouait systématiquement, avec une erreur
+ * 42P10 qu'on prenait pour une table absente.
+ *
+ * Bloquer deux fois la même personne n'est pas une erreur — c'est le
+ * même résultat, et le curateur n'a pas à s'en soucier. La seconde fois
+ * met simplement la ligne à jour.
+ *
+ * Rend « false » si l'écriture n'a pas abouti : le geste n'a pas eu
+ * lieu, et l'écran doit le dire plutôt que de laisser croire au
+ * contraire. La raison est journalisée telle que la base l'a donnée.
  */
 export async function bloquer(
   membre: {
@@ -76,6 +87,7 @@ export async function bloquer(
   const cle = pourLaBase(membre.email, membre.phone);
   if (!cle.email && !cle.phone) return false;
 
+  const db = supabaseAdmin();
   const ligne = {
     ...cle,
     first_name: membre.first_name,
@@ -83,27 +95,36 @@ export async function bloquer(
     raison: raison?.trim() || null,
   };
 
-  // Bloquer deux fois la même personne n'est pas une erreur : c'est le
-  // même résultat, et le curateur n'a pas à s'en soucier.
-  const db = supabaseAdmin();
-  const premier = await db
-    .from('lil_blacklist')
-    .upsert(ligne, { onConflict: 'email', ignoreDuplicates: false });
-  if (!premier.error) return true;
+  // Déjà bloqué, par l'un ou l'autre de ses identifiants ?
+  const conditions = [];
+  if (cle.email) conditions.push(`email.eq.${cle.email}`);
+  if (cle.phone) conditions.push(`phone.eq.${cle.phone}`);
 
-  // Ce numéro est déjà bloqué, sous une autre adresse : c'est la même
-  // personne qui revient avec un nouvel email. On bloque donc la nouvelle
-  // adresse seule — le numéro, lui, l'est déjà.
-  if (premier.error.code === '23505') {
-    const sansNumero = await db
-      .from('lil_blacklist')
-      .upsert({ ...ligne, phone: null }, { onConflict: 'email', ignoreDuplicates: false });
-    if (!sansNumero.error) return true;
-    console.error('[blacklist] blocage impossible', sansNumero.error.message);
+  const { data: existante, error: lecture } = await db
+    .from('lil_blacklist')
+    .select('id')
+    .or(conditions.join(','))
+    .limit(1);
+
+  if (lecture) {
+    console.error('[blacklist] lecture impossible', lecture.message);
     return false;
   }
 
-  console.error('[blacklist] blocage impossible', premier.error.message);
+  if (existante?.[0]) {
+    const { error } = await db.from('lil_blacklist').update(ligne).eq('id', existante[0].id);
+    if (error) console.error('[blacklist] mise à jour impossible', error.message);
+    return !error;
+  }
+
+  const { error } = await db.from('lil_blacklist').insert(ligne);
+  if (!error) return true;
+
+  // Deux curateurs d'un coup : la contrainte d'unicité a tranché, et
+  // l'autre ligne fait le même travail que la nôtre.
+  if (error.code === '23505') return true;
+
+  console.error('[blacklist] blocage impossible', error.message);
   return false;
 }
 

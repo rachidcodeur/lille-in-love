@@ -54,11 +54,15 @@ export async function POST(request: Request) {
       const { bloque, envoiArrete } = await bloquerEtRanger(memberId, raison);
       // Le blocage a échoué mais la fiche est rangée : on ne répond pas
       // « c'est fait » à moitié.
+      // Le message ne devine plus la cause : il a dit « exécute la
+      // migration » pendant que la table existait et que l'écriture
+      // échouait pour une tout autre raison. La raison exacte est dans
+      // le journal du serveur, c'est là qu'il faut aller la lire.
       if (!bloque) {
         return NextResponse.json(
           {
             error:
-              'La liste noire n’est pas encore en place. Exécute supabase/25_blacklist.sql, puis réessaie.',
+              'Le blocage n’a pas pu être enregistré. La fiche a bien été rangée à la corbeille. Regarde le journal du serveur — si la table manque, c’est supabase/25_blacklist.sql qu’il faut exécuter.',
           },
           { status: 500 },
         );

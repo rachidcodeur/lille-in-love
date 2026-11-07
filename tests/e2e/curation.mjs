@@ -1480,6 +1480,26 @@ s.members.find((m) => m.id === genant.id)?.deleted_at
   ? ok('et la fiche part à la corbeille du même geste')
   : bad('la fiche est restée dans la liste');
 
+// Bloquer deux fois la même personne n'est pas une erreur : c'est le
+// même résultat. L'upsert qui servait à ça échouait en silence contre un
+// index partiel — la seconde écriture doit passer sans rien casser.
+const rebloquer = await (
+  await fetch(`${BASE}/api/admin/corbeille`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ memberId: genant.id, action: 'bloquer', raison: 'Et récidive.' }),
+  })
+).json();
+rebloquer.ok
+  ? ok('bloquer deux fois la même personne passe sans erreur')
+  : bad('second blocage refusé', JSON.stringify(rebloquer));
+((await state()).blacklist ?? []).length === 1
+  ? ok('et ne crée pas une seconde ligne')
+  : bad('doublon dans la liste noire', String(((await state()).blacklist ?? []).length));
+((await state()).blacklist ?? [])[0]?.raison === 'Et récidive.'
+  ? ok('la raison la plus récente remplace la précédente')
+  : bad('raison non mise à jour', JSON.stringify(((await state()).blacklist ?? [])[0]?.raison));
+
 // Le même email, puis le même numéro sous une autre adresse.
 const retour = await (await inscrireGenant('genant@example.com', '07 77 77 77 77')).json();
 retour.error && !retour.ok
@@ -1518,7 +1538,7 @@ if (process.env.E2E_SHOTS) {
   await page.getByRole('button', { name: 'Annuler' }).click();
   await page.waitForTimeout(200);
 }
-/Comportement déplacé en soirée/.test(vueCorbeille)
+/Et récidive\./.test(vueCorbeille)
   ? ok('la liste noire se lit sous la corbeille, raison comprise')
   : bad('la liste noire ne s’affiche pas');
 
