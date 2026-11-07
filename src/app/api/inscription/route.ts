@@ -89,33 +89,29 @@ async function poserLesSupplements(
   const ensemble = await db.from('lil_members').update(valeurs).eq('id', memberId);
   if (!ensemble.error) return valeurs.matching_token;
 
-  // Une colonne manque, on ne sait pas laquelle : on redescend d'un cran
-  // à chaque fois, jusqu'à celle qui ouvre le service. Mieux vaut perdre
-  // le nom du compagnon que la candidature.
-  const sansCompagnon = await db
-    .from('lil_members')
-    .update({
-      referral_other: valeurs.referral_other,
-      matching_token: valeurs.matching_token,
-      aisance: valeurs.aisance,
-      tranches_age: valeurs.tranches_age,
-      facebook: valeurs.facebook,
-    })
-    .eq('id', memberId);
-  if (!sansCompagnon.error) return valeurs.matching_token;
+  // Une colonne manque, et PostgREST refuse l'ordre entier pour elle. On
+  // ne sait pas laquelle : on les écrit donc une par une, et seule celle
+  // qui manque vraiment est perdue.
+  //
+  // Un repli par paliers — tout, puis presque tout, puis le minimum —
+  // emportait des réponses qui n'avaient rien à voir : « facebook », dont
+  // la colonne existait, tombait avec « tranches_age », qui manquait. Une
+  // colonne absente ne doit coûter qu'elle-même.
+  let jeton: string | null = null;
+  for (const [colonne, valeur] of Object.entries(valeurs)) {
+    const { error } = await db
+      .from('lil_members')
+      .update({ [colonne]: valeur })
+      .eq('id', memberId);
 
-  const sansLesDeux = await db
-    .from('lil_members')
-    .update({ referral_other: valeurs.referral_other, matching_token: valeurs.matching_token })
-    .eq('id', memberId);
-  if (!sansLesDeux.error) return valeurs.matching_token;
+    if (error) {
+      console.error(`[inscription] « ${colonne} » non enregistré — migration en attente ?`);
+      continue;
+    }
+    if (colonne === 'matching_token') jeton = valeurs.matching_token;
+  }
 
-  const seul = await db
-    .from('lil_members')
-    .update({ matching_token: valeurs.matching_token })
-    .eq('id', memberId);
-
-  return seul.error ? null : valeurs.matching_token;
+  return jeton;
 }
 
 /**

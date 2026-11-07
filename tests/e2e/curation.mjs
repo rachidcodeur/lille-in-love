@@ -3546,6 +3546,7 @@ const sansMigrations = await fetch(`${BASE}/api/inscription`, {
     heightCm: 168, about: 'Essai.', motivation: 'Essai.', interests: ['culture'],
     profession: 'Essai', referral: 'autre', referralOther: 'Une amie',
     comesWith: 'non', firstName: 'Lucie', lastName: 'Retard',
+    facebook: 'https://www.facebook.com/lucie.retard',
     phone: '06 99 88 77 66', email: 'retard@example.com', consent: true, elapsedMs: 60000,
     photos: [{ path: 'pending/77777777-7777-4777-8777-777777777777.jpg' }],
   }),
@@ -3584,6 +3585,17 @@ court.id && court.matchingToken == null
 (await state()).members.some((m) => m.email === 'retard@example.com')
   ? ok('et l’aisance et les tranches d’âge ne l’emportent pas avec elles')
   : bad('la candidature a été perdue avec les colonnes manquantes');
+
+// Une colonne absente ne doit coûter qu'elle-même. Un repli par paliers
+// emportait des réponses qui n'avaient rien à voir : « facebook », dont
+// la colonne existait, tombait avec « tranches_age », qui manquait.
+const retardataire = (await state()).members.find((m) => m.email === 'retard@example.com');
+retardataire?.facebook === 'https://facebook.com/lucie.retard'
+  ? ok('et les colonnes qui existent, elles, sont bien écrites')
+  : bad('une colonne présente est tombée avec une absente', JSON.stringify(retardataire?.facebook ?? null));
+retardataire?.aisance == null
+  ? ok('et seule celle qui manque vraiment est perdue')
+  : bad('une colonne absente a été écrite', JSON.stringify(retardataire?.aisance ?? null));
 
 await fetch(`${FAKE}/__colonnes-absentes?table=lil_members&colonnes=`, { method: 'POST' });
 
